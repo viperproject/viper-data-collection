@@ -4,6 +4,7 @@ import Dependencies._
 lazy val silver = project in file("silver")
 lazy val silicon = project in file("silicon")
 lazy val carbon = project in file("carbon")
+
 lazy val root = (project in file("."))
   .dependsOn(silver)
   .dependsOn(silicon)
@@ -12,7 +13,7 @@ lazy val root = (project in file("."))
     name := "viper-data-collection",
     organization := "viper",
     version := "0.1.0-SNAPSHOT",
-    scalaVersion := "2.13.12",
+    scalaVersion := "2.13.10",
     libraryDependencies += munit % Test,
     libraryDependencies += "com.lihaoyi" %% "upickle" % "1.3.0"
   )
