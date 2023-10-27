@@ -1,11 +1,11 @@
 package dataCollection
 
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
-import viper.silicon.{Config, SiliconFrontend, reporting}
+import viper.silicon.SiliconFrontend
 import viper.carbon.CarbonFrontend
 import viper.silver.logger.ViperStdOutLogger
 import viper.silver.parser.FastParser
-import viper.silver.reporter.{ExceptionReport, InternalWarningMessage, StdIOReporter}
+import viper.silver.reporter.{NoopReporter, StdIOReporter}
 import viper.silver.verifier.{AbstractError, VerificationResult}
 import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
@@ -14,9 +14,8 @@ import java.nio.charset.CodingErrorAction
 import java.nio.file.{Path, Paths}
 import scala.collection.immutable.ArraySeq
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.DurationLong
+import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.io.{BufferedSource, Codec}
 import scala.io.Source.fromFile
 import scala.language.postfixOps
@@ -132,9 +131,7 @@ object VerError {
 object SimilarityChecker {
 }
 
-/** Object to analyse programs for later similarity comparison
- *
- * @*/
+/** Object to analyse programs for later similarity comparison */
 object ProgramAnalyser {
   private val fastParser = new FastParser()
   val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
@@ -149,13 +146,13 @@ object ProgramAnalyser {
   }
 
   private def getSilVerifierResults(args: Array[String]): VerifierResult = {
-    val runner = new SiliconInstance
+    val runner = new SiliconFEInstance
     runner.runMain(args)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 
   private def getCarbonVerifierResults(args: Array[String]): VerifierResult = {
-    val runner = new CarbonInstance
+    val runner = new CarbonFEInstance
     runner.main(args)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
@@ -181,47 +178,42 @@ object AnalysisRunner {
   }
 }
 
-//TODO: Somehow manage timeouts
-class CarbonInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), ViperStdOutLogger("Carbon", "INFO").get) {
+class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), ViperStdOutLogger("Carbon", "INFO").get) {
   def main(args: Array[String]): Unit = {
-    execute(Seq(args(0)))
+    runWithTimeout(5)(try {
+      execute(Seq(args(0)))
+    } catch {
+      case e: Exception => println(s"encountered: ${e}")
+    })
   }
+
+def runWithTimeout[T]
+(timeout: Long)
+(f: => T)
+: Option[T] = {
+  try {
+    Some(Await.result(Future(f), timeout.seconds))
+  } catch {
+    case e: TimeoutException => None
+  }
+}
+
 }
 
 
 /** Silicon frontend implementation that doesn't exit the program once verification is done */
-class SiliconInstance extends SiliconFrontend(StdIOReporter()) {
+class SiliconFEInstance extends SiliconFrontend(NoopReporter) {
   def runMain(args: Array[String]): Unit = {
-
     try {
       execute(ArraySeq.unsafeWrapArray(args))
     } catch {
-      case exception: Exception
-        if config == null || !config.asInstanceOf[Config].disableCatchingExceptions() =>
-        if (config != null) config.assertVerified()
-        reporting.exceptionToViperError(exception) match {
-          case Right((cause, _)) =>
-            reporter report ExceptionReport(exception)
-            logger debug("An exception occurred:", cause)
-          case Left(error: Error) =>
-            error match {
-              case _: NoClassDefFoundError =>
-                reporter report InternalWarningMessage(reporting.noClassDefFoundErrorMessage)
-                reporter report ExceptionReport(error)
-                logger error(reporting.noClassDefFoundErrorMessage, error)
-              case _ =>
-            }
-
-            throw error
-        }
-      case error: NoClassDefFoundError =>
-        reporter report InternalWarningMessage(reporting.noClassDefFoundErrorMessage)
-        reporter report ExceptionReport(error)
-        logger error(reporting.noClassDefFoundErrorMessage, error)
-    } finally {
+      case e: Exception => println(s"encountered: ${e}")
+    }
+    finally {
       siliconInstance.stop()
     }
   }
 }
+
 
 
