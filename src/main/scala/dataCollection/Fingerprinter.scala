@@ -88,19 +88,21 @@ object FPNodeOrdering extends Ordering[FPNode] {
   override def compare(x: FPNode, y: FPNode): Int = -((x.fp.weight, x.fp.hashVal) compare(y.fp.weight, y.fp.hashVal))
 }
 
-/** Stores the [[FPNode]] tree of a program, split into subtrees for domains, fields, functions, predicates and methods
+/** Stores the [[FPNode]] tree of a program, split into subtrees for domains, fields, functions, predicates, methods and extensions
  * and provides helper methods to analyze it */
 case class ProgramPrint(domainTree: FPNode,
                         fieldTree: FPNode,
                         functionTree: FPNode,
                         predicateTree: FPNode,
-                        methodTree: FPNode) {
+                        methodTree: FPNode,
+                        extensionTree: FPNode) {
   def matchTrees(oPP: ProgramPrint): MatchResult = {
     MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight -1),
       (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight -1),
       (numMatches(this.functionTree, oPP.functionTree), functionTree.fp.weight -1),
       (numMatches(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight -1),
-      (numMatches(this.methodTree, oPP.methodTree), methodTree.fp.weight -1))
+      (numMatches(this.methodTree, oPP.methodTree), methodTree.fp.weight -1),
+      (numMatches(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight -1))
   } // -1 to the tree weights to discount dummy root nodes
 
   def store(p: String): Unit = {
@@ -134,15 +136,15 @@ object ProgramPrint {
 
 
 /** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes */
-case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (Int, Int), pMatches: (Int, Int), mMatches: (Int, Int)) {
+case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (Int, Int), pMatches: (Int, Int), mMatches: (Int, Int), extMatches: (Int, Int)) {
 
   def methodMatchPercentage: Double = {
     100.0 * (mMatches._1.toDouble / mMatches._2.toDouble)
   }
 
   def preambleMatchPercentage: Double = {
-    val numMatches = (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._1)).sum.toDouble
-    val numNodes = (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._2)).sum
+    val numMatches = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._1)).sum.toDouble
+    val numNodes = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._2)).sum
     if (numNodes == 0) 100.0 else 100.0 * (numMatches / numNodes)
   }
   def totalPercentage: Double = {
@@ -156,6 +158,7 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     Function: ${funMatches._1} out of ${funMatches._2}
     Predicate: ${pMatches._1} out of ${pMatches._2}
     Method: ${mMatches._1} out of ${mMatches._2}
+    Extension: ${extMatches._1} out of ${extMatches._2}
     Total: $totalPercentage%1.2f%%"""
   }
 }
@@ -174,7 +177,8 @@ object Fingerprinter {
       fieldTree = trimTree(fingerprintPNode(RootPNode(pp.fields)(null))),
       functionTree = trimTree(fingerprintPNode(RootPNode(pp.functions)(null))),
       predicateTree = trimTree(fingerprintPNode(RootPNode(pp.predicates)(null))),
-      methodTree = trimTree(fingerprintPNode(RootPNode(pp.methods)(null))))
+      methodTree = trimTree(fingerprintPNode(RootPNode(pp.methods)(null))),
+      extensionTree = trimTree(fingerprintPNode(RootPNode(pp.extensions)(null))))
   }
 
   private def fingerprintPNode(pn: PNode): FPNode =  {
