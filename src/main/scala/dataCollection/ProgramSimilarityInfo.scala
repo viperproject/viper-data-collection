@@ -3,7 +3,7 @@ package dataCollection
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import viper.silicon.SiliconFrontend
 import viper.carbon.CarbonFrontend
-import viper.silver.logger.ViperStdOutLogger
+import viper.silver.logger.{ViperLogger, ViperStdOutLogger}
 import viper.silver.parser.FastParser
 import viper.silver.reporter.{NoopReporter, StdIOReporter}
 import viper.silver.verifier.{AbstractError, VerificationResult}
@@ -21,8 +21,9 @@ import scala.io.Source.fromFile
 import scala.language.postfixOps
 
 object SimTestRunner extends App {
-  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/results/"
-  val starttime = System.currentTimeMillis()
+  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/"
+  AnalysisRunner.main(Array(testFolder + "test.vpr", "--ideModeAdvanced"))
+  /*val starttime = System.currentTimeMillis()
   var progresults: Seq[ProgAnalysisResult] = Seq()
   for (num <- Seq.range(0, 901)) {
     val sourcefile: BufferedSource = fromFile(testFolder + s"prog${num}_analysis.json")
@@ -46,12 +47,17 @@ object SimTestRunner extends App {
     if (!(matches == List())) dupCount += 1
   }
   println(s"${dupCount} duplicates found")
-  println(s"Time: ${System.currentTimeMillis() - starttime}ms")
+  println(s"Time: ${System.currentTimeMillis() - starttime}ms")*/
 }
 
-/** Represents the result of the [[ProgramAnalyser]] for later comparison */
-case class ProgAnalysisResult(progName: String, siliconRes: VerifierResult, carbonRes: VerifierResult, pprint: ProgramPrint, flags: Seq[String]) {
-  def isSimilarTo(other: ProgAnalysisResult): Boolean = {
+/** Represents the result of the [[ProgramInfoAnalyser]] for later comparison
+ *
+ * @param siliconRes contains the [[VerifierResult]] and runtime of verifying the program through Silicon
+ * @param carbonRes  contains the [[VerifierResult]] and runtime of verifying the program through Carbon
+ * @param pprint     is the [[ProgramPrint]] of the program's AST
+ * @param flags      are the arguments used to run the program */
+case class ProgramSimilarityInfo(siliconRes: VerifierResult, carbonRes: VerifierResult, pprint: ProgramPrint, flags: Seq[String]) {
+  def isSimilarTo(other: ProgramSimilarityInfo): Boolean = {
     lazy val sameFlags = this.flags.toSet == other.flags.toSet
     lazy val similarSilResult = this.siliconRes.isSimilarTo(other.siliconRes, 1.5)
     lazy val similarCarbonResult = this.carbonRes.isSimilarTo(other.carbonRes, 1.5)
@@ -63,8 +69,8 @@ case class ProgAnalysisResult(progName: String, siliconRes: VerifierResult, carb
   }
 }
 
-object ProgAnalysisResult {
-  implicit val rw: RW[ProgAnalysisResult] = macroRW
+object ProgramSimilarityInfo {
+  implicit val rw: RW[ProgramSimilarityInfo] = macroRW
 }
 
 /** Result of running a program through some Viper Verifier
@@ -90,7 +96,10 @@ object VerifierResult {
   implicit val rw: RW[VerifierResult] = macroRW
 }
 
-/** A wrapper class for a [[VerificationResult]] to facilitate comparison and serialization */
+/** A wrapper class for a [[VerificationResult]] to facilitate comparison and serialization
+ *
+ * @param success whether the program verified successfully or failed
+ * @param errors  if verification failed, contains [[VerError]]s describing the failure causes */
 case class VerRes(success: Boolean, errors: Seq[VerError]) {
   def isSimilarTo(other: VerRes): Boolean = {
     success match {
@@ -110,7 +119,11 @@ object VerRes {
 
 }
 
-/** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information */
+/** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information
+ * Comparison is only done through [[id]], since [[message]]s are too specific to a given program
+ *
+ * @param id      the original error ID
+ * @param message describes the error in full */
 case class VerError(id: String, message: String) {
   override def equals(obj: Any): Boolean = obj match {
     case that: VerError => this.id == that.id
@@ -132,17 +145,16 @@ object SimilarityChecker {
 }
 
 /** Object to analyse programs for later similarity comparison */
-object ProgramAnalyser {
+object ProgramInfoAnalyser {
   private val fastParser = new FastParser()
   val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
   /** Analyses a program and returns the results of the verifier and a fingerprint of its AST */
-  def runProgAnalysis(args: Array[String]): ProgAnalysisResult = {
-    val fileName = Paths.get(args(0)).getFileName.toString.split("\\.").head
+  def runProgAnalysis(args: Array[String]): ProgramSimilarityInfo = {
     val silRes = getSilVerifierResults(args)
     val carbonRes = getCarbonVerifierResults(args)
     val pprint = getProgramPrint(Paths.get(args(0)))
-    ProgAnalysisResult(fileName, silRes, carbonRes, pprint, args.tail)
+    ProgramSimilarityInfo(silRes, carbonRes, pprint, args.tail)
   }
 
   private def getSilVerifierResults(args: Array[String]): VerifierResult = {
@@ -170,7 +182,7 @@ object AnalysisRunner {
 
   def main(args: Array[String]): Unit = {
     val fileName = Paths.get(args(0)).getFileName.toString.split("\\.").head
-    val programData = ProgramAnalyser.runProgAnalysis(args)
+    val programData = ProgramInfoAnalyser.runProgAnalysis(args)
     val resJSON = write(programData)
     val w = new BufferedWriter(new FileWriter(s"${testFolder}${fileName}_analysis.json"))
     w.write(resJSON)
@@ -187,22 +199,22 @@ class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), 
     })
   }
 
-def runWithTimeout[T]
-(timeout: Long)
-(f: => T)
-: Option[T] = {
-  try {
-    Some(Await.result(Future(f), timeout.seconds))
-  } catch {
-    case e: TimeoutException => None
+  def runWithTimeout[T]
+  (timeout: Long)
+  (f: => T)
+  : Option[T] = {
+    try {
+      Some(Await.result(Future(f), timeout.seconds))
+    } catch {
+      case e: TimeoutException => None
+    }
   }
-}
 
 }
 
 
 /** Silicon frontend implementation that doesn't exit the program once verification is done */
-class SiliconFEInstance extends SiliconFrontend(NoopReporter) {
+class SiliconFEInstance extends SiliconFrontend(StdIOReporter(), logger = ViperLogger("vlogger", "out.txt", level = "ALL").get) {
   def runMain(args: Array[String]): Unit = {
     try {
       execute(ArraySeq.unsafeWrapArray(args))
@@ -212,6 +224,13 @@ class SiliconFEInstance extends SiliconFrontend(NoopReporter) {
     finally {
       siliconInstance.stop()
     }
+  }
+
+  override def runAllPhases(): Unit = {
+    phases.foreach(ph => {
+      logger.trace(s"Frontend: running phase ${ph.name}, ${getTime}")
+      ph.f()
+    })
   }
 }
 
