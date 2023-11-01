@@ -4,6 +4,3 @@
 [submodule "carbon"]
 	path = carbon
 	url = https://github.com/viperproject/carbon
-[submodule "silver"]
-	path = silver
-	url = https://github.com/viperproject/silver

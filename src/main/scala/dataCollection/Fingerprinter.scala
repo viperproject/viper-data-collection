@@ -5,54 +5,13 @@ import viper.silver.parser._
 
 import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
-import scala.io.Source
+import scala.io.{BufferedSource, Codec, Source}
 import scala.math.Ordered.orderingToOrdered
-import upickle.default.{macroRW, write, read, ReadWriter => RW}
+import upickle.default.{macroRW, read, write, ReadWriter => RW}
 
 import java.io.{BufferedWriter, FileReader, FileWriter}
+import java.nio.charset.CodingErrorAction
 import scala.io.Source.fromFile
-
-
-object TestRunner extends App {
-  private val testFolder = "/Users/simon/code/silicon/src/test/resources/dataCollection/"
-  private val fastParser = new FastParser()
-  val fp = Fingerprinter
-
-  private val file1 = Paths.get(testFolder + "test.vpr")
-  private val string1 = Source.fromInputStream(Files.newInputStream(file1)).mkString
-
-  private val file2 = Paths.get(testFolder + "test2.vpr")
-  private val string2 = Source.fromInputStream(Files.newInputStream(file2)).mkString
-
-  private val file3 = Paths.get(testFolder + "test3.vpr")
-  private val string3 = Source.fromInputStream(Files.newInputStream(file3)).mkString
-
-  private val file4 = Paths.get(testFolder + "test4.vpr")
-  private val string4 = Source.fromInputStream(Files.newInputStream(file4)).mkString
-
-  private val pp1 = fastParser.parse(string1, file1)
-  private val pp1_print = fp.fingerprintPProgram(pp1)
-
-  private val pp2 = fastParser.parse(string2, file2)
-  private val pp2_print = fp.fingerprintPProgram(pp2)
-
-  private val pp3 = fastParser.parse(string3, file3)
-  private val pp3_print = fp.fingerprintPProgram(pp3)
-
-  private val pp4 = fastParser.parse(string4, file4)
-  private val pp4_print = fp.fingerprintPProgram(pp4)
-
-  pp1_print.store(testFolder + "prog1.json")
-  private val pprint1_clone = ProgramPrint.load(testFolder + "prog1.json")
-  println(pprint1_clone)
-
-  // only variable names, whitespaces changed: expected full match
-  println(pp1_print.matchTrees(pp2_print))
-  // reordered some statements, high match expected
-  println(pp1_print.matchTrees(pp3_print))
-  // completely different program, low match expected -> remove low weight nodes
-  println(pp1_print.matchTrees(pp4_print))
-}
 
 /** Represents a structural fingerprint of a [[PNode]]
  *
@@ -142,6 +101,14 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     100.0 * (mMatches._1.toDouble / mMatches._2.toDouble)
   }
 
+  def functionMatchPercentage: Double = {
+    100.0 * (funMatches._1.toDouble / funMatches._2.toDouble)
+  }
+
+  def funAndMethMatchPercentage: Double = {
+    100.0 * ((funMatches._1.toDouble + mMatches._1.toDouble) / (funMatches._2.toDouble + mMatches._2))
+  }
+
   def preambleMatchPercentage: Double = {
     val numMatches = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._1)).sum.toDouble
     val numNodes = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._2)).sum
@@ -159,7 +126,8 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     Predicate: ${pMatches._1} out of ${pMatches._2}
     Method: ${mMatches._1} out of ${mMatches._2}
     Extension: ${extMatches._1} out of ${extMatches._2}
-    Total: $totalPercentage%1.2f%%"""
+    Preamble: $preambleMatchPercentage%1.2f%%
+    Methods: $methodMatchPercentage%1.2f%%"""
   }
 }
 

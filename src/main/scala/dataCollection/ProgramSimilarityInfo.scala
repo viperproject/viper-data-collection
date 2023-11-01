@@ -11,44 +11,19 @@ import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.charset.CodingErrorAction
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import scala.collection.immutable.ArraySeq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationLong
 import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
-import scala.io.{BufferedSource, Codec}
+import scala.io.{BufferedSource, Codec, Source}
 import scala.io.Source.fromFile
 import scala.language.postfixOps
 
-object SimTestRunner extends App {
-  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/"
-  AnalysisRunner.main(Array(testFolder + "test.vpr", "--ideModeAdvanced"))
-  /*val starttime = System.currentTimeMillis()
-  var progresults: Seq[ProgAnalysisResult] = Seq()
-  for (num <- Seq.range(0, 901)) {
-    val sourcefile: BufferedSource = fromFile(testFolder + s"prog${num}_analysis.json")
-    val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-    val progres = read(pprintJSON)(ProgAnalysisResult.rw)
-    progresults = progresults :+ progres
-  }
-  var dupCount = 0
-  for (num <- Seq.range(0, 901)) {
-    val prog1 = progresults(num)
-    var matches: Seq[Int] = Seq()
-    for (num2 <- Seq.range(num + 1, 901)) {
-      val prog2 = progresults(num2)
-      if (prog1 != prog2) {
-        if (prog1.isSimilarTo(prog2) && prog2.isSimilarTo(prog1)) {
-          matches = matches :+ num2
-        }
-      }
-    }
-    println(s"Matches with ${num}: ${matches}")
-    if (!(matches == List())) dupCount += 1
-  }
-  println(s"${dupCount} duplicates found")
-  println(s"Time: ${System.currentTimeMillis() - starttime}ms")*/
-}
+//abstract functions, methods, ditch domains
+//test difference between manually removing the preambles and just only looking at methods
+//basic database implementation
+//symbexlogger for timing
 
 /** Represents the result of the [[ProgramInfoAnalyser]] for later comparison
  *
@@ -62,8 +37,8 @@ case class ProgramSimilarityInfo(siliconRes: VerifierResult, carbonRes: Verifier
     lazy val similarSilResult = this.siliconRes.isSimilarTo(other.siliconRes, 1.5)
     lazy val similarCarbonResult = this.carbonRes.isSimilarTo(other.carbonRes, 1.5)
     lazy val matchResult = this.pprint.matchTrees(other.pprint)
-    lazy val similarMethods = matchResult.methodMatchPercentage >= 80
-    lazy val similarPreamble = matchResult.preambleMatchPercentage >= 80
+    lazy val similarMethods = matchResult.methodMatchPercentage >= 90
+    lazy val similarPreamble = matchResult.preambleMatchPercentage >= 90
 
     sameFlags && similarSilResult && similarCarbonResult && similarPreamble && similarMethods
   }
@@ -160,12 +135,14 @@ object ProgramInfoAnalyser {
   private def getSilVerifierResults(args: Array[String]): VerifierResult = {
     val runner = new SiliconFEInstance
     runner.runMain(args)
+    println(runner.getPhaseRuntimes)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 
   private def getCarbonVerifierResults(args: Array[String]): VerifierResult = {
     val runner = new CarbonFEInstance
     runner.main(args)
+    println(runner.getPhaseRuntimes)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 
@@ -190,10 +167,11 @@ object AnalysisRunner {
   }
 }
 
-class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), ViperStdOutLogger("Carbon", "INFO").get) {
+class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), logger = ViperLogger("vlogger", "outcarbon.txt", level = "ALL").get) {
+  private var phaseRuntimes: Seq[(String, Long)] = Seq()
   def main(args: Array[String]): Unit = {
     runWithTimeout(5)(try {
-      execute(Seq(args(0)))
+      execute(Array("--help"))
     } catch {
       case e: Exception => println(s"encountered: ${e}")
     })
@@ -210,11 +188,25 @@ class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), 
     }
   }
 
+  override def runAllPhases(): Unit = {
+    var lastTime: Long = 0
+    phases.foreach(ph => {
+      logger.trace(s"Frontend: running phase ${ph.name}")
+      ph.f()
+      val timeInPhase = getTime - lastTime
+      lastTime = getTime
+      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
+    })
+  }
+
+  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
+
 }
 
 
 /** Silicon frontend implementation that doesn't exit the program once verification is done */
 class SiliconFEInstance extends SiliconFrontend(StdIOReporter(), logger = ViperLogger("vlogger", "out.txt", level = "ALL").get) {
+  private var phaseRuntimes: Seq[(String, Long)] = Seq()
   def runMain(args: Array[String]): Unit = {
     try {
       execute(ArraySeq.unsafeWrapArray(args))
@@ -227,11 +219,17 @@ class SiliconFEInstance extends SiliconFrontend(StdIOReporter(), logger = ViperL
   }
 
   override def runAllPhases(): Unit = {
+    var lastTime: Long = 0
     phases.foreach(ph => {
-      logger.trace(s"Frontend: running phase ${ph.name}, ${getTime}")
+      logger.trace(s"Frontend: running phase ${ph.name}")
       ph.f()
+      val timeInPhase = getTime - lastTime
+      lastTime = getTime
+      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
     })
   }
+
+  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
 }
 
 

@@ -1,5 +1,0 @@
-package dataCollection
-
-class ProgramData {
-
-}

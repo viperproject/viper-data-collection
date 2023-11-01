@@ -1,14 +1,12 @@
 import Dependencies._
 
 
-lazy val silver = project in file("silver")
-lazy val silicon = project in file("silicon")
 lazy val carbon = project in file("carbon")
+lazy val silicon = (project in file("silicon"))
 
 lazy val root = (project in file("."))
-  .dependsOn(silver)
-  .dependsOn(silicon)
   .dependsOn(carbon)
+  .dependsOn(silicon)
   .settings(
     name := "viper-data-collection",
     organization := "viper",
