@@ -1,21 +1,13 @@
 package dataCollection
 
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
-import viper.silicon.SiliconFrontend
-import viper.carbon.CarbonFrontend
-import viper.silver.logger.{ViperLogger, ViperStdOutLogger}
 import viper.silver.parser.FastParser
-import viper.silver.reporter.{NoopReporter, StdIOReporter}
 import viper.silver.verifier.{AbstractError, VerificationResult}
 import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Path, Paths}
-import scala.collection.immutable.ArraySeq
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationLong
-import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
 import scala.io.{BufferedSource, Codec, Source}
 import scala.io.Source.fromFile
 import scala.language.postfixOps
@@ -133,14 +125,14 @@ object ProgramInfoAnalyser {
   }
 
   private def getSilVerifierResults(args: Array[String]): VerifierResult = {
-    val runner = new SiliconFEInstance
+    val runner = new CollectionSilFrontend
     runner.runMain(args)
-    println(runner.getPhaseRuntimes)
+    println(runner.getRuntimes)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 
   private def getCarbonVerifierResults(args: Array[String]): VerifierResult = {
-    val runner = new CarbonFEInstance
+    val runner = new CollectionCarbonFrontend
     runner.main(args)
     println(runner.getPhaseRuntimes)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
@@ -166,71 +158,5 @@ object AnalysisRunner {
     w.close()
   }
 }
-
-class CarbonFEInstance extends CarbonFrontend(StdIOReporter("carbon_reporter"), logger = ViperLogger("vlogger", "outcarbon.txt", level = "ALL").get) {
-  private var phaseRuntimes: Seq[(String, Long)] = Seq()
-  def main(args: Array[String]): Unit = {
-    runWithTimeout(5)(try {
-      execute(Array("--help"))
-    } catch {
-      case e: Exception => println(s"encountered: ${e}")
-    })
-  }
-
-  def runWithTimeout[T]
-  (timeout: Long)
-  (f: => T)
-  : Option[T] = {
-    try {
-      Some(Await.result(Future(f), timeout.seconds))
-    } catch {
-      case e: TimeoutException => None
-    }
-  }
-
-  override def runAllPhases(): Unit = {
-    var lastTime: Long = 0
-    phases.foreach(ph => {
-      logger.trace(s"Frontend: running phase ${ph.name}")
-      ph.f()
-      val timeInPhase = getTime - lastTime
-      lastTime = getTime
-      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
-    })
-  }
-
-  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
-
-}
-
-
-/** Silicon frontend implementation that doesn't exit the program once verification is done */
-class SiliconFEInstance extends SiliconFrontend(StdIOReporter(), logger = ViperLogger("vlogger", "out.txt", level = "ALL").get) {
-  private var phaseRuntimes: Seq[(String, Long)] = Seq()
-  def runMain(args: Array[String]): Unit = {
-    try {
-      execute(ArraySeq.unsafeWrapArray(args))
-    } catch {
-      case e: Exception => println(s"encountered: ${e}")
-    }
-    finally {
-      siliconInstance.stop()
-    }
-  }
-
-  override def runAllPhases(): Unit = {
-    var lastTime: Long = 0
-    phases.foreach(ph => {
-      logger.trace(s"Frontend: running phase ${ph.name}")
-      ph.f()
-      val timeInPhase = getTime - lastTime
-      lastTime = getTime
-      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
-    })
-  }
-
-  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
-}
-
 
 
