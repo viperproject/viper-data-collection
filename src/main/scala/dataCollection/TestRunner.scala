@@ -2,6 +2,7 @@ import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 
+import slick.jdbc.MySQLProfile.api._
 import java.io.File
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Paths}

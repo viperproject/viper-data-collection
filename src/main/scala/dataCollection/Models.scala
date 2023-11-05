@@ -5,7 +5,10 @@ import viper.silver.parser.{Nodes, PExists, PForPerm, PForall, PNode, PProgram, 
 import slick.jdbc.MySQLProfile.api._
 import slick.lifted.ProvenShape
 
+import java.sql.Timestamp
+
 case class ProgramEntry(id: Long,
+                        submissionDate: Timestamp,
                         originalName: String,
                         program: String,
                         loc: Int,
@@ -23,6 +26,7 @@ case class ProgramEntry(id: Long,
 object ProgramEntry {
   def serialize(pE: ProgramEntry): SerializedProgramEntry = {
     SerializedProgramEntry(pE.id,
+      pE.submissionDate,
       pE.originalName,
       pE.program,
       pE.loc,
@@ -40,6 +44,7 @@ object ProgramEntry {
 
   def deserialize(pE: SerializedProgramEntry): ProgramEntry = {
     ProgramEntry(pE.id,
+      pE.submissionDate,
       pE.originalName,
       pE.program,
       pE.loc,
@@ -57,6 +62,7 @@ object ProgramEntry {
 }
 
 case class SerializedProgramEntry(id: Long,
+                                  submissionDate: Timestamp,
                                   originalName: String,
                                   program: String,
                                   loc: Int,
@@ -72,53 +78,8 @@ case class SerializedProgramEntry(id: Long,
                                   hasPreamble: Boolean)
 
 
-class ProgramEntryTable(tag: Tag) extends Table[SerializedProgramEntry](tag, Some("programs"), "ProgramEntries") {
-  private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-
-  private def originalName = column[String]("originalName")
-
-  private def program = column[String]("program")
-
-  private def loc = column[Int]("loc")
-
-  private def frontend = column[String]("frontend")
-
-  private def originalVerifier = column[String]("originalVerifier")
-
-  private def siliconResJSON = column[String]("siliconResJSON")
-
-  private def carbonResJSON = column[String]("carbonResJSON")
-
-  private def argsJSON = column[String]("argsJSON")
-
-  private def siliconPhaseRuntimesJSON = column[String]("siliconPhaseRuntimesJSON")
-
-  private def carbonPhaseRuntimesJSON = column[String]("carbonPhaseRuntimesJSON")
-
-  private def programPrintJSON = column[String]("programPrintJSON")
-
-  private def parseSuccess = column[Boolean]("parseSuccess")
-
-  private def hasPreamble = column[Boolean]("hasPreamble")
-
-  override def * : ProvenShape[SerializedProgramEntry] = (id,
-    originalName,
-    program,
-    loc,
-    frontend,
-    originalVerifier,
-    siliconResJSON,
-    carbonResJSON,
-    argsJSON,
-    siliconPhaseRuntimesJSON,
-    carbonPhaseRuntimesJSON,
-    programPrintJSON,
-    parseSuccess,
-    hasPreamble) <> (SerializedProgramEntry.tupled, SerializedProgramEntry.unapply)
-
-}
-
 case class UserSubmission(id: Long,
+                          submissionDate: Timestamp,
                           originalName: String,
                           program: String,
                           loc: Int,
@@ -130,6 +91,7 @@ case class UserSubmission(id: Long,
 object UserSubmission {
   def serialize(uS: UserSubmission): SerializedUserSubmission = {
     SerializedUserSubmission(uS.id,
+      uS.submissionDate,
       uS.originalName,
       uS.program,
       uS.loc,
@@ -141,6 +103,7 @@ object UserSubmission {
 
   def deserialize(uS: SerializedUserSubmission): UserSubmission = {
     UserSubmission(uS.id,
+      uS.submissionDate,
       uS.originalName,
       uS.program,
       uS.loc,
@@ -152,6 +115,7 @@ object UserSubmission {
 }
 
 case class SerializedUserSubmission(id: Long,
+                                    submissionDate: Timestamp,
                                     originalName: String,
                                     program: String,
                                     loc: Int,
@@ -160,32 +124,91 @@ case class SerializedUserSubmission(id: Long,
                                     originalVerifier: String,
                                     success: Boolean)
 
-class UserSubmissionTable(tag: Tag) extends Table[SerializedUserSubmission](tag, Some("programs"), "UserSubmissions") {
-  private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 
-  private def originalName = column[String]("originalName")
+object SlickTables {
+  class ProgramEntryTable(tag: Tag) extends Table[SerializedProgramEntry](tag, Some("programs"), "ProgramEntries") {
+    private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 
-  private def program = column[String]("program")
+    private def submissionDate = column[Timestamp]("submissionDate")
 
-  private def loc = column[Int]("loc")
+    private def originalName = column[String]("originalName")
 
-  private def frontend = column[String]("frontend")
+    private def program = column[String]("program")
 
-  private def argsJSON = column[String]("argsJSON")
+    private def loc = column[Int]("loc")
 
-  private def originalVerifier = column[String]("originalVerifier")
+    private def frontend = column[String]("frontend")
 
-  private def success = column[Boolean]("success")
+    private def originalVerifier = column[String]("originalVerifier")
 
-  override def * : ProvenShape[SerializedUserSubmission] = (id,
-    originalName,
-    program,
-    loc,
-    frontend,
-    argsJSON,
-    originalVerifier,
-    success) <> (SerializedUserSubmission.tupled, SerializedUserSubmission.unapply)
+    private def siliconResJSON = column[String]("siliconResJSON")
 
+    private def carbonResJSON = column[String]("carbonResJSON")
+
+    private def argsJSON = column[String]("argsJSON")
+
+    private def siliconPhaseRuntimesJSON = column[String]("siliconPhaseRuntimesJSON")
+
+    private def carbonPhaseRuntimesJSON = column[String]("carbonPhaseRuntimesJSON")
+
+    private def programPrintJSON = column[String]("programPrintJSON")
+
+    private def parseSuccess = column[Boolean]("parseSuccess")
+
+    private def hasPreamble = column[Boolean]("hasPreamble")
+
+    override def * : ProvenShape[SerializedProgramEntry] = (id,
+      submissionDate,
+      originalName,
+      program,
+      loc,
+      frontend,
+      originalVerifier,
+      siliconResJSON,
+      carbonResJSON,
+      argsJSON,
+      siliconPhaseRuntimesJSON,
+      carbonPhaseRuntimesJSON,
+      programPrintJSON,
+      parseSuccess,
+      hasPreamble) <> (SerializedProgramEntry.tupled, SerializedProgramEntry.unapply)
+
+  }
+
+  lazy val programEntryTable = TableQuery[ProgramEntryTable]
+
+  class UserSubmissionTable(tag: Tag) extends Table[SerializedUserSubmission](tag, Some("programs"), "UserSubmissions") {
+    private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+
+    private def submissionDate = column[Timestamp]("submissionDate")
+
+    private def originalName = column[String]("originalName")
+
+    private def program = column[String]("program")
+
+    private def loc = column[Int]("loc")
+
+    private def frontend = column[String]("frontend")
+
+    private def argsJSON = column[String]("argsJSON")
+
+    private def originalVerifier = column[String]("originalVerifier")
+
+    private def success = column[Boolean]("success")
+
+    override def * : ProvenShape[SerializedUserSubmission] = (id,
+      submissionDate,
+      originalName,
+      program,
+      loc,
+      frontend,
+      argsJSON,
+      originalVerifier,
+      success) <> (SerializedUserSubmission.tupled, SerializedUserSubmission.unapply)
+
+  }
+
+  lazy val userSubmissionTable = TableQuery[UserSubmissionTable]
 }
 
 object FeatureExtractor {
