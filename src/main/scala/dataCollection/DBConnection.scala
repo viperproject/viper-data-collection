@@ -1,5 +1,5 @@
 package dataCollection
 import slick.jdbc.MySQLProfile.api._
-object Connection {
+object DBConnection {
   val db = Database.forConfig("mysql")
 }

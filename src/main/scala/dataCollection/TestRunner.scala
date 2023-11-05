@@ -15,8 +15,16 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  findDupTrees()
+  createDDL()
+  //findDupTrees()
   //naginiDups()
+
+  def createDDL(): Unit = {
+    import dataCollection.GenericSlickTable._
+    val tables = Seq(programEntryTable, userSubmissionTable)
+    val ddl= tables.map(_.schema).reduce(_ ++ _)
+    println(ddl.createIfNotExistsStatements.mkString(";\n"))
+  }
 
   def naginiDups(): Unit = {
     val folder = new File(testFolder + "nagini_full/")
