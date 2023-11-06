@@ -23,6 +23,7 @@ case class ProgramEntry(id: Long,
                         args: Seq[String],
                         siliconPhaseRuntimes: Seq[(String, Long)],
                         carbonPhaseRuntimes: Seq[(String, Long)],
+                        siliconBenchmarks: Seq[(String, Long)],
                         programPrint: ProgramPrint,
                         parseSuccess: Boolean,
                         hasPreamble: Boolean)
@@ -42,6 +43,7 @@ object ProgramEntry {
       serialize(pE.args),
       serialize(pE.siliconPhaseRuntimes),
       serialize(pE.carbonPhaseRuntimes),
+      serialize(pE.siliconBenchmarks),
       serialize(pE.programPrint),
       pE.parseSuccess,
       pE.hasPreamble)
@@ -61,6 +63,7 @@ object ProgramEntry {
       deserialize[Seq[String]](pE.argsBlob),
       deserialize[Seq[(String, Long)]](pE.siliconPhaseRuntimesBlob),
       deserialize[Seq[(String, Long)]](pE.carbonPhaseRuntimesBlob),
+      deserialize[Seq[(String, Long)]](pE.siliconBenchmarksBlob),
       deserialize[ProgramPrint](pE.programPrintBlob),
       pE.parseSuccess,
       pE.hasPreamble)
@@ -79,6 +82,7 @@ case class ProgramEntryBlob(id: Long,
                                   argsBlob: Array[Byte],
                                   siliconPhaseRuntimesBlob: Array[Byte],
                                   carbonPhaseRuntimesBlob: Array[Byte],
+                                  siliconBenchmarksBlob: Array[Byte],
                                   programPrintBlob: Array[Byte],
                                   parseSuccess: Boolean,
                                   hasPreamble: Boolean)
@@ -159,6 +163,8 @@ class SlickTables(val profile: MySQLProfile){
 
     private def carbonPhaseRuntimesBlob = column[Array[Byte]]("carbonPhaseRuntimesBlob")
 
+    private def siliconBenchmarksBlob = column[Array[Byte]]("siliconBenchmarksBlob")
+
     private def programPrintBlob = column[Array[Byte]]("programPrintBlob")
 
     private def parseSuccess = column[Boolean]("parseSuccess")
@@ -177,6 +183,7 @@ class SlickTables(val profile: MySQLProfile){
       argsBlob,
       siliconPhaseRuntimesBlob,
       carbonPhaseRuntimesBlob,
+      siliconBenchmarksBlob,
       programPrintBlob,
       parseSuccess,
       hasPreamble) <> (ProgramEntryBlob.tupled, ProgramEntryBlob.unapply)
@@ -219,7 +226,7 @@ class SlickTables(val profile: MySQLProfile){
   lazy val userSubmissionTable = TableQuery[UserSubmissionTable]
 }
 
-object GenericSlickTable extends SlickTables(MySQLProfile)
+object GenericSlickTables extends SlickTables(MySQLProfile)
 
 
 object BinarySerializer {
@@ -231,7 +238,7 @@ object BinarySerializer {
     stream.toByteArray
   }
 
-  def deserialize[T](bytes: Array[Byte]): T = {
+  def deserialize[T >: Null <: AnyRef](bytes: Array[Byte]): T = {
     try {
       val inputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))
       val value = inputStream.readObject.asInstanceOf[T]

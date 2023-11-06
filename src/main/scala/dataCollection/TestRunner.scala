@@ -1,26 +1,39 @@
-import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
+import dataCollection.{DBQueryInterface, Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
-
 import slick.jdbc.MySQLProfile.api._
+
 import java.io.File
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Paths}
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.io.{BufferedSource, Codec}
 import scala.io.Source
+import scala.util.{Failure, Success}
 
 object TestRunner extends App {
   private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/"
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  createDDL()
+  getPrograms()
+  //createDDL()
   //findDupTrees()
   //naginiDups()
 
+  def getPrograms(): Unit = {
+    import dataCollection.ExecContext._
+    val programs = DBQueryInterface.getAllProgramEntries()
+    programs.onComplete {
+      case Success(value) => println(value)
+      case Failure(exception) => println(exception)
+    }
+    Await.result(programs, Duration.Inf)
+  }
   def createDDL(): Unit = {
-    import dataCollection.GenericSlickTable._
+    import dataCollection.GenericSlickTables._
     val tables = Seq(programEntryTable, userSubmissionTable)
     val ddl= tables.map(_.schema).reduce(_ ++ _)
     println(ddl.createIfNotExistsStatements.mkString(";\n"))
