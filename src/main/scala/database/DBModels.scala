@@ -1,12 +1,11 @@
-package dataCollection
+package database
 
-import dataCollection.BinarySerializer.serialize
+import dataCollection.{ProgramPrint, VerifierResult}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import slick.jdbc.MySQLProfile
-import upickle.default.{macroRW, read, write, ReadWriter => RW}
-import viper.silver.parser.{Nodes, PExists, PForPerm, PForall, PNode, PProgram, PQuantifier}
 import slick.jdbc.MySQLProfile.api._
 import slick.lifted.ProvenShape
+import viper.silver.parser._
 
 import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
@@ -51,7 +50,7 @@ object ProgramEntry {
 
   def deBlob(pE: ProgramEntryBlob): ProgramEntry = {
     import BinarySerializer._
-    ProgramEntry(pE.id,
+    database.ProgramEntry(pE.id,
       pE.submissionDate,
       pE.originalName,
       pE.program,

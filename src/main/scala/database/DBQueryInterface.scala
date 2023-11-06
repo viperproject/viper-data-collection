@@ -1,8 +1,7 @@
-package dataCollection
+package database
 
 import java.util.concurrent.Executors
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 object ExecContext {
   implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(8))
@@ -10,8 +9,8 @@ object ExecContext {
 
 object DBQueryInterface {
   private val db = DBConnection.db
-  import GenericSlickTables.profile.api._
   import ExecContext._
+  import GenericSlickTables.profile.api._
 
   def getAllProgramEntries(): Future[Seq[ProgramEntry]] = {
     val progBlobs: Future[Seq[ProgramEntryBlob]] = db.run(GenericSlickTables.programEntryTable.result)

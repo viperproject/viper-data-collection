@@ -1,4 +1,5 @@
-import dataCollection.{DBQueryInterface, Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
+import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
+import database.DBQueryInterface
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
@@ -24,7 +25,7 @@ object TestRunner extends App {
   //naginiDups()
 
   def getPrograms(): Unit = {
-    import dataCollection.ExecContext._
+    import database.ExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()
     programs.onComplete {
       case Success(value) => println(value)
@@ -33,7 +34,7 @@ object TestRunner extends App {
     Await.result(programs, Duration.Inf)
   }
   def createDDL(): Unit = {
-    import dataCollection.GenericSlickTables._
+    import database.GenericSlickTables._
     val tables = Seq(programEntryTable, userSubmissionTable)
     val ddl= tables.map(_.schema).reduce(_ ++ _)
     println(ddl.createIfNotExistsStatements.mkString(";\n"))
