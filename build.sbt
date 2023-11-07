@@ -15,8 +15,8 @@ lazy val root = (project in file("."))
     libraryDependencies += munit % Test,
     libraryDependencies += "com.lihaoyi" %% "upickle" % "1.3.0",
     libraryDependencies += "com.typesafe.slick" %% "slick" % "3.5.0-M4",
-    libraryDependencies += "mysql" % "mysql-connector-java" % "8.0.20",
-    libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.6.4",
+    libraryDependencies += "mysql" % "mysql-connector-java" % "8.0.33",
+    libraryDependencies += "org.slf4j" % "slf4j-nop" % "2.0.5",
   )
 
 // See https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html for instructions on how to publish to Sonatype.

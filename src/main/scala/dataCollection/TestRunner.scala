@@ -1,5 +1,5 @@
 import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
-import database.DBQueryInterface
+import database.{DBQueryInterface, GenericSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
@@ -14,13 +14,15 @@ import scala.io.{BufferedSource, Codec}
 import scala.io.Source
 import scala.util.{Failure, Success}
 
+//number of methods, maybe store larger one
+
 object TestRunner extends App {
   private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/"
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  getPrograms()
-  //createDDL()
+  //getPrograms()
+  println(GenericSlickTables.getDDL)
   //findDupTrees()
   //naginiDups()
 
@@ -32,12 +34,6 @@ object TestRunner extends App {
       case Failure(exception) => println(exception)
     }
     Await.result(programs, Duration.Inf)
-  }
-  def createDDL(): Unit = {
-    import database.GenericSlickTables._
-    val tables = Seq(programEntryTable, userSubmissionTable)
-    val ddl= tables.map(_.schema).reduce(_ ++ _)
-    println(ddl.createIfNotExistsStatements.mkString(";\n"))
   }
 
   def naginiDups(): Unit = {
@@ -55,7 +51,7 @@ object TestRunner extends App {
         if (pprint1 != pprint2) {
           val matchres1 = pprint1.matchTrees(pprint2)
           val matchres2 = pprint2.matchTrees(pprint1)
-          if (matchres1.funAndMethMatchPercentage >= 90 && matchres2.funAndMethMatchPercentage >= 90){
+          if (matchres1.funAndMethMatchPercentage >= 80 && matchres2.funAndMethMatchPercentage >= 80){
               println(matchres1)
               println(s"MATCH FOUND: ${name1}, ${name2}")
               dups = dups.union(Set(name1, name2))

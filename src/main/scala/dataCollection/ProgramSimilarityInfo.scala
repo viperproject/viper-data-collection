@@ -12,10 +12,12 @@ import scala.io.{BufferedSource, Codec, Source}
 import scala.io.Source.fromFile
 import scala.language.postfixOps
 
-//abstract functions, methods, ditch domains
-//test difference between manually removing the preambles and just only looking at methods
-//basic database implementation
-//symbexlogger for timing
+
+//processing pipeline
+//similarity evaluation
+//history of silicon versions and runtimes
+//programid, siliconRef, results, also for carbon
+
 
 /** Represents the result of the [[ProgramInfoAnalyser]] for later comparison
  *

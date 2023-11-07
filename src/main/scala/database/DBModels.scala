@@ -3,26 +3,21 @@ package database
 import dataCollection.{ProgramPrint, VerifierResult}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import slick.jdbc.MySQLProfile
-import slick.jdbc.MySQLProfile.api._
 import slick.lifted.ProvenShape
 import viper.silver.parser._
+import viper.silver.verifier.AbstractError
 
 import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
 
-case class ProgramEntry(id: Long,
+case class ProgramEntry(programEntryId: Long,
                         submissionDate: Timestamp,
                         originalName: String,
                         program: String,
                         loc: Int,
                         frontend: String,
                         originalVerifier: String,
-                        siliconRes: Option[VerifierResult],
-                        carbonRes: Option[VerifierResult],
                         args: Seq[String],
-                        siliconPhaseRuntimes: Seq[(String, Long)],
-                        carbonPhaseRuntimes: Seq[(String, Long)],
-                        siliconBenchmarks: Seq[(String, Long)],
                         programPrint: ProgramPrint,
                         parseSuccess: Boolean,
                         hasPreamble: Boolean)
@@ -30,19 +25,14 @@ case class ProgramEntry(id: Long,
 object ProgramEntry {
   def toBlob(pE: ProgramEntry): ProgramEntryBlob = {
     import BinarySerializer._
-    ProgramEntryBlob(pE.id,
+    ProgramEntryBlob(pE.programEntryId,
       pE.submissionDate,
       pE.originalName,
       pE.program,
       pE.loc,
       pE.frontend,
       pE.originalVerifier,
-      serialize(pE.siliconRes),
-      serialize(pE.carbonRes),
       serialize(pE.args),
-      serialize(pE.siliconPhaseRuntimes),
-      serialize(pE.carbonPhaseRuntimes),
-      serialize(pE.siliconBenchmarks),
       serialize(pE.programPrint),
       pE.parseSuccess,
       pE.hasPreamble)
@@ -50,44 +40,34 @@ object ProgramEntry {
 
   def deBlob(pE: ProgramEntryBlob): ProgramEntry = {
     import BinarySerializer._
-    database.ProgramEntry(pE.id,
+    database.ProgramEntry(pE.programEntryId,
       pE.submissionDate,
       pE.originalName,
       pE.program,
       pE.loc,
       pE.frontend,
       pE.originalVerifier,
-      deserialize[Option[VerifierResult]](pE.siliconResBlob),
-      deserialize[Option[VerifierResult]](pE.carbonResBlob),
       deserialize[Seq[String]](pE.argsBlob),
-      deserialize[Seq[(String, Long)]](pE.siliconPhaseRuntimesBlob),
-      deserialize[Seq[(String, Long)]](pE.carbonPhaseRuntimesBlob),
-      deserialize[Seq[(String, Long)]](pE.siliconBenchmarksBlob),
       deserialize[ProgramPrint](pE.programPrintBlob),
       pE.parseSuccess,
       pE.hasPreamble)
   }
 }
 
-case class ProgramEntryBlob(id: Long,
-                                  submissionDate: Timestamp,
-                                  originalName: String,
-                                  program: String,
-                                  loc: Int,
-                                  frontend: String,
-                                  originalVerifier: String,
-                                  siliconResBlob: Array[Byte],
-                                  carbonResBlob: Array[Byte],
-                                  argsBlob: Array[Byte],
-                                  siliconPhaseRuntimesBlob: Array[Byte],
-                                  carbonPhaseRuntimesBlob: Array[Byte],
-                                  siliconBenchmarksBlob: Array[Byte],
-                                  programPrintBlob: Array[Byte],
-                                  parseSuccess: Boolean,
-                                  hasPreamble: Boolean)
+case class ProgramEntryBlob(programEntryId: Long,
+                            submissionDate: Timestamp,
+                            originalName: String,
+                            program: String,
+                            loc: Int,
+                            frontend: String,
+                            originalVerifier: String,
+                            argsBlob: Array[Byte],
+                            programPrintBlob: Array[Byte],
+                            parseSuccess: Boolean,
+                            hasPreamble: Boolean)
 
 
-case class UserSubmission(id: Long,
+case class UserSubmission(submissionId: Long,
                           submissionDate: Timestamp,
                           originalName: String,
                           program: String,
@@ -100,7 +80,7 @@ case class UserSubmission(id: Long,
 object UserSubmission {
   def toBlob(uS: UserSubmission): UserSubmissionBlob = {
     import BinarySerializer._
-    UserSubmissionBlob(uS.id,
+    UserSubmissionBlob(uS.submissionId,
       uS.submissionDate,
       uS.originalName,
       uS.program,
@@ -113,7 +93,7 @@ object UserSubmission {
 
   def deBlob(uS: UserSubmissionBlob): UserSubmission = {
     import BinarySerializer._
-    UserSubmission(uS.id,
+    UserSubmission(uS.submissionId,
       uS.submissionDate,
       uS.originalName,
       uS.program,
@@ -125,20 +105,118 @@ object UserSubmission {
   }
 }
 
-case class UserSubmissionBlob(id: Long,
-                                    submissionDate: Timestamp,
-                                    originalName: String,
-                                    program: String,
-                                    loc: Int,
-                                    frontend: String,
-                                    argsBlob: Array[Byte],
-                                    originalVerifier: String,
-                                    success: Boolean)
+case class UserSubmissionBlob(submissionId: Long,
+                              submissionDate: Timestamp,
+                              originalName: String,
+                              program: String,
+                              loc: Int,
+                              frontend: String,
+                              argsBlob: Array[Byte],
+                              originalVerifier: String,
+                              success: Boolean)
 
 
-class SlickTables(val profile: MySQLProfile){
+case class SiliconResult(silResId: Long,
+                         siliconHash: String,
+                         programEntryId: Long,
+                         success: Boolean,
+                         runtime: Long,
+                         errors: Seq[AbstractError],
+                         phaseRuntimes: Seq[(String, Long)],
+                         benchmarkResults: Seq[(String, Long)])
+
+object SiliconResult {
+
+  import BinarySerializer._
+
+  def toBlob(sr: SiliconResult): SiliconResultBlob = {
+
+    SiliconResultBlob(
+      sr.silResId,
+      sr.siliconHash,
+      sr.programEntryId,
+      sr.success,
+      sr.runtime,
+      serialize(sr.errors),
+      serialize(sr.phaseRuntimes),
+      serialize((sr.benchmarkResults))
+    )
+  }
+
+  def deBlob(sr: SiliconResultBlob): SiliconResult = {
+    SiliconResult(
+      sr.silResId,
+      sr.siliconHash,
+      sr.programEntryId,
+      sr.success,
+      sr.runtime,
+      deserialize[Seq[AbstractError]](sr.errors),
+      deserialize[Seq[(String, Long)]](sr.phaseRuntimesBlob),
+      deserialize[Seq[(String, Long)]](sr.benchmarkResultsBlob)
+    )
+  }
+}
+
+case class SiliconResultBlob(silResId: Long,
+                             siliconHash: String,
+                             programEntryId: Long,
+                             success: Boolean,
+                             runtime: Long,
+                             errors: Array[Byte],
+                             phaseRuntimesBlob: Array[Byte],
+                             benchmarkResultsBlob: Array[Byte])
+
+
+case class CarbonResult(carbResId: Long,
+                        carbonHash: String,
+                        programEntryId: Long,
+                        success: Boolean,
+                        runtime: Long,
+                        errors: Seq[AbstractError],
+                        phaseRuntimes: Seq[(String, Long)])
+
+object CarbonResult {
+
+  import BinarySerializer._
+
+  def toBlob(sr: CarbonResult): CarbonResultBlob = {
+
+    CarbonResultBlob(
+      sr.carbResId,
+      sr.carbonHash,
+      sr.programEntryId,
+      sr.success,
+      sr.runtime,
+      serialize(sr.errors),
+      serialize(sr.phaseRuntimes)
+    )
+  }
+
+  def deBlob(sr: CarbonResultBlob): CarbonResult = {
+    CarbonResult(
+      sr.carbonResId,
+      sr.carbonHash,
+      sr.programEntryId,
+      sr.success,
+      sr.runtime,
+      deserialize[Seq[AbstractError]](sr.errors),
+      deserialize[Seq[(String, Long)]](sr.phaseRuntimesBlob)
+    )
+  }
+}
+
+case class CarbonResultBlob(carbonResId: Long,
+                            carbonHash: String,
+                            programEntryId: Long,
+                            success: Boolean,
+                            runtime: Long,
+                            errors: Array[Byte],
+                            phaseRuntimesBlob: Array[Byte])
+
+class SlickTables(val profile: MySQLProfile) {
+  import profile.api._
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntryBlob](tag, Some("programs"), "ProgramEntries") {
-    private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def programEntryId = column[Long]("programEntryId", O.PrimaryKey, O.AutoInc)
 
     private def submissionDate = column[Timestamp]("submissionDate")
 
@@ -152,17 +230,7 @@ class SlickTables(val profile: MySQLProfile){
 
     private def originalVerifier = column[String]("originalVerifier")
 
-    private def siliconResBlob = column[Array[Byte]]("siliconResBlob")
-
-    private def carbonResBlob = column[Array[Byte]]("carbonResBlob")
-
     private def argsBlob = column[Array[Byte]]("argsBlob")
-
-    private def siliconPhaseRuntimesBlob = column[Array[Byte]]("siliconPhaseRuntimesBlob")
-
-    private def carbonPhaseRuntimesBlob = column[Array[Byte]]("carbonPhaseRuntimesBlob")
-
-    private def siliconBenchmarksBlob = column[Array[Byte]]("siliconBenchmarksBlob")
 
     private def programPrintBlob = column[Array[Byte]]("programPrintBlob")
 
@@ -170,19 +238,14 @@ class SlickTables(val profile: MySQLProfile){
 
     private def hasPreamble = column[Boolean]("hasPreamble")
 
-    override def * : ProvenShape[ProgramEntryBlob] = (id,
+    override def * : ProvenShape[ProgramEntryBlob] = (programEntryId,
       submissionDate,
       originalName,
       program,
       loc,
       frontend,
       originalVerifier,
-      siliconResBlob,
-      carbonResBlob,
       argsBlob,
-      siliconPhaseRuntimesBlob,
-      carbonPhaseRuntimesBlob,
-      siliconBenchmarksBlob,
       programPrintBlob,
       parseSuccess,
       hasPreamble) <> (ProgramEntryBlob.tupled, ProgramEntryBlob.unapply)
@@ -192,7 +255,7 @@ class SlickTables(val profile: MySQLProfile){
   lazy val programEntryTable = TableQuery[ProgramEntryTable]
 
   class UserSubmissionTable(tag: Tag) extends Table[UserSubmissionBlob](tag, Some("programs"), "UserSubmissions") {
-    private def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def submissionId = column[Long]("submissionId", O.PrimaryKey, O.AutoInc)
 
     private def submissionDate = column[Timestamp]("submissionDate")
 
@@ -210,7 +273,7 @@ class SlickTables(val profile: MySQLProfile){
 
     private def success = column[Boolean]("success")
 
-    override def * : ProvenShape[UserSubmissionBlob] = (id,
+    override def * : ProvenShape[UserSubmissionBlob] = (submissionId,
       submissionDate,
       originalName,
       program,
@@ -223,6 +286,76 @@ class SlickTables(val profile: MySQLProfile){
   }
 
   lazy val userSubmissionTable = TableQuery[UserSubmissionTable]
+
+  class SiliconResultTable(tag: Tag) extends Table[SiliconResultBlob](tag, Some("programs"), "SiliconResults") {
+    def silResId = column[Long]("silResId", O.PrimaryKey, O.AutoInc)
+
+    private def siliconHash = column[String]("siliconHash")
+
+    private def programEntryId = column[Long]("programEntryId")
+
+    def programEntry = foreignKey("silPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+
+    private def success = column[Boolean]("success")
+
+    private def runtime = column[Long]("runtime")
+
+    private def errors = column[Array[Byte]]("errors")
+
+    private def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
+
+    private def benchmarkResultsBlob = column[Array[Byte]]("benchmarkResultsBlob")
+
+    override def * : ProvenShape[SiliconResultBlob] = (silResId,
+      siliconHash,
+      programEntryId,
+      success,
+      runtime,
+      errors,
+      phaseRuntimesBlob,
+      benchmarkResultsBlob
+    ) <> (SiliconResultBlob.tupled, SiliconResultBlob.unapply)
+
+  }
+
+  lazy val siliconResultTable = TableQuery[SiliconResultTable]
+
+
+  class CarbonResultTable(tag: Tag) extends Table[CarbonResultBlob](tag, Some("programs"), "CarbonResults") {
+    def carbResId = column[Long]("carbResId", O.PrimaryKey, O.AutoInc)
+
+    private def carbonHash = column[String]("carbonHash")
+
+    private def programEntryId = column[Long]("programEntryId")
+
+    def programEntry = foreignKey("carbPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+
+    private def success = column[Boolean]("success")
+
+    private def runtime = column[Long]("runtime")
+
+    private def errors = column[Array[Byte]]("errors")
+
+    private def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
+
+    override def * : ProvenShape[CarbonResultBlob] = (carbResId,
+      carbonHash,
+      programEntryId,
+      success,
+      runtime,
+      errors,
+      phaseRuntimesBlob
+    ) <> (CarbonResultBlob.tupled, CarbonResultBlob.unapply)
+
+  }
+
+  lazy val carbonResultTable = TableQuery[CarbonResultTable]
+
+
+  def getDDL: String = {
+    val schema = programEntryTable.schema ++ userSubmissionTable.schema ++ siliconResultTable.schema ++ carbonResultTable.schema
+    schema.createIfNotExists.statements.mkString(";\n")
+  }
 }
 
 object GenericSlickTables extends SlickTables(MySQLProfile)
@@ -255,6 +388,7 @@ object BinarySerializer {
     }
   }
 }
+
 object FeatureExtractor {
 
   def pnodeHasQP(pn: PNode): Boolean = pn match {
