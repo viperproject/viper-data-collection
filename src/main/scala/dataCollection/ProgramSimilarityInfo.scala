@@ -129,7 +129,7 @@ object ProgramInfoAnalyser {
   private def getSilVerifierResults(args: Array[String]): VerifierResult = {
     val runner = new CollectionSilFrontend
     runner.runMain(args)
-    println(runner.getRuntimes)
+    println(runner.getPhaseRuntimes ++ runner.getBenchmarkResults)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 

@@ -1,8 +1,9 @@
 package dataCollection
 
-import viper.silicon.{Silicon, SiliconFrontend}
+import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.logger.{SilentLogger, ViperLogger}
 import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
+import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
 import scala.collection.immutable.ArraySeq
 
@@ -12,6 +13,7 @@ class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, Sil
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
   private var benchmarkAnaResults: Seq[(String, Long)] = Seq()
+
   def runMain(args: Array[String]): Unit = {
     try {
       execute(ArraySeq.unsafeWrapArray(args))
@@ -42,19 +44,32 @@ class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, Sil
   override def createVerifier(fullCmd: String) = {
     siliconInstance = new Silicon(reporter, Seq("args" -> fullCmd)) {
       private val bmrReporter = BenchmarkingResultReporter()
+
       override def reporter: BenchmarkingResultReporter = bmrReporter
     }
 
     siliconInstance
   }
 
-  def getRuntimes: Seq[(String, Long)] = phaseRuntimes ++ benchmarkRuntimes
+  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
+
+  def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
+
+  def hasSucceeded: Boolean = getVerificationResult match {
+    case Some(res) => res match {
+      case SilSuccess => true
+      case _ => false
+    }
+    case _ => false
+  }
+
+  def siliconHash: String = BuildInfo.gitRevision
 
 
 }
 
 
-/** Reporter that stores the runtimes of received [[BenchmarkingPhase]]s*/
+/** Reporter that stores the runtimes of received [[BenchmarkingPhase]]s */
 case class BenchmarkingResultReporter(name: String = "benchmarking_result_reporter") extends Reporter {
   private val _initial_time = System.currentTimeMillis()
   private var _previous_phase: Long = _initial_time

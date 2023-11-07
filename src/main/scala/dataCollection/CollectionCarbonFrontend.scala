@@ -3,6 +3,7 @@ package dataCollection
 import viper.carbon.CarbonFrontend
 import viper.silver.logger.{SilentLogger, ViperLogger}
 import viper.silver.reporter.{NoopReporter, StdIOReporter}
+import viper.silver.verifier.{Success => CarbSuccess}
 
 import scala.concurrent.{Await, Future, TimeoutException}
 
@@ -28,5 +29,16 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, logger = Sil
   }
 
   def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
+
+  def hasSucceeded: Boolean = getVerificationResult match {
+    case Some(res) => res match {
+      case CarbSuccess => true
+      case _ => false
+    }
+    case _ => false
+  }
+
+  //TODO: Find some way to get carbon git commit hash
+  def carbonHash: String = "default"
 
 }
