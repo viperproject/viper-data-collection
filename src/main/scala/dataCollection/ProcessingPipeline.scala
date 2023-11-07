@@ -1,0 +1,5 @@
+package dataCollection
+
+object ProcessingPipeline {
+
+}

@@ -218,25 +218,25 @@ class SlickTables(val profile: MySQLProfile) {
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntryBlob](tag, Some("programs"), "ProgramEntries") {
     def programEntryId = column[Long]("programEntryId", O.PrimaryKey, O.AutoInc)
 
-    private def submissionDate = column[Timestamp]("submissionDate")
+    def submissionDate = column[Timestamp]("submissionDate")
 
-    private def originalName = column[String]("originalName")
+    def originalName = column[String]("originalName")
 
-    private def program = column[String]("program")
+    def program = column[String]("program")
 
-    private def loc = column[Int]("loc")
+    def loc = column[Int]("loc")
 
-    private def frontend = column[String]("frontend")
+    def frontend = column[String]("frontend")
 
-    private def originalVerifier = column[String]("originalVerifier")
+    def originalVerifier = column[String]("originalVerifier")
 
-    private def argsBlob = column[Array[Byte]]("argsBlob")
+    def argsBlob = column[Array[Byte]]("argsBlob")
 
-    private def programPrintBlob = column[Array[Byte]]("programPrintBlob")
+    def programPrintBlob = column[Array[Byte]]("programPrintBlob")
 
-    private def parseSuccess = column[Boolean]("parseSuccess")
+    def parseSuccess = column[Boolean]("parseSuccess")
 
-    private def hasPreamble = column[Boolean]("hasPreamble")
+    def hasPreamble = column[Boolean]("hasPreamble")
 
     override def * : ProvenShape[ProgramEntryBlob] = (programEntryId,
       submissionDate,
@@ -257,21 +257,21 @@ class SlickTables(val profile: MySQLProfile) {
   class UserSubmissionTable(tag: Tag) extends Table[UserSubmissionBlob](tag, Some("programs"), "UserSubmissions") {
     def submissionId = column[Long]("submissionId", O.PrimaryKey, O.AutoInc)
 
-    private def submissionDate = column[Timestamp]("submissionDate")
+    def submissionDate = column[Timestamp]("submissionDate")
 
-    private def originalName = column[String]("originalName")
+    def originalName = column[String]("originalName")
 
-    private def program = column[String]("program")
+    def program = column[String]("program")
 
-    private def loc = column[Int]("loc")
+    def loc = column[Int]("loc")
 
-    private def frontend = column[String]("frontend")
+    def frontend = column[String]("frontend")
 
-    private def argsBlob = column[Array[Byte]]("argsBlob")
+    def argsBlob = column[Array[Byte]]("argsBlob")
 
-    private def originalVerifier = column[String]("originalVerifier")
+    def originalVerifier = column[String]("originalVerifier")
 
-    private def success = column[Boolean]("success")
+    def success = column[Boolean]("success")
 
     override def * : ProvenShape[UserSubmissionBlob] = (submissionId,
       submissionDate,
@@ -290,21 +290,21 @@ class SlickTables(val profile: MySQLProfile) {
   class SiliconResultTable(tag: Tag) extends Table[SiliconResultBlob](tag, Some("programs"), "SiliconResults") {
     def silResId = column[Long]("silResId", O.PrimaryKey, O.AutoInc)
 
-    private def siliconHash = column[String]("siliconHash")
+    def siliconHash = column[String]("siliconHash")
 
-    private def programEntryId = column[Long]("programEntryId")
+    def programEntryId = column[Long]("programEntryId")
 
     def programEntry = foreignKey("silPE_FK", programEntryId, programEntryTable)(_.programEntryId)
 
-    private def success = column[Boolean]("success")
+    def success = column[Boolean]("success")
 
-    private def runtime = column[Long]("runtime")
+    def runtime = column[Long]("runtime")
 
-    private def errors = column[Array[Byte]]("errors")
+    def errors = column[Array[Byte]]("errors")
 
-    private def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
+    def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
 
-    private def benchmarkResultsBlob = column[Array[Byte]]("benchmarkResultsBlob")
+    def benchmarkResultsBlob = column[Array[Byte]]("benchmarkResultsBlob")
 
     override def * : ProvenShape[SiliconResultBlob] = (silResId,
       siliconHash,
@@ -324,19 +324,19 @@ class SlickTables(val profile: MySQLProfile) {
   class CarbonResultTable(tag: Tag) extends Table[CarbonResultBlob](tag, Some("programs"), "CarbonResults") {
     def carbResId = column[Long]("carbResId", O.PrimaryKey, O.AutoInc)
 
-    private def carbonHash = column[String]("carbonHash")
+    def carbonHash = column[String]("carbonHash")
 
-    private def programEntryId = column[Long]("programEntryId")
+    def programEntryId = column[Long]("programEntryId")
 
     def programEntry = foreignKey("carbPE_FK", programEntryId, programEntryTable)(_.programEntryId)
 
-    private def success = column[Boolean]("success")
+    def success = column[Boolean]("success")
 
-    private def runtime = column[Long]("runtime")
+    def runtime = column[Long]("runtime")
 
-    private def errors = column[Array[Byte]]("errors")
+    def errors = column[Array[Byte]]("errors")
 
-    private def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
+    def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
 
     override def * : ProvenShape[CarbonResultBlob] = (carbResId,
       carbonHash,

@@ -30,10 +30,28 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
-  def insertUserSubmission(submission: UserSubmission): Unit = {
+  def insertUserSubmission(submission: UserSubmission): Future[Int] = {
     val blob = UserSubmission.toBlob(submission)
     val insertQuery = GenericSlickTables.userSubmissionTable += blob
     db.run(insertQuery)
+  }
+
+  def insertSiliconResult(result: SiliconResult): Future[Int] = {
+    val blob = SiliconResult.toBlob(result)
+    val insertQuery = GenericSlickTables.siliconResultTable += blob
+    db.run(insertQuery)
+  }
+
+  def insertCarbonResult(result: CarbonResult): Future[Int] = {
+    val blob = CarbonResult.toBlob(result)
+    val insertQuery = GenericSlickTables.carbonResultTable += blob
+    db.run(insertQuery)
+  }
+
+  def getOldestUserSubmission(): Future[Option[UserSubmission]] = {
+    val subBlob: Future[Option[UserSubmissionBlob]] = db.run(GenericSlickTables.userSubmissionTable.sortBy(_.submissionDate.asc).result.headOption)
+    val submission: Future[Option[UserSubmission]] = subBlob.map(s => s map (u => UserSubmission.deBlob(u)))
+    submission
   }
 
 }
