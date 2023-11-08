@@ -45,7 +45,7 @@ object ProcessingPipeline {
     Await.result(foundMatch, Duration.Inf)
   }
 
-  def doEntriesMatch(pe1: ProgramEntry, sr:SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext) : Future[Boolean] = {
+  private def doEntriesMatch(pe1: ProgramEntry, sr:SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext) : Future[Boolean] = {
     if (pe1.isSimilarTo(pe2)) {
       val otherSilRes = DBQueryInterface.getLatestSilResForEntry(pe2.programEntryId)
       val otherCarbRes = DBQueryInterface.getLatestCarbResForEntry(pe2.programEntryId)
@@ -68,7 +68,7 @@ object ProcessingPipeline {
 
 
 
-  def getSiliconResults(pe: ProgramEntry): SiliconResult = {
+  def generateSiliconResults(pe: ProgramEntry): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     var args: Array[String] = Array(tmpFile)
@@ -95,7 +95,7 @@ object ProcessingPipeline {
     )
   }
 
-  def getCarbonResults(pe: ProgramEntry): CarbonResult = {
+  def generateCarbonResults(pe: ProgramEntry): CarbonResult = {
     val runner = new CollectionCarbonFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     var args: Array[String] = Array(tmpFile)
@@ -120,7 +120,7 @@ object ProcessingPipeline {
     )
   }
 
-  def createTempProgramFile(id: Long, program: String): String = {
+  private def createTempProgramFile(id: Long, program: String): String = {
     val fName = s"./tmp/${id}.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
     fw.write(program);
@@ -128,7 +128,7 @@ object ProcessingPipeline {
     fName
   }
 
-  def removeTempProgramFile(fName: String): Unit = {
+  private def removeTempProgramFile(fName: String): Unit = {
     val f = new File(fName)
     f.delete()
   }
