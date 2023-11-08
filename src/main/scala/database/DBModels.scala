@@ -20,7 +20,23 @@ case class ProgramEntry(programEntryId: Long,
                         args: Seq[String],
                         programPrint: ProgramPrint,
                         parseSuccess: Boolean,
-                        hasPreamble: Boolean)
+                        hasPreamble: Boolean) {
+
+  def isSimilarTo(other: ProgramEntry): Boolean = {
+    lazy val similarLength = this.loc <= 1.2 * other.loc && this.loc >= 0.8 * other.loc
+    lazy val sameFrontend = this.frontend == other.frontend
+    lazy val sameVerifier = this.originalVerifier == other.originalVerifier
+    lazy val similarArgs = this.args.toSet.intersect(other.args.toSet).size >= 0.8 * this.args.size
+    lazy val thisMatchResult = this.programPrint.matchTrees(other.programPrint)
+    lazy val otherMatchResult = other.programPrint.matchTrees(this.programPrint)
+    lazy val similarTrees = if (this.frontend == "Silicon" || this.frontend == "Carbon") {
+      thisMatchResult.totalPercentage >= 85 && otherMatchResult.totalPercentage >= 85
+    } else {
+      thisMatchResult.funAndMethMatchPercentage >= 85 && otherMatchResult.funAndMethMatchPercentage >= 85
+    }
+    similarLength && sameFrontend && sameVerifier && similarArgs && similarTrees
+  }
+}
 
 object ProgramEntry {
   def toBlob(pE: ProgramEntry): ProgramEntryBlob = {
@@ -117,13 +133,26 @@ case class UserSubmissionBlob(submissionId: Long,
 
 
 case class SiliconResult(silResId: Long,
+                         creationDate: Timestamp,
                          siliconHash: String,
                          programEntryId: Long,
                          success: Boolean,
                          runtime: Long,
                          errors: Seq[AbstractError],
                          phaseRuntimes: Seq[(String, Long)],
-                         benchmarkResults: Seq[(String, Long)])
+                         benchmarkResults: Seq[(String, Long)]) {
+  def isSimilarTo(other: SiliconResult, timeEps: Double): Boolean = {
+    lazy val sameRes: Boolean = if (this.success) {
+      other.success
+    } else {
+      val errorIds = Set(this.errors map (_.fullId))
+      val otherErrorIds = Set(other.errors map (_.fullId))
+      !other.success && errorIds == otherErrorIds
+    }
+    lazy val similarTime = (this.runtime <= other.runtime * timeEps && this.runtime >= other.runtime / timeEps)
+    similarTime && sameRes
+  }
+}
 
 object SiliconResult {
 
@@ -133,6 +162,7 @@ object SiliconResult {
 
     SiliconResultBlob(
       sr.silResId,
+      sr.creationDate,
       sr.siliconHash,
       sr.programEntryId,
       sr.success,
@@ -146,6 +176,7 @@ object SiliconResult {
   def deBlob(sr: SiliconResultBlob): SiliconResult = {
     SiliconResult(
       sr.silResId,
+      sr.creationDate,
       sr.siliconHash,
       sr.programEntryId,
       sr.success,
@@ -158,6 +189,7 @@ object SiliconResult {
 }
 
 case class SiliconResultBlob(silResId: Long,
+                             creationDate: Timestamp,
                              siliconHash: String,
                              programEntryId: Long,
                              success: Boolean,
@@ -168,12 +200,25 @@ case class SiliconResultBlob(silResId: Long,
 
 
 case class CarbonResult(carbResId: Long,
+                        creationDate: Timestamp,
                         carbonHash: String,
                         programEntryId: Long,
                         success: Boolean,
                         runtime: Long,
                         errors: Seq[AbstractError],
-                        phaseRuntimes: Seq[(String, Long)])
+                        phaseRuntimes: Seq[(String, Long)]) {
+  def isSimilarTo(other: CarbonResult, timeEps: Double): Boolean = {
+    lazy val sameRes: Boolean = if (this.success) {
+      other.success
+    } else {
+      val errorIds = Set(this.errors map (_.fullId))
+      val otherErrorIds = Set(other.errors map (_.fullId))
+      !other.success && errorIds == otherErrorIds
+    }
+    lazy val similarTime = (this.runtime <= other.runtime * timeEps && this.runtime >= other.runtime / timeEps)
+    similarTime && sameRes
+  }
+}
 
 object CarbonResult {
 
@@ -183,6 +228,7 @@ object CarbonResult {
 
     CarbonResultBlob(
       sr.carbResId,
+      sr.creationDate,
       sr.carbonHash,
       sr.programEntryId,
       sr.success,
@@ -195,6 +241,7 @@ object CarbonResult {
   def deBlob(sr: CarbonResultBlob): CarbonResult = {
     CarbonResult(
       sr.carbonResId,
+      sr.creationDate,
       sr.carbonHash,
       sr.programEntryId,
       sr.success,
@@ -206,6 +253,7 @@ object CarbonResult {
 }
 
 case class CarbonResultBlob(carbonResId: Long,
+                            creationDate: Timestamp,
                             carbonHash: String,
                             programEntryId: Long,
                             success: Boolean,
@@ -290,6 +338,8 @@ class SlickTables(val profile: MySQLProfile) {
   class SiliconResultTable(tag: Tag) extends Table[SiliconResultBlob](tag, Some("programs"), "SiliconResults") {
     def silResId = column[Long]("silResId", O.PrimaryKey, O.AutoInc)
 
+    def creationDate = column[Timestamp]("creationDate")
+
     def siliconHash = column[String]("siliconHash")
 
     def programEntryId = column[Long]("programEntryId")
@@ -307,6 +357,7 @@ class SlickTables(val profile: MySQLProfile) {
     def benchmarkResultsBlob = column[Array[Byte]]("benchmarkResultsBlob")
 
     override def * : ProvenShape[SiliconResultBlob] = (silResId,
+      creationDate,
       siliconHash,
       programEntryId,
       success,
@@ -324,6 +375,8 @@ class SlickTables(val profile: MySQLProfile) {
   class CarbonResultTable(tag: Tag) extends Table[CarbonResultBlob](tag, Some("programs"), "CarbonResults") {
     def carbResId = column[Long]("carbResId", O.PrimaryKey, O.AutoInc)
 
+    def creationDate = column[Timestamp]("creationDate")
+
     def carbonHash = column[String]("carbonHash")
 
     def programEntryId = column[Long]("programEntryId")
@@ -339,6 +392,7 @@ class SlickTables(val profile: MySQLProfile) {
     def phaseRuntimesBlob = column[Array[Byte]]("phaseRuntimesBlob")
 
     override def * : ProvenShape[CarbonResultBlob] = (carbResId,
+      creationDate,
       carbonHash,
       programEntryId,
       success,
@@ -358,7 +412,7 @@ class SlickTables(val profile: MySQLProfile) {
   }
 }
 
-object GenericSlickTables extends SlickTables(MySQLProfile)
+object MySQLSlickTables extends SlickTables(MySQLProfile)
 
 
 object BinarySerializer {

@@ -9,49 +9,103 @@ object ExecContext {
 
 object DBQueryInterface {
   private val db = DBConnection.db
+
   import ExecContext._
-  import GenericSlickTables.profile.api._
+  import MySQLSlickTables.profile.api._
 
   def getAllProgramEntries(): Future[Seq[ProgramEntry]] = {
-    val progBlobs: Future[Seq[ProgramEntryBlob]] = db.run(GenericSlickTables.programEntryTable.result)
-    val programEntries: Future[Seq[ProgramEntry]] = progBlobs.map(s => s map (p => ProgramEntry.deBlob(p)))
+    val progBlobs: Future[Seq[ProgramEntryBlob]] = db.run(MySQLSlickTables.programEntryTable.result)
+    val programEntries: Future[Seq[ProgramEntry]] = deBlobPE(progBlobs)
+    programEntries
+  }
+
+  def getPotentialMatchingEntries(pe: ProgramEntry): Future[Seq[ProgramEntry]] = {
+    val query = MySQLSlickTables.programEntryTable
+      .filter(_.loc >= (pe.loc * 0.8).toInt)
+      .filter(_.loc <= (pe.loc * 1.2).toInt)
+      .filter(_.originalVerifier === pe.originalVerifier)
+      .filter(_.frontend === pe.frontend)
+      .filter(_.parseSuccess === pe.parseSuccess)
+      .result
+    val progBlobs: Future[Seq[ProgramEntryBlob]] = db.run(query)
+    val programEntries = deBlobPE(progBlobs)
     programEntries
   }
 
   def getAllUserSubmissions(): Future[Seq[UserSubmission]] = {
-    val subBlobs: Future[Seq[UserSubmissionBlob]] = db.run(GenericSlickTables.userSubmissionTable.result)
-    val userSubmissions: Future[Seq[UserSubmission]] = subBlobs.map(s => s map (u => UserSubmission.deBlob(u)))
+    val subBlobs: Future[Seq[UserSubmissionBlob]] = db.run(MySQLSlickTables.userSubmissionTable.result)
+    val userSubmissions: Future[Seq[UserSubmission]] = deBlobUS(subBlobs)
     userSubmissions
   }
 
   def insertProgramEntry(entry: ProgramEntry): Future[Int] = {
     val blob = ProgramEntry.toBlob(entry)
-    val insertQuery = GenericSlickTables.programEntryTable += blob
+    val insertQuery = MySQLSlickTables.programEntryTable += blob
     db.run(insertQuery)
   }
 
   def insertUserSubmission(submission: UserSubmission): Future[Int] = {
     val blob = UserSubmission.toBlob(submission)
-    val insertQuery = GenericSlickTables.userSubmissionTable += blob
+    val insertQuery = MySQLSlickTables.userSubmissionTable += blob
     db.run(insertQuery)
   }
 
   def insertSiliconResult(result: SiliconResult): Future[Int] = {
     val blob = SiliconResult.toBlob(result)
-    val insertQuery = GenericSlickTables.siliconResultTable += blob
+    val insertQuery = MySQLSlickTables.siliconResultTable += blob
     db.run(insertQuery)
   }
 
   def insertCarbonResult(result: CarbonResult): Future[Int] = {
     val blob = CarbonResult.toBlob(result)
-    val insertQuery = GenericSlickTables.carbonResultTable += blob
+    val insertQuery = MySQLSlickTables.carbonResultTable += blob
     db.run(insertQuery)
   }
 
+  def getSiliconResultsForEntry(peId: Long): Future[Seq[SiliconResult]] = {
+    val silResBlobs = db.run(MySQLSlickTables.siliconResultTable.filter(_.programEntryId === peId).result)
+    val siliconResults = deblobSR(silResBlobs)
+    siliconResults
+  }
+
+  def getLatestSilResForEntry(peId: Long): Future[Option[SiliconResult]] = {
+    val silResBlobOpt = db.run(MySQLSlickTables.siliconResultTable.filter(_.programEntryId === peId).sortBy(_.creationDate.desc).result.headOption)
+    val silResOpt = silResBlobOpt map (o => o map ( s => SiliconResult.deBlob(s)))
+    silResOpt
+  }
+
+  def getLatestCarbResForEntry(peId: Long): Future[Option[CarbonResult]] = {
+    val carbResBlobOpt = db.run(MySQLSlickTables.carbonResultTable.filter(_.programEntryId === peId).sortBy(_.creationDate.desc).result.headOption)
+    val carbResOpt = carbResBlobOpt map (o => o map (c => CarbonResult.deBlob(c)))
+    carbResOpt
+  }
+
+  def getCarbonResultsForEntry(peId: Long): Future[Seq[CarbonResult]] = {
+    val carbResBlobs = db.run(MySQLSlickTables.carbonResultTable.filter(_.programEntryId === peId).result)
+    val carbonResults = deblobCR(carbResBlobs)
+    carbonResults
+  }
+
   def getOldestUserSubmission(): Future[Option[UserSubmission]] = {
-    val subBlob: Future[Option[UserSubmissionBlob]] = db.run(GenericSlickTables.userSubmissionTable.sortBy(_.submissionDate.asc).result.headOption)
+    val subBlob: Future[Option[UserSubmissionBlob]] = db.run(MySQLSlickTables.userSubmissionTable.sortBy(_.submissionDate.asc).result.headOption)
     val submission: Future[Option[UserSubmission]] = subBlob.map(s => s map (u => UserSubmission.deBlob(u)))
     submission
+  }
+
+  private def deBlobPE(list: Future[Seq[ProgramEntryBlob]]): Future[Seq[ProgramEntry]] = {
+    list.map(s => s map (p => ProgramEntry.deBlob(p)))
+  }
+
+  private def deBlobUS(list: Future[Seq[UserSubmissionBlob]]): Future[Seq[UserSubmission]] = {
+    list.map(s => s map (u => UserSubmission.deBlob(u)))
+  }
+
+  private def deblobSR(list: Future[Seq[SiliconResultBlob]]): Future[Seq[SiliconResult]] = {
+    list.map(s => s map (r => SiliconResult.deBlob(r)))
+  }
+
+  private def deblobCR(list: Future[Seq[CarbonResultBlob]]): Future[Seq[CarbonResult]] = {
+    list.map(s => s map (r => CarbonResult.deBlob(r)))
   }
 
 }

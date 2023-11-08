@@ -1,12 +1,15 @@
 package dataCollection
 
-import database.{CarbonResult, ProgramEntry, SiliconResult, UserSubmission}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, SiliconResult, UserSubmission}
 import viper.silver.parser.FastParser
+import database.ExecContext._
 
 import java.io.{File, FileWriter}
 import java.nio.file.{Path, Paths}
 import java.sql.Timestamp
 import java.time.{LocalDate, LocalDateTime}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.BufferedSource
 
 object ProcessingPipeline {
@@ -34,6 +37,37 @@ object ProcessingPipeline {
     )
   }
 
+  def tooCloseToExistingEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
+    val potMatches = DBQueryInterface.getPotentialMatchingEntries(pe)
+    val foundMatch: Future[Boolean] = potMatches flatMap (
+      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE))).reduceLeft((a,b) => a flatMap (xa => b map(xb => xa || xb)))
+      )
+    Await.result(foundMatch, Duration.Inf)
+  }
+
+  def doEntriesMatch(pe1: ProgramEntry, sr:SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext) : Future[Boolean] = {
+    if (pe1.isSimilarTo(pe2)) {
+      val otherSilRes = DBQueryInterface.getLatestSilResForEntry(pe2.programEntryId)
+      val otherCarbRes = DBQueryInterface.getLatestCarbResForEntry(pe2.programEntryId)
+      val silMatch = otherSilRes map ( o => o match {
+        case Some(silRes) => sr.isSimilarTo(silRes, 1.5)
+        case None => false
+      })
+      val carbMatch = otherCarbRes map (o => o match {
+        case Some(carbRes) => cr.isSimilarTo(carbRes, 1.5)
+        case None => false
+      })
+      for {
+        b1 <- silMatch
+        b2 <- carbMatch
+      } yield b1 && b2
+    } else {
+      Future(false)
+    }
+  }
+
+
+
   def getSiliconResults(pe: ProgramEntry): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
@@ -50,6 +84,7 @@ object ProcessingPipeline {
     val success = runner.hasSucceeded
     val errors = runner.errors
     SiliconResult(0,
+      Timestamp.valueOf(LocalDateTime.now()),
       siliconHash,
       pe.programEntryId,
       success,
@@ -75,6 +110,7 @@ object ProcessingPipeline {
     val success = runner.hasSucceeded
     val errors = runner.errors
     CarbonResult(0,
+      Timestamp.valueOf(LocalDateTime.now()),
       carbonHash,
       pe.programEntryId,
       success,
