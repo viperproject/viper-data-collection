@@ -1,5 +1,5 @@
 import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
-import database.{DBQueryInterface, MySQLSlickTables}
+import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
@@ -21,8 +21,8 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  //getPrograms()
-  println(MySQLSlickTables.getDDL)
+  getPrograms()
+  //println(PGSlickTables.getDDL)
   //findDupTrees()
   //naginiDups()
 

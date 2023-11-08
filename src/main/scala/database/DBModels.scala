@@ -2,7 +2,7 @@ package database
 
 import dataCollection.{ProgramPrint, VerifierResult}
 import org.apache.commons.io.output.ByteArrayOutputStream
-import slick.jdbc.MySQLProfile
+import slick.jdbc.{MySQLProfile, PostgresProfile}
 import slick.lifted.ProvenShape
 import viper.silver.parser._
 import viper.silver.verifier.AbstractError
@@ -261,8 +261,10 @@ case class CarbonResultBlob(carbonResId: Long,
                             errors: Array[Byte],
                             phaseRuntimesBlob: Array[Byte])
 
-class SlickTables(val profile: MySQLProfile) {
+class SlickTables(val profile: PostgresProfile) {
+
   import profile.api._
+
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntryBlob](tag, Some("programs"), "ProgramEntries") {
     def programEntryId = column[Long]("programEntryId", O.PrimaryKey, O.AutoInc)
 
@@ -412,7 +414,7 @@ class SlickTables(val profile: MySQLProfile) {
   }
 }
 
-object MySQLSlickTables extends SlickTables(MySQLProfile)
+object PGSlickTables extends SlickTables(PostgresProfile)
 
 
 object BinarySerializer {

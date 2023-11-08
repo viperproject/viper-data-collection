@@ -1,14 +1,14 @@
 package dataCollection
 
-import upickle.default.{macroRW, read, write, ReadWriter => RW}
+import upickle.default.{macroRW, write, ReadWriter => RW}
 import viper.silver.parser.FastParser
 import viper.silver.verifier.{AbstractError, VerificationResult}
 import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.charset.CodingErrorAction
-import java.nio.file.{Files, Path, Paths}
-import scala.io.{BufferedSource, Codec, Source}
+import java.nio.file.{Path, Paths}
+import scala.io.{BufferedSource, Codec}
 import scala.io.Source.fromFile
 import scala.language.postfixOps
 

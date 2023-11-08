@@ -3,14 +3,11 @@ package dataCollection
 import viper.silver.ast.Position
 import viper.silver.parser._
 
-import java.nio.file.{Files, Path, Paths}
 import java.security.MessageDigest
-import scala.io.{BufferedSource, Codec, Source}
 import scala.math.Ordered.orderingToOrdered
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 
-import java.io.{BufferedWriter, FileReader, FileWriter}
-import java.nio.charset.CodingErrorAction
+import java.io.{BufferedWriter, FileWriter}
 import scala.io.Source.fromFile
 
 /** Represents a structural fingerprint of a [[PNode]]
@@ -21,6 +18,7 @@ import scala.io.Source.fromFile
  *                the same [[hashVal]]
  * */
 case class Fingerprint(weight: Int, hashVal: String)
+
 object Fingerprint {
   implicit val rw: RW[Fingerprint] = macroRW
 }
@@ -38,6 +36,7 @@ case class FPNode(fp: Fingerprint, children: Seq[FPNode]) {
     childResults.exists(identity)
   }
 }
+
 object FPNode {
   implicit val rw: RW[FPNode] = macroRW
 }
@@ -56,12 +55,12 @@ case class ProgramPrint(domainTree: FPNode,
                         methodTree: FPNode,
                         extensionTree: FPNode) {
   def matchTrees(oPP: ProgramPrint): MatchResult = {
-    MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight -1),
-      (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight -1),
-      (numMatches(this.functionTree, oPP.functionTree), functionTree.fp.weight -1),
-      (numMatches(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight -1),
-      (numMatches(this.methodTree, oPP.methodTree), methodTree.fp.weight -1),
-      (numMatches(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight -1))
+    MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
+      (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),
+      (numMatches(this.functionTree, oPP.functionTree), functionTree.fp.weight - 1),
+      (numMatches(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight - 1),
+      (numMatches(this.methodTree, oPP.methodTree), methodTree.fp.weight - 1),
+      (numMatches(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight - 1))
   } // -1 to the tree weights to discount dummy root nodes
 
   def store(p: String): Unit = {
@@ -71,9 +70,9 @@ case class ProgramPrint(domainTree: FPNode,
     w.close()
   }
 
-  /** Count of how many nodes in tree of [[currNode]] are present in tree of [[root]]*/
-  private def numMatches(root:FPNode, otherRoot: FPNode): Int = {
-    val bias = if(root.containedInTree(otherRoot)) -1 else 0 // do not match dummy root node
+  /** Count of how many nodes in tree of [[root]] are present in tree of [[otherRoot]] */
+  private def numMatches(root: FPNode, otherRoot: FPNode): Int = {
+    val bias = if (root.containedInTree(otherRoot)) -1 else 0 // do not match dummy root node
     val matchCount = numSubTreeMatches(root, otherRoot)
     matchCount + bias
   }
@@ -83,6 +82,7 @@ case class ProgramPrint(domainTree: FPNode,
     currNode.children.map(c => numSubTreeMatches(c, root)).sum
   }
 }
+
 object ProgramPrint {
   implicit val rw: RW[ProgramPrint] = macroRW
 
@@ -114,6 +114,7 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     val numNodes = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._2)).sum
     if (numNodes == 0) 100.0 else 100.0 * (numMatches / numNodes)
   }
+
   def totalPercentage: Double = {
     100.0 * ((Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._1)).sum.toDouble / (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._2)).sum)
   }
@@ -149,7 +150,7 @@ object Fingerprinter {
       extensionTree = trimTree(fingerprintPNode(RootPNode(pp.extensions)(null))))
   }
 
-  private def fingerprintPNode(pn: PNode): FPNode =  {
+  private def fingerprintPNode(pn: PNode): FPNode = {
     val childPrints = subnodes(pn) map fingerprintPNode
     val currHash = hashNode(pn, childPrints)
     val treeWeight = childPrints.map(_.fp.weight).sum + 1

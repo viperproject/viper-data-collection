@@ -1,9 +1,9 @@
-create database if not exists programs;
-
-GO
-use programs;
-GO
-create table if not exists `programs`.`ProgramEntries` (`programEntryId` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,`submissionDate` TIMESTAMP NOT NULL,`originalName` TEXT NOT NULL,`program` TEXT NOT NULL,`loc` INTEGER NOT NULL,`frontend` TEXT NOT NULL,`originalVerifier` TEXT NOT NULL,`argsBlob` BLOB NOT NULL,`programPrintBlob` BLOB NOT NULL,`parseSuccess` BOOLEAN NOT NULL,`hasPreamble` BOOLEAN NOT NULL);
-create table if not exists `programs`.`UserSubmissions` (`submissionId` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,`submissionDate` TIMESTAMP NOT NULL,`originalName` TEXT NOT NULL,`program` TEXT NOT NULL,`loc` INTEGER NOT NULL,`frontend` TEXT NOT NULL,`argsBlob` BLOB NOT NULL,`originalVerifier` TEXT NOT NULL,`success` BOOLEAN NOT NULL);
-create table if not exists `programs`.`SiliconResults` (`silResId` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,`siliconHash` TEXT NOT NULL,`programEntryId` BIGINT NOT NULL,`success` BOOLEAN NOT NULL,`runtime` BIGINT NOT NULL,`errors` BLOB NOT NULL,`phaseRuntimesBlob` BLOB NOT NULL,`benchmarkResultsBlob` BLOB NOT NULL, constraint `silPE_FK` foreign key (`programEntryId`) references `programs`.`ProgramEntries`(`programEntryId`) on update NO ACTION on delete NO ACTION);
-create table if not exists `programs`.`CarbonResults` (`carbResId` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,`carbonHash` TEXT NOT NULL,`programEntryId` BIGINT NOT NULL,`success` BOOLEAN NOT NULL,`runtime` BIGINT NOT NULL,`errors` BLOB NOT NULL,`phaseRuntimesBlob` BLOB NOT NULL, constraint `carbPE_FK` foreign key (`programEntryId`) references `programs`.`ProgramEntries`(`programEntryId`) on update NO ACTION on delete NO ACTION);
+create schema programs;
+create table if not exists "programs"."ProgramEntries" ("programEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"submissionDate" TIMESTAMP NOT NULL,"originalName" VARCHAR NOT NULL,"program" VARCHAR NOT NULL,"loc" INTEGER NOT NULL,"frontend" VARCHAR NOT NULL,"originalVerifier" VARCHAR NOT NULL,"argsBlob" BYTEA NOT NULL,"programPrintBlob" BYTEA NOT NULL,"parseSuccess" BOOLEAN NOT NULL,"hasPreamble" BOOLEAN NOT NULL);
+create table if not exists "programs"."UserSubmissions" ("submissionId" BIGSERIAL NOT NULL PRIMARY KEY,"submissionDate" TIMESTAMP NOT NULL,"originalName" VARCHAR NOT NULL,"program" VARCHAR NOT NULL,"loc" INTEGER NOT NULL,"frontend" VARCHAR NOT NULL,"argsBlob" BYTEA NOT NULL,"originalVerifier" VARCHAR NOT NULL,"success" BOOLEAN NOT NULL);
+create table if not exists "programs"."SiliconResults" ("silResId" BIGSERIAL NOT NULL PRIMARY KEY,"creationDate" TIMESTAMP NOT NULL,"siliconHash" VARCHAR NOT NULL,"programEntryId" BIGINT NOT NULL,"success" BOOLEAN NOT NULL,"runtime" BIGINT NOT NULL,"errors" BYTEA NOT NULL,"phaseRuntimesBlob" BYTEA NOT NULL,"benchmarkResultsBlob" BYTEA NOT NULL);
+alter table "programs"."SiliconResults" drop constraint if exists "silPE_FK";
+alter table "programs"."SiliconResults" add constraint "silPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete NO ACTION;
+create table if not exists "programs"."CarbonResults" ("carbResId" BIGSERIAL NOT NULL PRIMARY KEY,"creationDate" TIMESTAMP NOT NULL,"carbonHash" VARCHAR NOT NULL,"programEntryId" BIGINT NOT NULL,"success" BOOLEAN NOT NULL,"runtime" BIGINT NOT NULL,"errors" BYTEA NOT NULL,"phaseRuntimesBlob" BYTEA NOT NULL);
+alter table "programs"."CarbonResults" drop constraint if exists "carbPE_FK";
+alter table "programs"."CarbonResults" add constraint "carbPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete NO ACTION

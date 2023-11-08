@@ -5,12 +5,11 @@ import viper.silver.parser.FastParser
 import database.ExecContext._
 
 import java.io.{File, FileWriter}
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 import java.sql.Timestamp
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDateTime
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.io.BufferedSource
 
 object ProcessingPipeline {
   private val fastParser = new FastParser()
@@ -37,26 +36,26 @@ object ProcessingPipeline {
     )
   }
 
-  def tooCloseToExistingEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
+  def doesSimilarEntryExist(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntries(pe)
     val foundMatch: Future[Boolean] = potMatches flatMap (
-      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE))).reduceLeft((a,b) => a flatMap (xa => b map(xb => xa || xb)))
+      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE))).reduceLeft((a, b) => a flatMap (xa => b map (xb => xa || xb)))
       )
     Await.result(foundMatch, Duration.Inf)
   }
 
-  private def doEntriesMatch(pe1: ProgramEntry, sr:SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext) : Future[Boolean] = {
+  private def doEntriesMatch(pe1: ProgramEntry, sr: SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext): Future[Boolean] = {
     if (pe1.isSimilarTo(pe2)) {
       val otherSilRes = DBQueryInterface.getLatestSilResForEntry(pe2.programEntryId)
       val otherCarbRes = DBQueryInterface.getLatestCarbResForEntry(pe2.programEntryId)
-      val silMatch = otherSilRes map ( o => o match {
+      val silMatch = otherSilRes map {
         case Some(silRes) => sr.isSimilarTo(silRes, 1.5)
         case None => false
-      })
-      val carbMatch = otherCarbRes map (o => o match {
+      }
+      val carbMatch = otherCarbRes map {
         case Some(carbRes) => cr.isSimilarTo(carbRes, 1.5)
         case None => false
-      })
+      }
       for {
         b1 <- silMatch
         b2 <- carbMatch
@@ -65,7 +64,6 @@ object ProcessingPipeline {
       Future(false)
     }
   }
-
 
 
   def generateSiliconResults(pe: ProgramEntry): SiliconResult = {
@@ -121,9 +119,9 @@ object ProcessingPipeline {
   }
 
   private def createTempProgramFile(id: Long, program: String): String = {
-    val fName = s"./tmp/${id}.vpr"
+    val fName = s"./tmp/$id.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
-    fw.write(program);
+    fw.write(program)
     fw.close()
     fName
   }
