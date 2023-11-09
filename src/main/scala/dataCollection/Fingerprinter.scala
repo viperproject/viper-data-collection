@@ -53,7 +53,9 @@ case class ProgramPrint(domainTree: FPNode,
                         functionTree: FPNode,
                         predicateTree: FPNode,
                         methodTree: FPNode,
-                        extensionTree: FPNode) {
+                        extensionTree: FPNode,
+                        numMethods: Int,
+                        numFunctions: Int) {
   def matchTrees(oPP: ProgramPrint): MatchResult = {
     MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
       (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),
@@ -147,7 +149,9 @@ object Fingerprinter {
       functionTree = trimTree(fingerprintPNode(RootPNode(pp.functions)(null))),
       predicateTree = trimTree(fingerprintPNode(RootPNode(pp.predicates)(null))),
       methodTree = trimTree(fingerprintPNode(RootPNode(pp.methods)(null))),
-      extensionTree = trimTree(fingerprintPNode(RootPNode(pp.extensions)(null))))
+      extensionTree = trimTree(fingerprintPNode(RootPNode(pp.extensions)(null))),
+      numMethods = pp.methods.size,
+      numFunctions = pp.functions.size)
   }
 
   private def fingerprintPNode(pn: PNode): FPNode = {
