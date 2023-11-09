@@ -1,8 +1,8 @@
 package database
 
-import dataCollection.{ProgramPrint, VerifierResult}
+import dataCollection.{ProgramPrint}
 import org.apache.commons.io.output.ByteArrayOutputStream
-import slick.jdbc.{MySQLProfile, PostgresProfile}
+import slick.jdbc.{PostgresProfile}
 import slick.lifted.ProvenShape
 import viper.silver.parser._
 import viper.silver.verifier.AbstractError
@@ -10,6 +10,20 @@ import viper.silver.verifier.AbstractError
 import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
 
+
+/** Case class to represent a row in the programs.ProgramEntries table of the database
+ *
+ * @param programEntryId   unique identifier for the entry
+ * @param submissionDate   time when this entry was created
+ * @param originalName     the file name of the original viper program
+ * @param program          the viper program in plaintext
+ * @param loc              number of lines of code
+ * @param frontend         Viper frontend that produced this program
+ * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
+ * @param args             the arguments originally passed to the verifier
+ * @param programPrint     the fingerprint tree of this program for similarity comparisons
+ * @param parseSuccess     whether program was able to be parsed
+ * @param hasPreamble      whether programs contains global predicates, domains, fields or extensions */
 case class ProgramEntry(programEntryId: Long,
                         submissionDate: Timestamp,
                         originalName: String,
@@ -22,6 +36,11 @@ case class ProgramEntry(programEntryId: Long,
                         parseSuccess: Boolean,
                         hasPreamble: Boolean) {
 
+  /** returns whether this entry is close enough to another to count as a duplicate.
+   *
+   * Fields checked for equality: Frontend, Verifier, numbers of methods and functions
+   *
+   * Fields checked for similarity: loc, args, programPrint */
   def isSimilarTo(other: ProgramEntry): Boolean = {
     lazy val similarLength = this.loc <= 1.2 * other.loc && this.loc >= 0.8 * other.loc
     lazy val sameFrontend = this.frontend == other.frontend
@@ -44,6 +63,18 @@ object ProgramEntry {
   def tupled = (ProgramEntry.apply _).tupled
 }
 
+
+/** Case class to represent a row in the programs.UserSubmissions table of the database
+ *
+ * @param submissionId     unique identifier for the entry
+ * @param submissionDate   time when this entry was created
+ * @param originalName     the file name of the original viper program
+ * @param program          the viper program in plaintext
+ * @param loc              number of lines of code
+ * @param frontend         Viper frontend that produced this program
+ * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
+ * @param args             the arguments originally passed to the verifier
+ * @param success          whether the program verified on the users device */
 case class UserSubmission(submissionId: Long,
                           submissionDate: Timestamp,
                           originalName: String,
@@ -59,7 +90,17 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
-
+/** Case class to represent a row in the programs.SiliconResults table of the database
+ *
+ * @param silResId         unique identifier for the entry
+ * @param creationDate     time when this entry was created
+ * @param siliconHash      commit hash of the silicon version used to get this result
+ * @param programEntryId   id referring to the ProgramEntry that was profiled
+ * @param success          whether program verified successfully
+ * @param runtime          total time for verification
+ * @param errors           errors encountered during verification - should be empty if [[success]]
+ * @param phaseRuntimes    runtimes of the phases of silicon
+ * @param benchmarkResults more detailed information by the [[viper.silver.reporter.BenchmarkingReporter]] */
 case class SiliconResult(silResId: Long,
                          creationDate: Timestamp,
                          siliconHash: String,
@@ -89,6 +130,16 @@ object SiliconResult {
   def tupled = (SiliconResult.apply _).tupled
 }
 
+/** Case class to represent a row in the programs.CarbonResults table of the database
+ *
+ * @param carbResId      unique identifier for the entry
+ * @param creationDate   time when this entry was created
+ * @param carbonHash     commit hash of the carbon version used to get this result
+ * @param programEntryId id referring to the ProgramEntry that was profiled
+ * @param success        whether program verified successfully
+ * @param runtime        total time for verification
+ * @param errors         errors encountered during verification - should be empty if [[success]]
+ * @param phaseRuntimes  runtimes of the phases of carbon */
 case class CarbonResult(carbResId: Long,
                         creationDate: Timestamp,
                         carbonHash: String,
@@ -114,6 +165,8 @@ object CarbonResult {
   def tupled = (CarbonResult.apply _).tupled
 }
 
+/** Class to represent the tables of the database
+ * Available tables: [[programEntryTable]], [[userSubmissionTable]], [[siliconResultTable]], [[carbonResultTable]] */
 class SlickTables(val profile: PostgresProfile) {
 
   import profile.api._
@@ -291,6 +344,8 @@ class SlickTables(val profile: PostgresProfile) {
 object PGSlickTables extends SlickTables(PostgresProfile)
 
 
+/** Provides helper functions to convert any nullable type to a byte array and back.
+ * Used to store more complex types in database */
 object BinarySerializer {
   def serialize(value: Any): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()

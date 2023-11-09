@@ -18,6 +18,11 @@ object DBQueryInterface {
     programEntries
   }
 
+  def getProgramEntryByID(programEntryId: Long): Future[Option[ProgramEntry]] = {
+    val entryOpt = db.run(PGSlickTables.programEntryTable.filter(_.programEntryId === programEntryId).result.headOption)
+    entryOpt
+  }
+
   def getPotentialMatchingEntries(pe: ProgramEntry): Future[Seq[ProgramEntry]] = {
     val query = PGSlickTables.programEntryTable
       .filter(_.loc >= (pe.loc * 0.8).toInt)
@@ -28,6 +33,22 @@ object DBQueryInterface {
       .result
     val programEntries: Future[Seq[ProgramEntry]] = db.run(query)
     programEntries
+  }
+
+  def getPEIdsWithoutSilRes(): Future[Seq[Long]] = {
+    val query = for {
+      entry <- PGSlickTables.programEntryTable if !PGSlickTables.siliconResultTable.filter(_.programEntryId === entry.programEntryId).exists
+    } yield entry.programEntryId
+    val ids = db.run(query.result)
+    ids
+  }
+
+  def getPEIdsWithoutCarbRes(): Future[Seq[Long]] = {
+    val query = for {
+      entry <- PGSlickTables.programEntryTable if !PGSlickTables.carbonResultTable.filter(_.programEntryId === entry.programEntryId).exists
+    } yield entry.programEntryId
+    val ids = db.run(query.result)
+    ids
   }
 
   def getAllUserSubmissions(): Future[Seq[UserSubmission]] = {
@@ -45,6 +66,10 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
+  def deleteUserSubmission(submissionId: Long): Future[Int] = {
+    val query = PGSlickTables.userSubmissionTable.filter(_.submissionId === submissionId).delete
+    db.run(query)
+  }
   def insertSiliconResult(result: SiliconResult): Future[Int] = {
     val insertQuery = PGSlickTables.siliconResultTable += result
     db.run(insertQuery)
