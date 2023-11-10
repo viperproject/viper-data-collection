@@ -48,10 +48,12 @@ object ProcessingHelper {
     )
   }
 
-  def doesSimilarEntryExist(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
+  def existsSimilarEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntries(pe)
     val foundMatch: Future[Boolean] = potMatches flatMap (
-      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE))).reduceLeft((a, b) => a flatMap (xa => b map (xb => xa || xb)))
+      // Map doEntriesMatch on every potential entry, then reduce the results by or-ing them
+      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE)))
+        .reduceLeft((a, b) => a flatMap (xa => b map (xb => xa || xb)))
       )
     Await.result(foundMatch, Duration.Inf)
   }
