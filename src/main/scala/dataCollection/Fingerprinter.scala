@@ -55,7 +55,7 @@ case class ProgramPrint(domainTree: FPNode,
                         methodTree: FPNode,
                         extensionTree: FPNode,
                         numMethods: Int,
-                        numFunctions: Int) {
+                        numFunctions: Int) extends Serializable {
   def matchTrees(oPP: ProgramPrint): MatchResult = {
     MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
       (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),

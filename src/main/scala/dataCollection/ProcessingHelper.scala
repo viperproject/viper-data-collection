@@ -53,7 +53,7 @@ object ProcessingHelper {
     val foundMatch: Future[Boolean] = potMatches flatMap (
       // Map doEntriesMatch on every potential entry, then reduce the results by or-ing them
       seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE)))
-        .reduceLeft((a, b) => a flatMap (xa => b map (xb => xa || xb)))
+        .reduceLeft((fBool1, fBool2) => fBool1 flatMap (bool1 => fBool2 map (bool2 => bool1 || bool2)))
       )
     Await.result(foundMatch, Duration.Inf)
   }
@@ -100,10 +100,10 @@ object ProcessingHelper {
   }
 
 
-  def generateSiliconResults(pe: ProgramEntry): SiliconResult = {
+  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
-    var args: Array[String] = Array(tmpFile)
+    var args: Array[String] = Array(tmpFile) ++ extraArgs
     // original arguments are only used if the program was also originally run with silicon
     if (pe.originalVerifier == "Silicon") {
       args = args ++ pe.args
@@ -111,10 +111,10 @@ object ProcessingHelper {
     runner.runMain(args)
     val runtime = runner.getTime
     val siliconHash = runner.siliconHash
-    val phaseRuntimes = runner.getPhaseRuntimes
-    val benchmarkResults = runner.getBenchmarkResults
+    val phaseRuntimes = runner.getPhaseRuntimes.toArray
+    val benchmarkResults = runner.getBenchmarkResults.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors
+    val errors = runner.errors.toArray
     SiliconResult(0,
       Timestamp.valueOf(LocalDateTime.now()),
       siliconHash,
@@ -127,10 +127,10 @@ object ProcessingHelper {
     )
   }
 
-  def generateCarbonResults(pe: ProgramEntry): CarbonResult = {
+  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): CarbonResult = {
     val runner = new CollectionCarbonFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
-    var args: Array[String] = Array(tmpFile)
+    var args: Array[String] = Array(tmpFile) ++ extraArgs
     // original arguments are only used if the program was also originally run with carbon
     if (pe.originalVerifier == "Carbon") {
       args = args ++ pe.args
@@ -138,9 +138,9 @@ object ProcessingHelper {
     runner.main(args)
     val runtime = runner.getTime
     val carbonHash = runner.carbonHash
-    val phaseRuntimes = runner.getPhaseRuntimes
+    val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors
+    val errors = runner.errors.toArray
     CarbonResult(0,
       Timestamp.valueOf(LocalDateTime.now()),
       carbonHash,

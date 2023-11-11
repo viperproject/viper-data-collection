@@ -31,10 +31,10 @@ case class ProgramEntry(programEntryId: Long,
                         loc: Int,
                         frontend: String,
                         originalVerifier: String,
-                        args: Seq[String],
+                        args: Array[String],
                         programPrint: ProgramPrint,
                         parseSuccess: Boolean,
-                        hasPreamble: Boolean) {
+                        hasPreamble: Boolean) extends Serializable {
 
   /** returns whether this entry is close enough to another to count as a duplicate.
    *
@@ -74,16 +74,18 @@ object ProgramEntry {
  * @param frontend         Viper frontend that produced this program
  * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
  * @param args             the arguments originally passed to the verifier
- * @param success          whether the program verified on the users device */
+ * @param success          whether the program verified on the users device
+ * @param runtime          how long it took the user's verifier to finish */
 case class UserSubmission(submissionId: Long,
                           submissionDate: Timestamp,
                           originalName: String,
                           program: String,
                           loc: Int,
                           frontend: String,
-                          args: Seq[String],
+                          args: Array[String],
                           originalVerifier: String,
-                          success: Boolean)
+                          success: Boolean,
+                          runtime: Long) extends Serializable
 
 object UserSubmission {
 
@@ -107,9 +109,9 @@ case class SiliconResult(silResId: Long,
                          programEntryId: Long,
                          success: Boolean,
                          runtime: Long,
-                         errors: Seq[AbstractError],
-                         phaseRuntimes: Seq[(String, Long)],
-                         benchmarkResults: Seq[(String, Long)]) {
+                         errors: Array[AbstractError],
+                         phaseRuntimes: Array[(String, Long)],
+                         benchmarkResults: Array[(String, Long)]) extends Serializable {
   def isSimilarTo(other: SiliconResult, timeEps: Double): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
       other.success
@@ -146,8 +148,8 @@ case class CarbonResult(carbResId: Long,
                         programEntryId: Long,
                         success: Boolean,
                         runtime: Long,
-                        errors: Seq[AbstractError],
-                        phaseRuntimes: Seq[(String, Long)]) {
+                        errors: Array[AbstractError],
+                        phaseRuntimes: Array[(String, Long)]) extends Serializable {
   def isSimilarTo(other: CarbonResult, timeEps: Double): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
       other.success
@@ -177,19 +179,19 @@ class SlickTables(val profile: PostgresProfile) {
     ba => deserialize[ProgramPrint](ba)
   )
 
-  implicit val stringSeqColumnType = MappedColumnType.base[Seq[String], Array[Byte]](
+  implicit val stringArrColumnType = MappedColumnType.base[Array[String], Array[Byte]](
     seq => serialize(seq),
-    ba => deserialize[Seq[String]](ba)
+    ba => deserialize[Array[String]](ba)
   )
 
-  implicit val strLongSeqColumnType = MappedColumnType.base[Seq[(String, Long)], Array[Byte]](
+  implicit val strLongArrColumnType = MappedColumnType.base[Array[(String, Long)], Array[Byte]](
     seq => serialize(seq),
-    ba => deserialize[Seq[(String, Long)]](ba)
+    ba => deserialize[Array[(String, Long)]](ba)
   )
 
-  implicit val absErrorSeqColumnType = MappedColumnType.base[Seq[AbstractError], Array[Byte]](
+  implicit val absErrorArrColumnType = MappedColumnType.base[Array[AbstractError], Array[Byte]](
     seq => serialize(seq),
-    ba => deserialize[Seq[AbstractError]](ba)
+    ba => deserialize[Array[AbstractError]](ba)
   )
 
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntry](tag, Some("programs"), "ProgramEntries") {
@@ -207,7 +209,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def originalVerifier = column[String]("originalVerifier")
 
-    def args = column[Seq[String]]("args")
+    def args = column[Array[String]]("args")
 
     def programPrint = column[ProgramPrint]("programPrint")
 
@@ -244,11 +246,13 @@ class SlickTables(val profile: PostgresProfile) {
 
     def frontend = column[String]("frontend")
 
-    def args = column[Seq[String]]("argsBlob")
+    def args = column[Array[String]]("argsBlob")
 
     def originalVerifier = column[String]("originalVerifier")
 
     def success = column[Boolean]("success")
+
+    def runtime = column[Long]("runtime")
 
     override def * : ProvenShape[UserSubmission] = (submissionId,
       submissionDate,
@@ -258,7 +262,8 @@ class SlickTables(val profile: PostgresProfile) {
       frontend,
       args,
       originalVerifier,
-      success) <> (UserSubmission.tupled, UserSubmission.unapply)
+      success,
+      runtime) <> (UserSubmission.tupled, UserSubmission.unapply)
 
   }
 
@@ -279,11 +284,11 @@ class SlickTables(val profile: PostgresProfile) {
 
     def runtime = column[Long]("runtime")
 
-    def errors = column[Seq[AbstractError]]("errors")
+    def errors = column[Array[AbstractError]]("errors")
 
-    def phaseRuntimes = column[Seq[(String, Long)]]("phaseRuntimes")
+    def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
-    def benchmarkResults = column[Seq[(String, Long)]]("benchmarkResults")
+    def benchmarkResults = column[Array[(String, Long)]]("benchmarkResults")
 
     override def * : ProvenShape[SiliconResult] = (silResId,
       creationDate,
@@ -316,9 +321,9 @@ class SlickTables(val profile: PostgresProfile) {
 
     def runtime = column[Long]("runtime")
 
-    def errors = column[Seq[AbstractError]]("errors")
+    def errors = column[Array[AbstractError]]("errors")
 
-    def phaseRuntimes = column[Seq[(String, Long)]]("phaseRuntimes")
+    def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
     override def * : ProvenShape[CarbonResult] = (carbResId,
       creationDate,
@@ -347,7 +352,7 @@ object PGSlickTables extends SlickTables(PostgresProfile)
 /** Provides helper functions to convert any nullable type to a byte array and back.
  * Used to store more complex types in database */
 object BinarySerializer {
-  def serialize(value: Any): Array[Byte] = {
+  def serialize[T <: Serializable](value: T): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val outStream = new ObjectOutputStream(stream)
     outStream.writeObject(value)
@@ -355,7 +360,7 @@ object BinarySerializer {
     stream.toByteArray
   }
 
-  def deserialize[T >: Null <: AnyRef](bytes: Array[Byte]): T = {
+  def deserialize[T <: Serializable](bytes: Array[Byte]): T = {
     try {
       val inputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))
       val value = inputStream.readObject.asInstanceOf[T]
