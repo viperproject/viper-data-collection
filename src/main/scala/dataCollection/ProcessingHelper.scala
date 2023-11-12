@@ -11,10 +11,12 @@ import java.time.LocalDateTime
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
+/** Provides functions to aid in the processing of submissions and generating database entries */
 object ProcessingHelper {
   private val fastParser = new FastParser()
   private val fPrinter = Fingerprinter
 
+  /** Tries to get userSubmission with the oldest submissionDate and converts it to ProgramEntry */
   def processOldestSubmission(): Option[ProgramEntry] = {
     val submissionOpt = Await.result(DBQueryInterface.getOldestUserSubmission(), Duration.Inf)
     submissionOpt match {
@@ -48,6 +50,10 @@ object ProcessingHelper {
     )
   }
 
+  /** Searches database for ProgramEntries that could be a match, then compares the entry, newest siliconResult
+   * and CarbonResult for each to see if they are too similar
+   *
+   * @return true if there is a database entry that is too similar to the argument */
   def existsSimilarEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntries(pe)
     val foundMatch: Future[Boolean] = potMatches flatMap (
@@ -58,16 +64,19 @@ object ProcessingHelper {
     Await.result(foundMatch, Duration.Inf)
   }
 
+  /** Compares one programEntry, siliconResult and CarbonResult to another
+   *
+   * @return true if the entries are too similar, packed in Future to multi-thread comparisons */
   private def doEntriesMatch(pe1: ProgramEntry, sr: SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext): Future[Boolean] = {
     if (pe1.isSimilarTo(pe2)) {
       val otherSilRes = DBQueryInterface.getLatestSilResForEntry(pe2.programEntryId)
       val otherCarbRes = DBQueryInterface.getLatestCarbResForEntry(pe2.programEntryId)
       val silMatch = otherSilRes map {
-        case Some(silRes) => sr.isSimilarTo(silRes, 1.5)
+        case Some(silRes) => sr.isSimilarTo(silRes)
         case None => false
       }
       val carbMatch = otherCarbRes map {
-        case Some(carbRes) => cr.isSimilarTo(carbRes, 1.5)
+        case Some(carbRes) => cr.isSimilarTo(carbRes)
         case None => false
       }
       for {
@@ -79,6 +88,7 @@ object ProcessingHelper {
     }
   }
 
+  /** Takes the ID of an existing programEntry, creates a SiliconResult for this entry and inserts it into the SiliconResults table */
   def silBenchmarkProgramEntry(programEntryId: Long): Unit = {
     val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), Duration.Inf)
     entryOpt match {
@@ -89,6 +99,7 @@ object ProcessingHelper {
     }
   }
 
+  /** Takes the ID of an existing programEntry, creates a CarbonResult for this entry and inserts it into the CarbonResult table */
   def carbBenchmarkProgramEntry(programEntryId: Long): Unit = {
     val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), Duration.Inf)
     entryOpt match {
@@ -100,6 +111,8 @@ object ProcessingHelper {
   }
 
 
+  /** @param pe       ProgramEntry for which to get the results of verifying it through Silicon
+   * @param extraArgs arguments that will be passed into Silicon alongside the original ones */
   def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
@@ -115,6 +128,9 @@ object ProcessingHelper {
     val benchmarkResults = runner.getBenchmarkResults.toArray
     val success = runner.hasSucceeded
     val errors = runner.errors.toArray
+
+    removeTempProgramFile(tmpFile)
+
     SiliconResult(0,
       Timestamp.valueOf(LocalDateTime.now()),
       siliconHash,
@@ -127,6 +143,8 @@ object ProcessingHelper {
     )
   }
 
+  /** @param pe       ProgramEntry for which to get the results of verifying it through Carbon
+   * @param extraArgs arguments that will be passed into Carbon alongside the original ones */
   def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): CarbonResult = {
     val runner = new CollectionCarbonFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
@@ -141,6 +159,9 @@ object ProcessingHelper {
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val success = runner.hasSucceeded
     val errors = runner.errors.toArray
+
+    removeTempProgramFile(tmpFile)
+
     CarbonResult(0,
       Timestamp.valueOf(LocalDateTime.now()),
       carbonHash,
@@ -152,6 +173,7 @@ object ProcessingHelper {
     )
   }
 
+  /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
   private def createTempProgramFile(id: Long, program: String): String = {
     val fName = s"./tmp/$id.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
@@ -160,6 +182,7 @@ object ProcessingHelper {
     fName
   }
 
+  /** Removes the temporary program file */
   private def removeTempProgramFile(fName: String): Unit = {
     val f = new File(fName)
     f.delete()

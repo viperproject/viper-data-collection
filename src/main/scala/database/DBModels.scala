@@ -1,8 +1,9 @@
 package database
 
 import dataCollection.{ProgramPrint}
+import util._
 import org.apache.commons.io.output.ByteArrayOutputStream
-import slick.jdbc.{PostgresProfile}
+import slick.jdbc.PostgresProfile
 import slick.lifted.ProvenShape
 import viper.silver.parser._
 import viper.silver.verifier.AbstractError
@@ -34,7 +35,7 @@ case class ProgramEntry(programEntryId: Long,
                         args: Array[String],
                         programPrint: ProgramPrint,
                         parseSuccess: Boolean,
-                        hasPreamble: Boolean) extends Serializable {
+                        hasPreamble: Boolean) extends Similarity[ProgramEntry] with Serializable {
 
   /** returns whether this entry is close enough to another to count as a duplicate.
    *
@@ -50,9 +51,9 @@ case class ProgramEntry(programEntryId: Long,
     lazy val thisMatchResult = this.programPrint.matchTrees(other.programPrint)
     lazy val otherMatchResult = other.programPrint.matchTrees(this.programPrint)
     lazy val similarTrees = if (this.frontend == "Silicon" || this.frontend == "Carbon") {
-      thisMatchResult.totalPercentage >= 85 && otherMatchResult.totalPercentage >= 85
+      thisMatchResult.totalMatchP >= 85 && otherMatchResult.totalMatchP >= 85
     } else {
-      thisMatchResult.funAndMethMatchPercentage >= 85 && otherMatchResult.funAndMethMatchPercentage >= 85
+      thisMatchResult.methFunMatchP >= 85 && otherMatchResult.methFunMatchP >= 85
     }
     similarLength && sameFrontend && sameVerifier && similarArgs && sameNumMethFunc && similarTrees
   }
@@ -111,8 +112,11 @@ case class SiliconResult(silResId: Long,
                          runtime: Long,
                          errors: Array[AbstractError],
                          phaseRuntimes: Array[(String, Long)],
-                         benchmarkResults: Array[(String, Long)]) extends Serializable {
-  def isSimilarTo(other: SiliconResult, timeEps: Double): Boolean = {
+                         benchmarkResults: Array[(String, Long)]) extends Similarity[SiliconResult] with Serializable {
+
+  /** @return [[true]] if results have the same success, errors and their runtimes are within 50% of each other,
+   *          [[false]] else */
+  def isSimilarTo(other: SiliconResult): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
       other.success
     } else {
@@ -120,7 +124,7 @@ case class SiliconResult(silResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = (this.runtime <= other.runtime * timeEps && this.runtime >= other.runtime / timeEps)
+    lazy val similarTime = (this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
     similarTime && sameRes
   }
 }
@@ -149,8 +153,11 @@ case class CarbonResult(carbResId: Long,
                         success: Boolean,
                         runtime: Long,
                         errors: Array[AbstractError],
-                        phaseRuntimes: Array[(String, Long)]) extends Serializable {
-  def isSimilarTo(other: CarbonResult, timeEps: Double): Boolean = {
+                        phaseRuntimes: Array[(String, Long)]) extends Similarity[CarbonResult] with Serializable {
+
+  /** @return [[true]] if results have the same success, errors and their runtimes are within 50% of each other,
+   *          [[false]] else */
+  def isSimilarTo(other: CarbonResult): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
       other.success
     } else {
@@ -158,7 +165,7 @@ case class CarbonResult(carbResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = (this.runtime <= other.runtime * timeEps && this.runtime >= other.runtime / timeEps)
+    lazy val similarTime = (this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
     similarTime && sameRes
   }
 }
@@ -173,6 +180,8 @@ class SlickTables(val profile: PostgresProfile) {
 
   import profile.api._
   import BinarySerializer._
+
+  //Implicit converters for column types that can't be stored natively in Postgres
 
   implicit val pprintColumnType = MappedColumnType.base[ProgramPrint, Array[Byte]](
     pp => serialize(pp),
@@ -346,12 +355,15 @@ class SlickTables(val profile: PostgresProfile) {
   }
 }
 
+/** Database tables for a generic Postgres Profile */
 object PGSlickTables extends SlickTables(PostgresProfile)
 
 
 /** Provides helper functions to convert any nullable type to a byte array and back.
  * Used to store more complex types in database */
 object BinarySerializer {
+
+  /** Takes serializable object and converts it to Array[Byte] */
   def serialize[T <: Serializable](value: T): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val outStream = new ObjectOutputStream(stream)
@@ -360,6 +372,10 @@ object BinarySerializer {
     stream.toByteArray
   }
 
+  /** Takes Array[Byte] and tries to convert it into [[T]]
+   *
+   * @param bytes byte representation of object to deserialize
+   * @return Either deserialized object or null in case of an exception */
   def deserialize[T <: Serializable](bytes: Array[Byte]): T = {
     try {
       val inputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))

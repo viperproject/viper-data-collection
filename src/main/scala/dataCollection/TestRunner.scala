@@ -51,10 +51,10 @@ object TestRunner extends App {
         if (pprint1 != pprint2) {
           val matchres1 = pprint1.matchTrees(pprint2)
           val matchres2 = pprint2.matchTrees(pprint1)
-          if (matchres1.funAndMethMatchPercentage >= 80 && matchres2.funAndMethMatchPercentage >= 80){
-              println(matchres1)
-              println(s"MATCH FOUND: ${name1}, ${name2}")
-              dups = dups.union(Set(name1, name2))
+          if (matchres1.methFunMatchP >= 80 && matchres2.methFunMatchP >= 80) {
+            println(matchres1)
+            println(s"MATCH FOUND: ${name1}, ${name2}")
+            dups = dups.union(Set(name1, name2))
           }
         }
       }
@@ -80,8 +80,8 @@ object TestRunner extends App {
         val prog2 = progresults(num2)
         val matchres1 = prog1.matchTrees(prog2)
         val matchres2 = prog2.matchTrees(prog1)
-        if (matchres1.funAndMethMatchPercentage >= 90 && matchres2.funAndMethMatchPercentage >= 90) {
-            matches = matches :+ num2
+        if (matchres1.methFunMatchP >= 90 && matchres2.methFunMatchP >= 90) {
+          matches = matches :+ num2
         }
       }
       println(s"Matches with ${num}: ${matches}")
@@ -90,6 +90,7 @@ object TestRunner extends App {
     println(s"${dupCount} duplicates found")
     println(s"Time: ${System.currentTimeMillis() - starttime}ms")
   }
+
   def findDups(): Unit = {
     val starttime = System.currentTimeMillis()
     var progresults: Seq[ProgramSimilarityInfo] = Seq()

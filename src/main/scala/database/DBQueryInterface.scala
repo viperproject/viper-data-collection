@@ -70,6 +70,7 @@ object DBQueryInterface {
     val query = PGSlickTables.userSubmissionTable.filter(_.submissionId === submissionId).delete
     db.run(query)
   }
+
   def insertSiliconResult(result: SiliconResult): Future[Int] = {
     val insertQuery = PGSlickTables.siliconResultTable += result
     db.run(insertQuery)

@@ -99,25 +99,25 @@ object ProgramPrint {
 /** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes */
 case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (Int, Int), pMatches: (Int, Int), mMatches: (Int, Int), extMatches: (Int, Int)) {
 
-  def methodMatchPercentage: Double = {
+  def methMatchP: Double = {
     100.0 * (mMatches._1.toDouble / mMatches._2.toDouble)
   }
 
-  def functionMatchPercentage: Double = {
+  def funMatchP: Double = {
     100.0 * (funMatches._1.toDouble / funMatches._2.toDouble)
   }
 
-  def funAndMethMatchPercentage: Double = {
+  def methFunMatchP: Double = {
     100.0 * ((funMatches._1.toDouble + mMatches._1.toDouble) / (funMatches._2.toDouble + mMatches._2))
   }
 
-  def preambleMatchPercentage: Double = {
-    val numMatches = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._1)).sum.toDouble
-    val numNodes = (Seq(dMatches, fMatches, funMatches, pMatches, extMatches) map (_._2)).sum
+  def preambleMatchP: Double = {
+    val numMatches = (Seq(dMatches, fMatches, pMatches, extMatches) map (_._1)).sum.toDouble
+    val numNodes = (Seq(dMatches, fMatches, pMatches, extMatches) map (_._2)).sum
     if (numNodes == 0) 100.0 else 100.0 * (numMatches / numNodes)
   }
 
-  def totalPercentage: Double = {
+  def totalMatchP: Double = {
     100.0 * ((Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._1)).sum.toDouble / (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._2)).sum)
   }
 
@@ -129,8 +129,8 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     Predicate: ${pMatches._1} out of ${pMatches._2}
     Method: ${mMatches._1} out of ${mMatches._2}
     Extension: ${extMatches._1} out of ${extMatches._2}
-    Preamble: $preambleMatchPercentage%1.2f%%
-    Methods: $methodMatchPercentage%1.2f%%"""
+    Preamble: $preambleMatchP%1.2f%%
+    Methods: $methMatchP%1.2f%%"""
   }
 }
 

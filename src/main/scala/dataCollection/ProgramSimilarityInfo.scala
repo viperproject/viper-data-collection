@@ -31,8 +31,8 @@ case class ProgramSimilarityInfo(siliconRes: VerifierResult, carbonRes: Verifier
     lazy val similarSilResult = this.siliconRes.isSimilarTo(other.siliconRes, 1.5)
     lazy val similarCarbonResult = this.carbonRes.isSimilarTo(other.carbonRes, 1.5)
     lazy val matchResult = this.pprint.matchTrees(other.pprint)
-    lazy val similarMethods = matchResult.methodMatchPercentage >= 90
-    lazy val similarPreamble = matchResult.preambleMatchPercentage >= 90
+    lazy val similarMethods = matchResult.methMatchP >= 90
+    lazy val similarPreamble = matchResult.preambleMatchP >= 90
 
     sameFlags && similarSilResult && similarCarbonResult && similarPreamble && similarMethods
   }
