@@ -21,8 +21,8 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  getPrograms()
-  //println(PGSlickTables.getDDL)
+  //getPrograms()
+  println(PGSlickTables.getDDL)
   //findDupTrees()
   //naginiDups()
 

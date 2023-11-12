@@ -7,6 +7,7 @@ import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.io.Directory
+import scala.sys.process._
 
 /** Provides methods to process submissions, create ProgramEntries, benchmark them and insert the results into the database */
 object ProcessingPipeline {
@@ -17,6 +18,7 @@ object ProcessingPipeline {
 
   /** Combines the different processing stages, meant to be called periodically from some outside source */
   def main(args: Array[String]): Unit = {
+    val baseDir = System.getProperty("user.dir")
     var tmpDirName: String = ""
     try {
       tmpDirName = programEntryStage()
@@ -24,9 +26,15 @@ object ProcessingPipeline {
       case NothingToDoException() => return
     }
 
-    // TODO: write shell script that runs siliconStage and carbonStage
+    val siliconProcess = Process(s"$baseDir/processing_scripts/siliconStage.sh $tmpDirName")
+    siliconProcess.!
+
+    val carbonProcess = Process(s"$baseDir/processing_scripts/carbonStage.sh $tmpDirName")
+    carbonProcess.!
 
     filterAndInsertStage(tmpDirName)
+
+    removeTempDir(tmpDirName)
   }
 
   /** Tries to get the oldest UserSubmission and create a ProgramEntry from it. Stores the ProgramEntry in the ./tmp folder for other stages to use
@@ -112,7 +120,7 @@ object ProcessingPipeline {
    * If filters were passed, the ProgramEntry, SiliconResult and CarbonResult are stored in the database. */
   def filterAndInsertStage(dirName: String): Unit = {
     // Loading the generated Files
-    val tmpDir = s"tmp/$dirName"
+    val tmpDir = s"tmp/$dirName/"
     val peFileName = tmpDir + "programEntry.bin"
     val silResFileName = tmpDir + "silRes.bin"
     val carbResFileName = tmpDir + "carbRes.bin"
@@ -177,6 +185,22 @@ object ProcessingPipeline {
     }
   }
 
+}
+
+object SiliconStageRunner {
+  import ProcessingPipeline.siliconStage
+  def main(args: Array[String]): Unit = {
+    if (args.length != 1) return
+    siliconStage(args(0))
+  }
+}
+
+object CarbonStageRunner {
+  import ProcessingPipeline.carbonStage
+  def main(args: Array[String]): Unit = {
+    if (args.length != 1) return
+    carbonStage(args(0))
+  }
 }
 
 
