@@ -23,8 +23,11 @@ object TestRunner extends App {
 
   //getPrograms()
   println(PGSlickTables.getDDL)
+  //findDups()
+  //fpAllPrograms()
   //findDupTrees()
   //naginiDups()
+
 
   def getPrograms(): Unit = {
     import database.ExecContext._
@@ -52,10 +55,12 @@ object TestRunner extends App {
           val matchres1 = pprint1.matchTrees(pprint2)
           val matchres2 = pprint2.matchTrees(pprint1)
           if (matchres1.methFunMatchP >= 80 && matchres2.methFunMatchP >= 80) {
+            if (matchres1.methFunMatchP <= 90 && matchres2.methFunMatchP <= 90) {
+            if (pprint1.numFunctions == pprint2.numFunctions && pprint1.numMethods == pprint2.numMethods) {
             println(matchres1)
             println(s"MATCH FOUND: ${name1}, ${name2}")
             dups = dups.union(Set(name1, name2))
-          }
+          }}}
         }
       }
     }
@@ -80,8 +85,11 @@ object TestRunner extends App {
         val prog2 = progresults(num2)
         val matchres1 = prog1.matchTrees(prog2)
         val matchres2 = prog2.matchTrees(prog1)
-        if (matchres1.methFunMatchP >= 90 && matchres2.methFunMatchP >= 90) {
-          matches = matches :+ num2
+        if (matchres1.totalMatchP >= 80 && matchres2.totalMatchP >= 80) {
+          if (matchres1.totalMatchP <= 90 && matchres2.totalMatchP <= 90) {
+            if (prog1.numFunctions == prog2.numFunctions && prog1.numMethods == prog2.numMethods) {
+            matches = matches :+ num2
+          }}
         }
       }
       println(s"Matches with ${num}: ${matches}")
@@ -107,7 +115,8 @@ object TestRunner extends App {
       for (num2 <- Seq.range(num + 1, 901)) {
         val prog2 = progresults(num2)
         if (prog1 != prog2) {
-          if (prog1.isSimilarTo(prog2) && prog2.isSimilarTo(prog1)) {
+          if (!prog1.isSimilarTo(prog2, 90)) {
+            if(prog1.isSimilarTo(prog2, 80))
             matches = matches :+ num2
           }
         }

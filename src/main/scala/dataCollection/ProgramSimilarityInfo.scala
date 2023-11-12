@@ -26,15 +26,16 @@ import scala.language.postfixOps
  * @param pprint     is the [[ProgramPrint]] of the program's AST
  * @param flags      are the arguments used to run the program */
 case class ProgramSimilarityInfo(siliconRes: VerifierResult, carbonRes: VerifierResult, pprint: ProgramPrint, flags: Seq[String]) {
-  def isSimilarTo(other: ProgramSimilarityInfo): Boolean = {
+  def isSimilarTo(other: ProgramSimilarityInfo, percentage: Int): Boolean = {
     lazy val sameFlags = this.flags.toSet == other.flags.toSet
     lazy val similarSilResult = this.siliconRes.isSimilarTo(other.siliconRes, 1.5)
     lazy val similarCarbonResult = this.carbonRes.isSimilarTo(other.carbonRes, 1.5)
     lazy val matchResult = this.pprint.matchTrees(other.pprint)
-    lazy val similarMethods = matchResult.methMatchP >= 90
-    lazy val similarPreamble = matchResult.preambleMatchP >= 90
+    lazy val oMatchResult = other.pprint.matchTrees(this.pprint)
+    lazy val similar1 = matchResult.totalMatchP >= percentage
+    lazy val similar2 = oMatchResult.totalMatchP >= percentage
 
-    sameFlags && similarSilResult && similarCarbonResult && similarPreamble && similarMethods
+    sameFlags && similarSilResult && similarCarbonResult && similar1 && similar2
   }
 }
 

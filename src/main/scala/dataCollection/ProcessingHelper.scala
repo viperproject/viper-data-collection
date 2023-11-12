@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, SiliconResult, UserSubmission}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission}
 import viper.silver.parser.FastParser
 import database.ExecContext._
 
@@ -29,10 +29,19 @@ object ProcessingHelper {
     }
   }
 
+  def createProgramPrintEntry(program: String): ProgramPrintEntry = {
+    val tmpFile = createTempProgramFile(program.hashCode, program)
+    val parsedProgram = fastParser.parse(program, Paths.get(tmpFile))
+    val programPrint = fPrinter.fingerprintPProgram(parsedProgram)
+    removeTempProgramFile(tmpFile)
+    ProgramPrintEntry(0,
+      0,
+      programPrint)
+  }
+
   def createProgramEntryFromSubmission(us: UserSubmission): ProgramEntry = {
     val tmpFile = createTempProgramFile(us.submissionId, us.program)
     val parsedProgram = fastParser.parse(us.program, Paths.get(tmpFile))
-    val programPrint = fPrinter.fingerprintPProgram(parsedProgram)
     val parseSuccess = parsedProgram.errors.isEmpty
     val hasPreamble = parsedProgram.predicates.nonEmpty || parsedProgram.domains.nonEmpty || parsedProgram.fields.nonEmpty || parsedProgram.extensions.nonEmpty
     removeTempProgramFile(tmpFile)
@@ -44,7 +53,6 @@ object ProcessingHelper {
       us.frontend,
       us.originalVerifier,
       us.args,
-      programPrint,
       parseSuccess,
       hasPreamble,
     )
@@ -54,11 +62,11 @@ object ProcessingHelper {
    * and CarbonResult for each to see if they are too similar
    *
    * @return true if there is a database entry that is too similar to the argument */
-  def existsSimilarEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult): Boolean = {
-    val potMatches = DBQueryInterface.getPotentialMatchingEntries(pe)
+  def existsSimilarEntry(et: EntryTuple): Boolean = {
+    val potMatches = DBQueryInterface.getPotentialMatchingEntryTuples(et.programEntry)
     val foundMatch: Future[Boolean] = potMatches flatMap (
       // Map doEntriesMatch on every potential entry, then reduce the results by or-ing them
-      seq => (seq map (otherPE => doEntriesMatch(pe, sr, cr, otherPE)))
+      seq => (seq map (otherET => doEntriesMatch(et, otherET)))
         .reduceLeft((fBool1, fBool2) => fBool1 flatMap (bool1 => fBool2 map (bool2 => bool1 || bool2)))
       )
     Await.result(foundMatch, Duration.Inf)
@@ -67,24 +75,23 @@ object ProcessingHelper {
   /** Compares one programEntry, siliconResult and CarbonResult to another
    *
    * @return true if the entries are too similar, packed in Future to multi-thread comparisons */
-  private def doEntriesMatch(pe1: ProgramEntry, sr: SiliconResult, cr: CarbonResult, pe2: ProgramEntry)(implicit ec: ExecutionContext): Future[Boolean] = {
-    if (pe1.isSimilarTo(pe2)) {
-      val otherSilRes = DBQueryInterface.getLatestSilResForEntry(pe2.programEntryId)
-      val otherCarbRes = DBQueryInterface.getLatestCarbResForEntry(pe2.programEntryId)
-      val silMatch = otherSilRes map {
-        case Some(silRes) => sr.isSimilarTo(silRes)
-        case None => false
+  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple)(implicit ec: ExecutionContext): Future[Boolean] = {
+    Future {
+      lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
+      lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
+      lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
+      lazy val pprint1 = et1.programPrintEntry.programPrint
+      lazy val pprint2 = et2.programPrintEntry.programPrint
+      lazy val sameNumMethFunc = pprint1.numMethods == pprint2.numMethods && pprint1.numFunctions == pprint2.numFunctions
+      lazy val matchResult1 = pprint1.matchTrees(pprint2)
+      lazy val matchResult2 = pprint2.matchTrees(pprint2)
+      lazy val similarTrees = if (et1.programEntry.frontend == "Silicon" || et1.programEntry.frontend == "Carbon") {
+        matchResult1.totalMatchP >= 80 && matchResult2.totalMatchP >= 80
+      } else {
+        matchResult1.methFunMatchP >= 80 && matchResult2.methFunMatchP >= 80
       }
-      val carbMatch = otherCarbRes map {
-        case Some(carbRes) => cr.isSimilarTo(carbRes)
-        case None => false
-      }
-      for {
-        b1 <- silMatch
-        b2 <- carbMatch
-      } yield b1 && b2
-    } else {
-      Future(false)
+
+      peMatch && srMatch && crMatch && sameNumMethFunc && similarTrees
     }
   }
 
@@ -188,3 +195,8 @@ object ProcessingHelper {
     f.delete()
   }
 }
+
+case class EntryTuple(programEntry: ProgramEntry,
+                      programPrintEntry: ProgramPrintEntry,
+                      siliconResult: SiliconResult,
+                      carbonResult: CarbonResult)

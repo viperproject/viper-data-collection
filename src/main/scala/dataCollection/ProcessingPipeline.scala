@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, SiliconResult}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult}
 import util._
 
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream}
@@ -47,13 +47,25 @@ object ProcessingPipeline {
       case Some(entry) => {
         val dirName = entry.hashCode().toString
         createTempDir(dirName)
-        val tmpFileName = s"tmp/$dirName/programEntry.bin"
+
+        val programPrintEntry = createProgramPrintEntry(entry.program)
+
+        val entryFileName = s"tmp/$dirName/programEntry.bin"
+        val pprintFileName = s"tmp/$dirName/programPrintEntry.bin"
         val entryBin = serialize(entry)
-        val fWriter = new BufferedOutputStream(new FileOutputStream(tmpFileName))
+        val pprintBin = serialize(programPrintEntry)
+        val entryWriter = new BufferedOutputStream(new FileOutputStream(entryFileName))
+        val pprintWriter = new BufferedOutputStream(new FileOutputStream(pprintFileName))
         try {
-          fWriter.write(entryBin)
+          entryWriter.write(entryBin)
         } finally {
-          fWriter.close()
+          entryWriter.close()
+        }
+
+        try {
+          pprintWriter.write(entryBin)
+        } finally {
+          pprintWriter.close()
         }
         dirName
       }
@@ -124,10 +136,12 @@ object ProcessingPipeline {
     val peFileName = tmpDir + "programEntry.bin"
     val silResFileName = tmpDir + "silRes.bin"
     val carbResFileName = tmpDir + "carbRes.bin"
+    val pprintFileName = tmpDir + "programPrintEntry.bin"
 
     val peFileReader = new BufferedInputStream(new FileInputStream(peFileName))
     val sRFileReader = new BufferedInputStream(new FileInputStream(silResFileName))
     val cRFileReader = new BufferedInputStream(new FileInputStream(carbResFileName))
+    val ppFileReader = new BufferedInputStream(new FileInputStream(pprintFileName))
 
     val pEByteArr = try {
       peFileReader.readAllBytes()
@@ -147,12 +161,20 @@ object ProcessingPipeline {
       cRFileReader.close()
     }
 
+    val ppByteArr = try {
+      ppFileReader.readAllBytes()
+    } finally {
+      ppFileReader.close()
+    }
+
+
     val programEntry = deserialize[ProgramEntry](pEByteArr)
     val siliconResult = deserialize[SiliconResult](sRByteArr)
     val carbonResult = deserialize[CarbonResult](cRByteArr)
+    val programPrintEntry = deserialize[ProgramPrintEntry](ppByteArr)
 
     // Deciding whether to drop entry based on similarity
-    val similarEntryExists = existsSimilarEntry(programEntry, siliconResult, carbonResult)
+    val similarEntryExists = existsSimilarEntry(EntryTuple(programEntry, programPrintEntry, siliconResult, carbonResult))
     if (similarEntryExists) {
       println("Entry deemed too similar, will not be stored.")
       return
@@ -188,7 +210,9 @@ object ProcessingPipeline {
 }
 
 object SiliconStageRunner {
+
   import ProcessingPipeline.siliconStage
+
   def main(args: Array[String]): Unit = {
     if (args.length != 1) return
     siliconStage(args(0))
@@ -196,7 +220,9 @@ object SiliconStageRunner {
 }
 
 object CarbonStageRunner {
+
   import ProcessingPipeline.carbonStage
+
   def main(args: Array[String]): Unit = {
     if (args.length != 1) return
     carbonStage(args(0))

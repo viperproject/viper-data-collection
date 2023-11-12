@@ -1,5 +1,7 @@
 package database
 
+import dataCollection.EntryTuple
+
 import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,16 +25,23 @@ object DBQueryInterface {
     entryOpt
   }
 
-  def getPotentialMatchingEntries(pe: ProgramEntry): Future[Seq[ProgramEntry]] = {
-    val query = PGSlickTables.programEntryTable
-      .filter(_.loc >= (pe.loc * 0.8).toInt)
-      .filter(_.loc <= (pe.loc * 1.2).toInt)
-      .filter(_.originalVerifier === pe.originalVerifier)
-      .filter(_.frontend === pe.frontend)
-      .filter(_.parseSuccess === pe.parseSuccess)
+  def getPotentialMatchingEntryTuples(pe: ProgramEntry): Future[Seq[EntryTuple]] = {
+    val tupleQuery = for {
+      proge <- PGSlickTables.programEntryTable
+      sr <- PGSlickTables.siliconResultTable if sr.programEntryId == proge.programEntryId
+      cr <- PGSlickTables.carbonResultTable if cr.programEntryId == proge.programEntryId
+      pp <- PGSlickTables.programPrintEntryTable if pp.programEntryId == proge.programEntryId
+    } yield (proge, pp, sr, cr)
+    val filteredQuery = tupleQuery
+      .filter(_._1.loc >= (pe.loc * 0.8).toInt)
+      .filter(_._1.loc <= (pe.loc * 1.2).toInt)
+      .filter(_._1.originalVerifier === pe.originalVerifier)
+      .filter(_._1.frontend === pe.frontend)
+      .filter(_._1.parseSuccess === pe.parseSuccess)
       .result
-    val programEntries: Future[Seq[ProgramEntry]] = db.run(query)
-    programEntries
+    val tuples: Future[Seq[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)]] = db.run(filteredQuery)
+    val entryTuples: Future[Seq[EntryTuple]] = tuples map (seq => seq map (t => EntryTuple tupled t))
+    entryTuples
   }
 
   def getPEIdsWithoutSilRes(): Future[Seq[Long]] = {

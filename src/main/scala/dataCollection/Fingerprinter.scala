@@ -170,7 +170,8 @@ object Fingerprinter {
   /** Removes all nodes with weight < 4, updates weights */
   private def trimTree(root: FPNode): FPNode = {
     val trimmedTree = dropSmallNodes(root, 3)
-    updateWeights(trimmedTree)
+    //updateWeights(trimmedTree)
+    trimmedTree
   }
 
   private def dropSmallNodes(root: FPNode, limit: Int): FPNode = {

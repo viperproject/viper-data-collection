@@ -22,7 +22,6 @@ import java.sql.Timestamp
  * @param frontend         Viper frontend that produced this program
  * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
  * @param args             the arguments originally passed to the verifier
- * @param programPrint     the fingerprint tree of this program for similarity comparisons
  * @param parseSuccess     whether program was able to be parsed
  * @param hasPreamble      whether programs contains global predicates, domains, fields or extensions */
 case class ProgramEntry(programEntryId: Long,
@@ -33,7 +32,6 @@ case class ProgramEntry(programEntryId: Long,
                         frontend: String,
                         originalVerifier: String,
                         args: Array[String],
-                        programPrint: ProgramPrint,
                         parseSuccess: Boolean,
                         hasPreamble: Boolean) extends Similarity[ProgramEntry] with Serializable {
 
@@ -47,15 +45,15 @@ case class ProgramEntry(programEntryId: Long,
     lazy val sameFrontend = this.frontend == other.frontend
     lazy val sameVerifier = this.originalVerifier == other.originalVerifier
     lazy val similarArgs = this.args.toSet.intersect(other.args.toSet).size >= 0.8 * this.args.size
-    lazy val sameNumMethFunc = this.programPrint.numMethods == other.programPrint.numMethods && this.programPrint.numFunctions == other.programPrint.numFunctions
+    /*lazy val sameNumMethFunc = this.programPrint.numMethods == other.programPrint.numMethods && this.programPrint.numFunctions == other.programPrint.numFunctions
     lazy val thisMatchResult = this.programPrint.matchTrees(other.programPrint)
     lazy val otherMatchResult = other.programPrint.matchTrees(this.programPrint)
     lazy val similarTrees = if (this.frontend == "Silicon" || this.frontend == "Carbon") {
-      thisMatchResult.totalMatchP >= 85 && otherMatchResult.totalMatchP >= 85
+      thisMatchResult.totalMatchP >= 80 && otherMatchResult.totalMatchP >= 80
     } else {
-      thisMatchResult.methFunMatchP >= 85 && otherMatchResult.methFunMatchP >= 85
-    }
-    similarLength && sameFrontend && sameVerifier && similarArgs && sameNumMethFunc && similarTrees
+      thisMatchResult.methFunMatchP >= 80 && otherMatchResult.methFunMatchP >= 80
+    }*/
+    similarLength && sameFrontend && sameVerifier && similarArgs
   }
 }
 
@@ -174,6 +172,14 @@ object CarbonResult {
   def tupled = (CarbonResult.apply _).tupled
 }
 
+case class ProgramPrintEntry(pprintId: Long,
+                             programEntryId: Long,
+                             programPrint: ProgramPrint) extends Serializable
+
+object ProgramPrintEntry {
+  def tupled = (ProgramPrintEntry.apply _).tupled
+}
+
 /** Class to represent the tables of the database
  * Available tables: [[programEntryTable]], [[userSubmissionTable]], [[siliconResultTable]], [[carbonResultTable]] */
 class SlickTables(val profile: PostgresProfile) {
@@ -220,8 +226,6 @@ class SlickTables(val profile: PostgresProfile) {
 
     def args = column[Array[String]]("args")
 
-    def programPrint = column[ProgramPrint]("programPrint")
-
     def parseSuccess = column[Boolean]("parseSuccess")
 
     def hasPreamble = column[Boolean]("hasPreamble")
@@ -234,7 +238,6 @@ class SlickTables(val profile: PostgresProfile) {
       frontend,
       originalVerifier,
       args,
-      programPrint,
       parseSuccess,
       hasPreamble) <> (ProgramEntry.tupled, ProgramEntry.unapply)
 
@@ -349,9 +352,31 @@ class SlickTables(val profile: PostgresProfile) {
   lazy val carbonResultTable = TableQuery[CarbonResultTable]
 
 
+  class ProgramPrintEntryTable(tag: Tag) extends Table[ProgramPrintEntry](tag, Some("programs"), "ProgramPrintEntry") {
+    def pprintId = column[Long]("pprintID", O.PrimaryKey, O.AutoInc)
+
+    def programEntryId = column[Long]("programEntryId")
+
+    def programEntry = foreignKey("pprintPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+
+
+    def programPrint = column[ProgramPrint]("programPrint")
+
+    override def * : ProvenShape[ProgramPrintEntry] = (pprintId,
+      programEntryId,
+      programPrint
+    ) <> (ProgramPrintEntry.tupled, ProgramPrintEntry.unapply)
+
+  }
+
+  lazy val programPrintEntryTable = TableQuery[ProgramPrintEntryTable]
+
+
+
+
   def getDDL: String = {
-    val schema = programEntryTable.schema ++ userSubmissionTable.schema ++ siliconResultTable.schema ++ carbonResultTable.schema
-    schema.createIfNotExists.statements.mkString(";\n")
+    val schema = programEntryTable.schema ++ userSubmissionTable.schema ++ siliconResultTable.schema ++ carbonResultTable.schema ++ programPrintEntryTable.schema
+    schema.createIfNotExistsStatements.mkString(";\n")
   }
 }
 
