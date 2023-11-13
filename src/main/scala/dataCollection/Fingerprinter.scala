@@ -121,6 +121,18 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
     100.0 * ((Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._1)).sum.toDouble / (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._2)).sum)
   }
 
+  def isSubset: Boolean = {
+    totalMatchP >= 99.0
+  }
+
+  def isViperMatch: Boolean = {
+    totalMatchP >= 80
+  }
+
+  def isFrontendMatch: Boolean = {
+    methFunMatchP >= 80
+  }
+
   override def toString: String = {
     f"""The following number of subtrees were matched:
     Domain: ${dMatches._1} out of ${dMatches._2}
@@ -170,7 +182,7 @@ object Fingerprinter {
   /** Removes all nodes with weight < 4, updates weights */
   private def trimTree(root: FPNode): FPNode = {
     val trimmedTree = dropSmallNodes(root, 3)
-    //updateWeights(trimmedTree)
+    updateWeights(trimmedTree)
     trimmedTree
   }
 

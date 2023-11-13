@@ -1,0 +1,17 @@
+field f : Int;
+
+method main(x: Ref)
+    requires acc(x.f)
+{
+    x.f := 300;
+    assert(x.f == 300)
+    set(x, 400)
+    
+}
+
+method set(x: Ref, i: Int)
+  requires acc(x.f) && x.f < i
+  ensures  acc(x.f) && x.f == i
+{
+  x.f := i
+}

@@ -82,17 +82,23 @@ object ProcessingHelper {
       lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
       lazy val pprint1 = et1.programPrintEntry.programPrint
       lazy val pprint2 = et2.programPrintEntry.programPrint
-      lazy val sameNumMethFunc = pprint1.numMethods == pprint2.numMethods && pprint1.numFunctions == pprint2.numFunctions
-      lazy val matchResult1 = pprint1.matchTrees(pprint2)
-      lazy val matchResult2 = pprint2.matchTrees(pprint2)
-      lazy val similarTrees = if (et1.programEntry.frontend == "Silicon" || et1.programEntry.frontend == "Carbon") {
-        matchResult1.totalMatchP >= 80 && matchResult2.totalMatchP >= 80
-      } else {
-        matchResult1.methFunMatchP >= 80 && matchResult2.methFunMatchP >= 80
-      }
+      lazy val pprintMatch = doProgramPrintsMatch(pprint1, pprint2, et1.programEntry.frontend)
 
-      peMatch && srMatch && crMatch && sameNumMethFunc && similarTrees
+      peMatch && srMatch && crMatch && pprintMatch
     }
+  }
+
+  def doProgramPrintsMatch(pprint1: ProgramPrint, pprint2: ProgramPrint, frontend: String): Boolean = {
+    lazy val sameNumMethFunc = pprint1.numMethods == pprint2.numMethods && pprint1.numFunctions == pprint2.numFunctions
+    lazy val matchResult1 = pprint1.matchTrees(pprint2)
+    lazy val matchResult2 = pprint2.matchTrees(pprint1)
+    lazy val isSubset = matchResult1.isSubset || matchResult2.isSubset
+    lazy val similarTrees = if (frontend == "Silicon" || frontend == "Carbon") {
+      matchResult1.isViperMatch && matchResult2.isViperMatch
+    } else {
+      matchResult1.isFrontendMatch && matchResult2.isFrontendMatch
+    }
+    sameNumMethFunc && (similarTrees || isSubset)
   }
 
   /** Takes the ID of an existing programEntry, creates a SiliconResult for this entry and inserts it into the SiliconResults table */
@@ -181,7 +187,7 @@ object ProcessingHelper {
   }
 
   /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
-  private def createTempProgramFile(id: Long, program: String): String = {
+  def createTempProgramFile(id: Long, program: String): String = {
     val fName = s"./tmp/$id.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
     fw.write(program)
@@ -190,7 +196,7 @@ object ProcessingHelper {
   }
 
   /** Removes the temporary program file */
-  private def removeTempProgramFile(fName: String): Unit = {
+  def removeTempProgramFile(fName: String): Unit = {
     val f = new File(fName)
     f.delete()
   }

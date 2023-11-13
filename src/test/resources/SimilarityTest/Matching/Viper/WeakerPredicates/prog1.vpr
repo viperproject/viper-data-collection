@@ -1,0 +1,23 @@
+// Type your example here, and hit the "play" button to run the verifier for feedback
+import <decreases/int.vpr>
+
+method floor_sqrt(n: Int) returns (z: Int)
+  requires true
+  ensures true
+{
+  var y: Int;
+
+  y := 0;
+  z := 0;
+
+  while (y * y < n) 
+    invariant false
+  {
+    y := y + 1;
+    if (y * y <= n) {
+      z := z + 1;
+    } else {
+      // skip
+    }
+  }
+}

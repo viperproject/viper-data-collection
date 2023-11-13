@@ -1,0 +1,30 @@
+field f: Int
+
+method inc(x: Ref, i: Int)
+  requires acc(x.f)
+  ensures  acc(x.f)
+  ensures  x.f == old(x.f) + i
+{
+  x.f := x.f + i
+}
+
+method client(a: Ref, b: Ref) {
+  inhale acc(a.f)
+  inhale acc(b.f)
+
+  a.f := 1
+  b.f := 3
+
+  copyAndInc(a, a)
+
+  assert b.f == 3 && a.f == 2
+}
+
+method copyAndInc(x: Ref, y: Ref)
+    requires acc(x.f) && (x != y ==> acc(y.f))
+    ensures acc(x.f) && (x != y ==> acc(y.f))
+    ensures x.f == old(y.f) + 1 && y.f == old(y.f)
+
+{
+    x.f := y.f + 1
+}
