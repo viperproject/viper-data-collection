@@ -98,7 +98,7 @@ object ProcessingHelper {
     } else {
       matchResult1.isFrontendMatch && matchResult2.isFrontendMatch
     }
-    sameNumMethFunc && (similarTrees || isSubset)
+    (sameNumMethFunc && similarTrees) || isSubset
   }
 
   /** Takes the ID of an existing programEntry, creates a SiliconResult for this entry and inserts it into the SiliconResults table */

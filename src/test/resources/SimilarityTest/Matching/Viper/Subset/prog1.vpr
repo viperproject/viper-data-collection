@@ -1,0 +1,20 @@
+field f: Int
+
+method inc(x: Ref, i: Int)
+  requires acc(x.f)
+  ensures  acc(x.f)
+  ensures  x.f == old(x.f) + i
+{
+  x.f := x.f + i
+}
+
+method client(a: Ref, b: Ref) {
+  inhale acc(a.f) && acc(b.f)
+
+  a.f := 1
+  b.f := 3
+
+  inc(a, 3)
+
+  assert b.f == 3
+}
