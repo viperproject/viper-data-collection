@@ -21,9 +21,12 @@ method client(a: Ref, b: Ref) {
 }
 
 method copyAndInc(x: Ref, y: Ref)
-    requires acc(x.f) && (x != y ==> acc(y.f))
-    ensures acc(x.f) && (x != y ==> acc(y.f))
-    ensures x.f == old(y.f) + 1 && y.f == old(y.f)
+    requires acc(x.f)
+    requires (x != y ==> acc(y.f))
+    ensures acc(x.f)
+    ensures (x != y ==> acc(y.f))
+    ensures x.f == old(y.f) + 1
+    ensures y.f == old(y.f)
 
 {
     x.f := y.f + 1

@@ -1,4 +1,4 @@
-import dataCollection.{Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
+import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
 import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
@@ -21,11 +21,12 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
+  showAST()
   //getPrograms()
   //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
-  findDupTrees()
+  //findDupTrees()
   //naginiDups()
   //specificResult(233, 245)
 
@@ -40,14 +41,22 @@ object TestRunner extends App {
     Await.result(programs, Duration.Inf)
   }
 
+  def showAST(): Unit = {
+    val file = new File("src/test/resources/SimilarityTest/Matching/Viper/AndPredicates/prog1.vpr")
+    val buffer = fromFile(file)
+    val prog = try buffer.mkString finally buffer.close()
+    val progAST = fastParser.parse(prog, file.toPath)
+    println(progAST)
+  }
+
   def naginiDups(): Unit = {
     val folder = new File(testFolder + "nagini_full/")
-    var pprints: Seq[(String, ProgramPrint)] = Seq()
+    var pprints: Seq[(String, ComparableProgramPrint)] = Seq()
     for (f <- folder.listFiles()) {
       val sourcefile = fromFile(f)
       val text = try sourcefile.mkString finally sourcefile.close()
       val prog = fastParser.parse(text, f.toPath)
-      pprints = pprints :+ (f.getName, Fingerprinter.fingerprintPProgram(prog))
+      pprints = pprints :+ (f.getName, ComparableProgramPrint.convert(Fingerprinter.fingerprintPProgram(prog)))
     }
     var dups: Set[String] = Set()
     for ((name1, pprint1) <- pprints) {
@@ -71,10 +80,10 @@ object TestRunner extends App {
   def specificResult(num1: Int, num2: Int): Unit = {
     val sourcefile1: BufferedSource = fromFile(testFolder + s"results/prog${num1}pprint.json")
     val pprintJSON1: String = try sourcefile1.mkString finally sourcefile1.close()
-    val progres1 = read(pprintJSON1)(ProgramPrint.rw)
+    val progres1 = ComparableProgramPrint convert read(pprintJSON1)(ProgramPrint.rw)
     val sourcefile2: BufferedSource = fromFile(testFolder + s"results/prog${num2}pprint.json")
     val pprintJSON2: String = try sourcefile2.mkString finally sourcefile2.close()
-    val progres2 = read(pprintJSON2)(ProgramPrint.rw)
+    val progres2 = ComparableProgramPrint convert read(pprintJSON2)(ProgramPrint.rw)
     val matchres1 = progres1.matchTrees(progres2)
     val matchres2 = progres1.matchTrees(progres2)
     println(matchres1)
@@ -82,11 +91,11 @@ object TestRunner extends App {
 
   def findDupTrees(): Unit = {
     val starttime = System.currentTimeMillis()
-    var progresults: Seq[ProgramPrint] = Seq()
+    var progresults: Seq[ComparableProgramPrint] = Seq()
     for (num <- Seq.range(0, 901)) {
       val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}pprint.json")
       val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-      val progres = read(pprintJSON)(ProgramPrint.rw)
+      val progres = ComparableProgramPrint convert read(pprintJSON)(ProgramPrint.rw)
       progresults = progresults :+ progres
     }
     var dupCount = 0
@@ -170,20 +179,16 @@ object TestRunner extends App {
     val string4 = Source.fromInputStream(Files.newInputStream(file4)).mkString
 
     val pp1 = fastParser.parse(string1, file1)
-    val pp1_print = fp.fingerprintPProgram(pp1)
+    val pp1_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp1)
 
     val pp2 = fastParser.parse(string2, file2)
-    val pp2_print = fp.fingerprintPProgram(pp2)
+    val pp2_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp2)
 
     val pp3 = fastParser.parse(string3, file3)
-    val pp3_print = fp.fingerprintPProgram(pp3)
+    val pp3_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp3)
 
     val pp4 = fastParser.parse(string4, file4)
-    val pp4_print = fp.fingerprintPProgram(pp4)
-
-    pp1_print.store(testFolder + "prog1.json")
-    val pprint1_clone = ProgramPrint.load(testFolder + "prog1.json")
-    println(pprint1_clone)
+    val pp4_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp4)
 
     // only variable names, whitespaces changed: expected full match
     println(pp1_print.matchTrees(pp2_print))

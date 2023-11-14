@@ -24,18 +24,7 @@ object Fingerprint {
 }
 
 /** Tree to store [[Fingerprint]]s of nodes and their children in a structurally similar way to the original program */
-case class FPNode(fp: Fingerprint, children: Seq[FPNode]) {
-
-  /** Returns true if this nodes [[Fingerprint]] is present in the tree represented by [[root]]
-   *
-   * @param root the tree to search for the fingerprint */
-  def containedInTree(root: FPNode): Boolean = {
-    if (root.fp.weight < this.fp.weight) return false
-    if (root.fp == this.fp) return true
-    lazy val childResults = root.children map containedInTree
-    childResults.exists(identity)
-  }
-}
+case class FPNode(fp: Fingerprint, children: Seq[FPNode])
 
 object FPNode {
   implicit val rw: RW[FPNode] = macroRW
@@ -46,8 +35,8 @@ object FPNodeOrdering extends Ordering[FPNode] {
   override def compare(x: FPNode, y: FPNode): Int = -((x.fp.weight, x.fp.hashVal) compare(y.fp.weight, y.fp.hashVal))
 }
 
-/** Stores the [[FPNode]] tree of a program, split into subtrees for domains, fields, functions, predicates, methods and extensions
- * and provides helper methods to analyze it */
+/** Stores the [[FPNode]] tree of a program, split into subtrees for domains, fields, functions, predicates, methods and extensions.
+ * This case class is used to serialize and store the Fingerprint information. For comparison purposes, [[ComparableProgramPrint]] is used. */
 case class ProgramPrint(domainTree: FPNode,
                         fieldTree: FPNode,
                         functionTree: FPNode,
@@ -56,32 +45,11 @@ case class ProgramPrint(domainTree: FPNode,
                         extensionTree: FPNode,
                         numMethods: Int,
                         numFunctions: Int) extends Serializable {
-  def matchTrees(oPP: ProgramPrint): MatchResult = {
-    MatchResult((numMatches(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
-      (numMatches(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),
-      (numMatches(this.functionTree, oPP.functionTree), functionTree.fp.weight - 1),
-      (numMatches(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight - 1),
-      (numMatches(this.methodTree, oPP.methodTree), methodTree.fp.weight - 1),
-      (numMatches(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight - 1))
-  } // -1 to the tree weights to discount dummy root nodes
-
   def store(p: String): Unit = {
     val pprintJSON = write(this)
     val w = new BufferedWriter(new FileWriter(p))
     w.write(pprintJSON)
     w.close()
-  }
-
-  /** Count of how many nodes in tree of [[root]] are present in tree of [[otherRoot]] */
-  private def numMatches(root: FPNode, otherRoot: FPNode): Int = {
-    val bias = if (root.containedInTree(otherRoot)) -1 else 0 // do not match dummy root node
-    val matchCount = numSubTreeMatches(root, otherRoot)
-    matchCount + bias
-  }
-
-  private def numSubTreeMatches(currNode: FPNode, root: FPNode): Int = {
-    if (currNode.containedInTree(root)) return currNode.fp.weight
-    currNode.children.map(c => numSubTreeMatches(c, root)).sum
   }
 }
 
@@ -92,6 +60,100 @@ object ProgramPrint {
     val source = fromFile(p)
     val pprintJSON = try source.mkString finally source.close()
     read(pprintJSON)
+  }
+}
+
+/** Fingerprint Tree Node for comparisons. If a node in this tree is matched to one in another tree, the other node is marked as matched to ensure a 1:1
+ * matching between trees. Nodes in this tree aren't marked since they won't be checked more than once. */
+class ComparableFPNode(val fp: Fingerprint, val children: Seq[ComparableFPNode], var matched: Boolean = false) {
+
+  /** Returns true if the tree of [[root]] contains a node with the same Fingerprint, marks that node in the other tree as matched */
+  def containedInTree(root: ComparableFPNode): Boolean = {
+    if (root.fp.weight < this.fp.weight || root.matched) return false
+    if (root.fp == this.fp) {
+      root.matched = true
+      return true
+    }
+    lazy val childResults = root.children map containedInTree
+    childResults.exists(identity)
+  }
+
+  /** Clears all matched fields in this subtree */
+  def clearMatches: Unit = {
+    matched = false
+    children map (_.clearMatches)
+  }
+}
+
+object ComparableFPNode {
+  def convert(pn: FPNode): ComparableFPNode = {
+    val compChildren = pn.children map ComparableFPNode.convert
+    new ComparableFPNode(pn.fp.copy(), compChildren)
+  }
+}
+
+/** Class used to compare ProgramPrints. In contrast to a [[ProgramPrint]], this class is mutable and the nodes contain boolean fields to indicate that
+ * they were matched to another node, to avoid duplicate matches that could overestimate the similarity of two programs. */
+class ComparableProgramPrint(val domainTree: ComparableFPNode,
+                             val fieldTree: ComparableFPNode,
+                             val functionTree: ComparableFPNode,
+                             val predicateTree: ComparableFPNode,
+                             val methodTree: ComparableFPNode,
+                             val extensionTree: ComparableFPNode,
+                             val numMethods: Int,
+                             val numFunctions: Int) {
+
+  /** Matches all subtrees of this program to the associated subtrees in [[oPP]]. Clears the [[oPP]] tree after comparison.
+   * The dummy parent node is ignored in node weights.
+   *
+   * @return A [[MatchResult]] containing a tuple per tree with the number of nodes that were matched and total number of nodes. */
+  def matchTrees(oPP: ComparableProgramPrint): MatchResult = {
+    val mr = MatchResult((matchesInTree(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
+      (matchesInTree(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),
+      (matchesInTree(this.functionTree, oPP.functionTree), functionTree.fp.weight - 1),
+      (matchesInTree(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight - 1),
+      (matchesInTree(this.methodTree, oPP.methodTree), methodTree.fp.weight - 1),
+      (matchesInTree(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight - 1))
+    oPP.clearMatches()
+    mr
+  }
+
+  /** Clears the matched fields in all subtrees of this program. */
+  def clearMatches(): Unit = {
+    Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree) map (_.clearMatches)
+  }
+
+  /** Returns the amount of nodes in [[root]] that could be matched to one in [[otherRoot]]. This is a separate method to
+   * [[numSubTreeMatches]] to discard the dummy parent node. */
+  private def matchesInTree(root: ComparableFPNode, otherRoot: ComparableFPNode): Int = {
+    if (root.containedInTree(otherRoot)) return root.fp.weight - 1 // do not match dummy root node
+    val matchCount = numSubTreeMatches(root, otherRoot)
+    matchCount
+  }
+
+  /** Returns the amount of nodes in the tree of [[currNode]] that could be matched to one in [[root]] */
+  private def numSubTreeMatches(currNode: ComparableFPNode, root: ComparableFPNode): Int = {
+    if (currNode.containedInTree(root)) return currNode.fp.weight
+    currNode.children.map(c => numSubTreeMatches(c, root)).sum
+  }
+}
+
+object ComparableProgramPrint {
+  def convert(pp: ProgramPrint): ComparableProgramPrint = {
+    val compDomainTree = ComparableFPNode.convert(pp.domainTree)
+    val compFieldTree = ComparableFPNode.convert(pp.fieldTree)
+    val compFunctionTree = ComparableFPNode.convert(pp.functionTree)
+    val compPredicateTree = ComparableFPNode.convert(pp.predicateTree)
+    val compMethodTree = ComparableFPNode.convert(pp.methodTree)
+    val compExtensionTree = ComparableFPNode.convert(pp.extensionTree)
+    new ComparableProgramPrint(compDomainTree,
+      compFieldTree,
+      compFunctionTree,
+      compPredicateTree,
+      compMethodTree,
+      compExtensionTree,
+      pp.numMethods,
+      pp.numFunctions)
   }
 }
 
@@ -167,8 +229,15 @@ object Fingerprinter {
   }
 
   private def fingerprintPNode(pn: PNode): FPNode = {
-    val childPrints = subnodes(pn) map fingerprintPNode
-    val currHash = hashNode(pn, childPrints)
+    // Split pres and posts that are combined with && into separate statements, semantically equivalent
+    val flatPN: PNode = pn match {
+      case pm: PMethod => pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(pm.pos, pm.annotations)
+      case pf: PFunction => pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(pf.pos, pf.annotations)
+      case _ => pn
+    }
+
+    val childPrints = subnodes(flatPN) map fingerprintPNode
+    val currHash = hashNode(flatPN, childPrints)
     val treeWeight = childPrints.map(_.fp.weight).sum + 1
     FPNode(Fingerprint(treeWeight, currHash), childPrints.sorted(FPNodeOrdering))
   }
@@ -179,9 +248,9 @@ object Fingerprinter {
     MD5.generateHash(concatHashes)
   }
 
-  /** Removes all nodes with weight < 4, updates weights */
+  /** Removes all leaf nodes, updates weights */
   private def trimTree(root: FPNode): FPNode = {
-    val trimmedTree = dropSmallNodes(root, 3)
+    val trimmedTree = dropSmallNodes(root, 1)
     updateWeights(trimmedTree)
     trimmedTree
   }
@@ -203,11 +272,19 @@ object Fingerprinter {
   }
 
   private def isCommutative(pn: PNode): Boolean = pn match {
+    case _: PMethod | _: PFunction => true
     case PBinExp(_, op, _) => op match {
       case "union" | "intersection" | "+" | "*" | "==" | "!=" | "&&" | "||" | "<==>" => true
       case _ => false
     }
     case _ => false
+  }
+
+  private def flattenBinExpAnd(pn: PExp): Seq[PExp] = {
+    pn match {
+      case bn: PBinExp => if (bn.opName == "&&") Seq(bn.left, bn.right) else Seq(bn)
+      case _ => Seq(pn)
+    }
   }
 }
 

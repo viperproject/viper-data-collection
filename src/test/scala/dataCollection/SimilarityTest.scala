@@ -22,6 +22,7 @@ class SimilarityTest extends AnyFunSuite{
     val fileDir = new Directory(new File("src/test/resources/SimilarityTest/Matching/Viper"))
     val subDirs = fileDir.dirs
     for (d <- subDirs) {
+      println(s"Now comparing $d")
       val doMatch = Helper.doMatch(d.toString()+"/prog1.vpr", d.toString()+"/prog2.vpr", "Silicon")
       assert(doMatch)
     }
@@ -31,6 +32,7 @@ class SimilarityTest extends AnyFunSuite{
     val fileDir = new Directory(new File("src/test/resources/SimilarityTest/Matching/Frontends"))
     val subDirs = fileDir.dirs
     for (d <- subDirs) {
+      println(s"Now comparing $d")
       val doMatch = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", "Generic")
       assert(doMatch)
     }
@@ -39,6 +41,7 @@ class SimilarityTest extends AnyFunSuite{
     val fileDir = new Directory(new File("src/test/resources/SimilarityTest/NotMatching/Viper"))
     val subDirs = fileDir.dirs
     for (d <- subDirs) {
+      println(s"Now comparing $d")
       val doMatch = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", "Silicon")
       assert(!doMatch)
     }
@@ -47,6 +50,7 @@ class SimilarityTest extends AnyFunSuite{
     val fileDir = new Directory(new File("src/test/resources/SimilarityTest/NotMatching/Frontends"))
     val subDirs = fileDir.dirs
     for (d <- subDirs) {
+      println(s"Now comparing $d")
       val doMatch = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", "Generic")
       assert(!doMatch)
     }
