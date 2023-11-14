@@ -1,10 +1,12 @@
 package database
 
-import dataCollection.{ProgramPrint}
+import dataCollection.ProgramPrint
 import util._
 import org.apache.commons.io.output.ByteArrayOutputStream
-import slick.jdbc.PostgresProfile
+import slick.ast.BaseTypedType
+import slick.jdbc.{JdbcType, PostgresProfile}
 import slick.lifted.ProvenShape
+import upickle.default.{macroRW, ReadWriter => RW}
 import viper.silver.parser._
 import viper.silver.verifier.AbstractError
 
@@ -44,15 +46,7 @@ case class ProgramEntry(programEntryId: Long,
     lazy val similarLength = this.loc <= 1.2 * other.loc && this.loc >= 0.8 * other.loc
     lazy val sameFrontend = this.frontend == other.frontend
     lazy val sameVerifier = this.originalVerifier == other.originalVerifier
-    lazy val similarArgs = this.args.toSet.intersect(other.args.toSet).size >= 0.8 * this.args.size
-    /*lazy val sameNumMethFunc = this.programPrint.numMethods == other.programPrint.numMethods && this.programPrint.numFunctions == other.programPrint.numFunctions
-    lazy val thisMatchResult = this.programPrint.matchTrees(other.programPrint)
-    lazy val otherMatchResult = other.programPrint.matchTrees(this.programPrint)
-    lazy val similarTrees = if (this.frontend == "Silicon" || this.frontend == "Carbon") {
-      thisMatchResult.totalMatchP >= 80 && otherMatchResult.totalMatchP >= 80
-    } else {
-      thisMatchResult.methFunMatchP >= 80 && otherMatchResult.methFunMatchP >= 80
-    }*/
+    lazy val similarArgs = this.args.toSet.intersect(other.args.toSet).size >= 0.8 * this.args.length
     similarLength && sameFrontend && sameVerifier && similarArgs
   }
 }
@@ -108,7 +102,7 @@ case class SiliconResult(silResId: Long,
                          programEntryId: Long,
                          success: Boolean,
                          runtime: Long,
-                         errors: Array[AbstractError],
+                         errors: Array[VerError],
                          phaseRuntimes: Array[(String, Long)],
                          benchmarkResults: Array[(String, Long)]) extends Similarity[SiliconResult] with Serializable {
 
@@ -122,7 +116,7 @@ case class SiliconResult(silResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = (this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
+    lazy val similarTime = this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5
     similarTime && sameRes
   }
 }
@@ -150,7 +144,7 @@ case class CarbonResult(carbResId: Long,
                         programEntryId: Long,
                         success: Boolean,
                         runtime: Long,
-                        errors: Array[AbstractError],
+                        errors: Array[VerError],
                         phaseRuntimes: Array[(String, Long)]) extends Similarity[CarbonResult] with Serializable {
 
   /** @return [[true]] if results have the same success, errors and their runtimes are within 50% of each other,
@@ -163,7 +157,7 @@ case class CarbonResult(carbResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = (this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
+    lazy val similarTime = this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5
     similarTime && sameRes
   }
 }
@@ -180,6 +174,27 @@ object ProgramPrintEntry {
   def tupled = (ProgramPrintEntry.apply _).tupled
 }
 
+/** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information
+ * Comparison is only done through [[fullId]], since [[message]]s are too specific to a given program
+ *
+ * @param fullId      the original error ID
+ * @param message describes the error in full */
+case class VerError(fullId: String, message: String) {
+  override def equals(obj: Any): Boolean = obj match {
+    case that: VerError => this.fullId == that.fullId
+    case _ => false
+  }
+
+  override def hashCode(): Int = fullId.hashCode
+}
+
+object VerError {
+  implicit val rw: RW[VerError] = macroRW
+  def toError(ae: AbstractError): VerError = {
+    VerError(ae.fullId, ae.readableMessage)
+  }
+}
+
 /** Class to represent the tables of the database
  * Available tables: [[programEntryTable]], [[userSubmissionTable]], [[siliconResultTable]], [[carbonResultTable]] */
 class SlickTables(val profile: PostgresProfile) {
@@ -189,24 +204,24 @@ class SlickTables(val profile: PostgresProfile) {
 
   //Implicit converters for column types that can't be stored natively in Postgres
 
-  implicit val pprintColumnType = MappedColumnType.base[ProgramPrint, Array[Byte]](
+  implicit val pprintColumnType: JdbcType[ProgramPrint] with BaseTypedType[ProgramPrint] = MappedColumnType.base[ProgramPrint, Array[Byte]](
     pp => serialize(pp),
     ba => deserialize[ProgramPrint](ba)
   )
 
-  implicit val stringArrColumnType = MappedColumnType.base[Array[String], Array[Byte]](
+  implicit val stringArrColumnType: JdbcType[Array[String]] with BaseTypedType[Array[String]] = MappedColumnType.base[Array[String], Array[Byte]](
     seq => serialize(seq),
     ba => deserialize[Array[String]](ba)
   )
 
-  implicit val strLongArrColumnType = MappedColumnType.base[Array[(String, Long)], Array[Byte]](
+  implicit val strLongArrColumnType: JdbcType[Array[(String, Long)]] with BaseTypedType[Array[(String, Long)]] = MappedColumnType.base[Array[(String, Long)], Array[Byte]](
     seq => serialize(seq),
     ba => deserialize[Array[(String, Long)]](ba)
   )
 
-  implicit val absErrorArrColumnType = MappedColumnType.base[Array[AbstractError], Array[Byte]](
+  implicit val verErrorArrColumnType: JdbcType[Array[VerError]] with BaseTypedType[Array[VerError]] = MappedColumnType.base[Array[VerError], Array[Byte]](
     seq => serialize(seq),
-    ba => deserialize[Array[AbstractError]](ba)
+    ba => deserialize[Array[VerError]](ba)
   )
 
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntry](tag, Some("programs"), "ProgramEntries") {
@@ -296,7 +311,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def runtime = column[Long]("runtime")
 
-    def errors = column[Array[AbstractError]]("errors")
+    def errors = column[Array[VerError]]("errors")
 
     def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
@@ -333,7 +348,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def runtime = column[Long]("runtime")
 
-    def errors = column[Array[AbstractError]]("errors")
+    def errors = column[Array[VerError]]("errors")
 
     def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
@@ -430,7 +445,7 @@ object FeatureExtractor {
     }
   }
 
-  def hasPreamble(pp: PProgram) = {
+  def hasPreamble(pp: PProgram): Boolean = {
     (Seq(pp.predicates, pp.functions, pp.fields, pp.domains, pp.extensions) map (l => l == List())).exists(identity)
   }
 

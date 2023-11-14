@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
 import viper.silver.parser.FastParser
 import database.ExecContext._
 
@@ -140,7 +140,7 @@ object ProcessingHelper {
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val benchmarkResults = runner.getBenchmarkResults.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors.toArray
+    val errors = runner.errors.toArray map VerError.toError
 
     removeTempProgramFile(tmpFile)
 
@@ -171,7 +171,7 @@ object ProcessingHelper {
     val carbonHash = runner.carbonHash
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors.toArray
+    val errors = runner.errors.toArray map VerError.toError
 
     removeTempProgramFile(tmpFile)
 

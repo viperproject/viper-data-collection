@@ -1,5 +1,6 @@
 package dataCollection
 
+import database.VerError
 import upickle.default.{macroRW, write, ReadWriter => RW}
 import viper.silver.parser.FastParser
 import viper.silver.verifier.{AbstractError, VerificationResult}
@@ -14,9 +15,12 @@ import scala.language.postfixOps
 
 
 //processing pipeline
+
 //similarity evaluation
 //history of silicon versions and runtimes
 //programid, siliconRef, results, also for carbon
+
+// remove used nodes from fingerprint trees
 
 
 /** Represents the result of the [[ProgramInfoAnalyser]] for later comparison
@@ -89,27 +93,7 @@ object VerRes {
 
 }
 
-/** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information
- * Comparison is only done through [[id]], since [[message]]s are too specific to a given program
- *
- * @param id      the original error ID
- * @param message describes the error in full */
-case class VerError(id: String, message: String) {
-  override def equals(obj: Any): Boolean = obj match {
-    case that: VerError => this.id == that.id
-    case _ => false
-  }
 
-  override def hashCode(): Int = id.hashCode
-}
-
-object VerError {
-  implicit val rw: RW[VerError] = macroRW
-
-  def toError(ae: AbstractError): VerError = {
-    VerError(ae.fullId, ae.readableMessage)
-  }
-}
 
 object SimilarityChecker {
 }
