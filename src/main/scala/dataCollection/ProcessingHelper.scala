@@ -3,6 +3,7 @@ package dataCollection
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
 import viper.silver.parser.FastParser
 import database.ExecContext._
+import slick.basic.DatabasePublisher
 
 import java.io.{File, FileWriter}
 import java.nio.file.Paths
@@ -58,25 +59,23 @@ object ProcessingHelper {
     )
   }
 
-  /** Searches database for ProgramEntries that could be a match, then compares the entry, newest siliconResult
-   * and CarbonResult for each to see if they are too similar
+  /** Searches database for ProgramEntries that could be a match, then compares the entry, newest siliconResult,
+   * CarbonResult and ProgramPrint for each to see if they are too similar. This is done using a DatabasePublisher
+   * to avoid loading all Entries into memory at once.
    *
    * @return true if there is a database entry that is too similar to the argument */
   def existsSimilarEntry(et: EntryTuple): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntryTuples(et.programEntry)
-    val foundMatch: Future[Boolean] = potMatches flatMap (
-      // Map doEntriesMatch on every potential entry, then reduce the results by or-ing them
-      seq => (seq map (otherET => doEntriesMatch(et, otherET)))
-        .reduceLeft((fBool1, fBool2) => fBool1 flatMap (bool1 => fBool2 map (bool2 => bool1 || bool2)))
-      )
-    Await.result(foundMatch, Duration.Inf)
+    val matchResults = potMatches.mapResult(otherEntry => doEntriesMatch(et, otherEntry))
+    var foundMatch = false
+    matchResults.foreach(r => foundMatch = foundMatch || r)
+    foundMatch
   }
 
-  /** Compares one programEntry, siliconResult and CarbonResult to another
+  /** Compares one EntryTuple to another
    *
-   * @return true if the entries are too similar, packed in Future to multi-thread comparisons */
-  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple)(implicit ec: ExecutionContext): Future[Boolean] = {
-    Future {
+   * @return true if the entries are too similar */
+  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple)(implicit ec: ExecutionContext): Boolean = {
       lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
       lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
       lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
@@ -85,7 +84,6 @@ object ProcessingHelper {
       lazy val pprintMatch = doProgramPrintsMatch(pprint1, pprint2, et1.programEntry.frontend)
 
       peMatch && srMatch && crMatch && pprintMatch
-    }
   }
 
   def doProgramPrintsMatch(pprint1: ProgramPrint, pprint2: ProgramPrint, frontend: String): Boolean = {

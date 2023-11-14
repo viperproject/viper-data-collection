@@ -1,9 +1,11 @@
 package database
 
 import dataCollection.EntryTuple
+import slick.basic.DatabasePublisher
 
 import java.util.concurrent.Executors
 import scala.concurrent.{ExecutionContext, Future}
+import scala.io.Source
 
 object ExecContext {
   implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(8))
@@ -25,7 +27,7 @@ object DBQueryInterface {
     entryOpt
   }
 
-  def getPotentialMatchingEntryTuples(pe: ProgramEntry): Future[Seq[EntryTuple]] = {
+  def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[EntryTuple] = {
     val tupleQuery = for {
       proge <- PGSlickTables.programEntryTable
       sr <- PGSlickTables.siliconResultTable if sr.programEntryId == proge.programEntryId
@@ -39,8 +41,10 @@ object DBQueryInterface {
       .filter(_._1.frontend === pe.frontend)
       .filter(_._1.parseSuccess === pe.parseSuccess)
       .result
-    val tuples: Future[Seq[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)]] = db.run(filteredQuery)
-    val entryTuples: Future[Seq[EntryTuple]] = tuples map (seq => seq map (t => EntryTuple tupled t))
+      .transactionally
+      .withStatementParameters(fetchSize = 100)
+    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(filteredQuery)
+    val entryTuples: DatabasePublisher[EntryTuple] = tuples.mapResult(t => EntryTuple.tupled(t))
     entryTuples
   }
 

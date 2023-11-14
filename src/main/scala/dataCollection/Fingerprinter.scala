@@ -74,7 +74,7 @@ class ComparableFPNode(val fp: Fingerprint, val children: Seq[ComparableFPNode],
       root.matched = true
       return true
     }
-    lazy val childResults = root.children map containedInTree
+    lazy val childResults = root.children.filter(_.fp.weight >= this.fp.weight) map containedInTree
     childResults.exists(identity)
   }
 
@@ -237,14 +237,14 @@ object Fingerprinter {
     }
 
     val childPrints = subnodes(flatPN) map fingerprintPNode
-    val currHash = hashNode(flatPN, childPrints)
-    val treeWeight = childPrints.map(_.fp.weight).sum + 1
-    FPNode(Fingerprint(treeWeight, currHash), childPrints.sorted(FPNodeOrdering))
+    val sortedPrints = if (isCommutative(flatPN)) childPrints.sorted(FPNodeOrdering) else childPrints
+    val currHash = hashNode(flatPN, sortedPrints)
+    val treeWeight = sortedPrints.map(_.fp.weight).sum + 1
+    FPNode(Fingerprint(treeWeight, currHash), sortedPrints)
   }
 
   private def hashNode(pn: PNode, childPrints: Seq[FPNode]): String = {
-    val cPrints = if (isCommutative(pn)) childPrints.sorted(FPNodeOrdering) else childPrints
-    val concatHashes: String = ConstNodeHashes.hashValue(pn) + String.valueOf(cPrints flatMap (_.fp.hashVal))
+    val concatHashes: String = ConstNodeHashes.hashValue(pn) + String.valueOf(childPrints flatMap (_.fp.hashVal))
     MD5.generateHash(concatHashes)
   }
 
@@ -263,7 +263,7 @@ object Fingerprinter {
 
   private def updateWeights(root: FPNode): FPNode = {
     val updatedChildren = root.children map updateWeights
-    FPNode(Fingerprint(updatedChildren.map(_.fp.weight).sum + 1, root.fp.hashVal), updatedChildren.sorted(FPNodeOrdering))
+    FPNode(Fingerprint(updatedChildren.map(_.fp.weight).sum + 1, root.fp.hashVal), updatedChildren)
   }
 
   private def subnodes(pn: PNode): Seq[PNode] = pn match {
