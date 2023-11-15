@@ -63,7 +63,7 @@ object ProcessingPipeline {
         }
 
         try {
-          pprintWriter.write(entryBin)
+          pprintWriter.write(pprintBin)
         } finally {
           pprintWriter.close()
         }
@@ -184,12 +184,7 @@ object ProcessingPipeline {
 
     // Passed all filters, store in database
 
-    val peInsert = DBQueryInterface.insertProgramEntry(programEntry)
-    val sRInsert = DBQueryInterface.insertSiliconResult(siliconResult)
-    val cRInsert = DBQueryInterface.insertCarbonResult(carbonResult)
-//TODO: Insert Programprint
-    val insertQueries = Future.sequence(List(peInsert, sRInsert, cRInsert))
-    Await.ready(insertQueries, Duration.Inf)
+    DBQueryInterface.insertEntry(programEntry, siliconResult, carbonResult, programPrintEntry)
   }
 
 

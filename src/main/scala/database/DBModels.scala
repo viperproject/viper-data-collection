@@ -177,7 +177,7 @@ object ProgramPrintEntry {
 /** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information
  * Comparison is only done through [[fullId]], since [[message]]s are too specific to a given program
  *
- * @param fullId      the original error ID
+ * @param fullId  the original error ID
  * @param message describes the error in full */
 case class VerError(fullId: String, message: String) {
   override def equals(obj: Any): Boolean = obj match {
@@ -190,6 +190,7 @@ case class VerError(fullId: String, message: String) {
 
 object VerError {
   implicit val rw: RW[VerError] = macroRW
+
   def toError(ae: AbstractError): VerError = {
     VerError(ae.fullId, ae.readableMessage)
   }
@@ -385,8 +386,6 @@ class SlickTables(val profile: PostgresProfile) {
   }
 
   lazy val programPrintEntryTable = TableQuery[ProgramPrintEntryTable]
-
-
 
 
   def getDDL: String = {

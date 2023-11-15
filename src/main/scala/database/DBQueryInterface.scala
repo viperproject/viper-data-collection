@@ -4,7 +4,8 @@ import dataCollection.EntryTuple
 import slick.basic.DatabasePublisher
 
 import java.util.concurrent.Executors
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
 
 object ExecContext {
@@ -30,9 +31,9 @@ object DBQueryInterface {
   def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[EntryTuple] = {
     val tupleQuery = for {
       proge <- PGSlickTables.programEntryTable
-      sr <- PGSlickTables.siliconResultTable if sr.programEntryId == proge.programEntryId
-      cr <- PGSlickTables.carbonResultTable if cr.programEntryId == proge.programEntryId
-      pp <- PGSlickTables.programPrintEntryTable if pp.programEntryId == proge.programEntryId
+      sr <- PGSlickTables.siliconResultTable if sr.programEntryId === proge.programEntryId
+      cr <- PGSlickTables.carbonResultTable if cr.programEntryId === proge.programEntryId
+      pp <- PGSlickTables.programPrintEntryTable if pp.programEntryId === proge.programEntryId
     } yield (proge, pp, sr, cr)
     val filteredQuery = tupleQuery
       .filter(_._1.loc >= (pe.loc * 0.8).toInt)
@@ -41,9 +42,9 @@ object DBQueryInterface {
       .filter(_._1.frontend === pe.frontend)
       .filter(_._1.parseSuccess === pe.parseSuccess)
       .result
-      .transactionally
+    val queryWithParams = filteredQuery.transactionally
       .withStatementParameters(fetchSize = 100)
-    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(filteredQuery)
+    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(queryWithParams)
     val entryTuples: DatabasePublisher[EntryTuple] = tuples.mapResult(t => EntryTuple.tupled(t))
     entryTuples
   }
@@ -69,8 +70,8 @@ object DBQueryInterface {
     userSubmissions
   }
 
-  def insertProgramEntry(entry: ProgramEntry): Future[Int] = {
-    val insertQuery = PGSlickTables.programEntryTable += entry
+  def insertProgramEntry(entry: ProgramEntry): Future[Long] = {
+    val insertQuery = (PGSlickTables.programEntryTable returning PGSlickTables.programEntryTable.map(_.programEntryId)) += entry
     db.run(insertQuery)
   }
 
@@ -92,6 +93,21 @@ object DBQueryInterface {
   def insertCarbonResult(result: CarbonResult): Future[Int] = {
     val insertQuery = PGSlickTables.carbonResultTable += result
     db.run(insertQuery)
+  }
+
+  def insertProgramPrintEntry(ppe: ProgramPrintEntry): Future[Int] = {
+    val insertQuery = PGSlickTables.programPrintEntryTable += ppe
+    db.run(insertQuery)
+  }
+
+  def insertEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult, ppe: ProgramPrintEntry): Future[Unit] = {
+    val peId = Await.result(insertProgramEntry(pe), Duration.Inf)
+    val inserts = DBIO.seq(
+      PGSlickTables.siliconResultTable += sr.copy(programEntryId = peId),
+      PGSlickTables.carbonResultTable += cr.copy(programEntryId = peId),
+      PGSlickTables.programPrintEntryTable += ppe.copy(programEntryId = peId)
+    )
+    Await.ready(db.run(inserts), Duration.Inf)
   }
 
   def getSiliconResultsForEntry(peId: Long): Future[Seq[SiliconResult]] = {
@@ -117,6 +133,41 @@ object DBQueryInterface {
   def getOldestUserSubmission(): Future[Option[UserSubmission]] = {
     val submission: Future[Option[UserSubmission]] = db.run(PGSlickTables.userSubmissionTable.sortBy(_.submissionDate.asc).result.headOption)
     submission
+  }
+
+  def getUSCount(): Future[Int] = {
+    val usCount = db.run(PGSlickTables.userSubmissionTable.length.result)
+    usCount
+  }
+
+  def getPECount(): Future[Int] = {
+    val peCount = db.run(PGSlickTables.programEntryTable.length.result)
+    peCount
+  }
+
+  def getSRCount(): Future[Int] = {
+    val srCount = db.run(PGSlickTables.siliconResultTable.length.result)
+    srCount
+  }
+
+  def getCRCount(): Future[Int] = {
+    val crCount = db.run(PGSlickTables.carbonResultTable.length.result)
+    crCount
+  }
+
+  def getPPCount(): Future[Int] = {
+    val ppCount = db.run(PGSlickTables.programPrintEntryTable.length.result)
+    ppCount
+  }
+
+  def clearDB(): Future[Unit] = {
+    val deleteUS = PGSlickTables.userSubmissionTable.delete
+    val deletePE = PGSlickTables.programEntryTable.delete
+    val deleteSR = PGSlickTables.siliconResultTable.delete
+    val deleteCR = PGSlickTables.carbonResultTable.delete
+    val deletePP = PGSlickTables.programPrintEntryTable.delete
+    val deleteQuery = DBIO.seq(deleteUS, deletePE, deleteSR, deleteCR, deletePP)
+    db.run(deleteQuery)
   }
 
 }

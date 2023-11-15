@@ -1,0 +1,14 @@
+method x(z: Int) returns (y: Int)
+  requires 0<=z
+  ensures  y==z*(z+1)/2
+{
+  y := 0
+  var w: Int := 0;
+  while(w<=z)
+    invariant w<=(z+1)
+    invariant y==(w-1)* w/2
+  {
+    y := y+w
+    w := w+1
+  }
+}

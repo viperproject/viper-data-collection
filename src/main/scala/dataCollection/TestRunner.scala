@@ -21,8 +21,8 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  showAST()
-  //getPrograms()
+  //showAST()
+  getPrograms()
   //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
@@ -66,10 +66,11 @@ object TestRunner extends App {
           val matchres2 = pprint2.matchTrees(pprint1)
           if (matchres1.methFunMatchP >= 80 && matchres2.methFunMatchP >= 80) {
             if (matchres1.methFunMatchP <= 90 && matchres2.methFunMatchP <= 90) {
-            println(matchres1)
-            println(s"MATCH FOUND: ${name1}, ${name2}")
-            dups = dups.union(Set(name1, name2))
-          }}
+              println(matchres1)
+              println(s"MATCH FOUND: ${name1}, ${name2}")
+              dups = dups.union(Set(name1, name2))
+            }
+          }
         }
       }
     }
@@ -109,8 +110,9 @@ object TestRunner extends App {
         if (matchres1.totalMatchP >= 80 && matchres2.totalMatchP >= 80) {
           if (matchres1.totalMatchP <= 100 && matchres2.totalMatchP <= 100) {
             if (prog1.numFunctions == prog2.numFunctions && prog1.numMethods == prog2.numMethods) {
-            matches = matches :+ num2
-          }}
+              matches = matches :+ num2
+            }
+          }
         }
       }
       println(s"Matches with ${num}: ${matches}")
@@ -137,8 +139,8 @@ object TestRunner extends App {
         val prog2 = progresults(num2)
         if (prog1 != prog2) {
           if (!prog1.isSimilarTo(prog2, 90)) {
-            if(prog1.isSimilarTo(prog2, 80))
-            matches = matches :+ num2
+            if (prog1.isSimilarTo(prog2, 80))
+              matches = matches :+ num2
           }
         }
       }

@@ -5,8 +5,8 @@ create table if not exists "programs"."SiliconResults" ("silResId" BIGSERIAL NOT
 create table if not exists "programs"."CarbonResults" ("carbResId" BIGSERIAL NOT NULL PRIMARY KEY,"creationDate" TIMESTAMP NOT NULL,"carbonHash" VARCHAR NOT NULL,"programEntryId" BIGINT NOT NULL,"success" BOOLEAN NOT NULL,"runtime" BIGINT NOT NULL,"errors" BYTEA NOT NULL,"phaseRuntimes" BYTEA NOT NULL);
 create table if not exists "programs"."ProgramPrintEntry" ("pprintID" BIGSERIAL NOT NULL PRIMARY KEY,"programEntryId" BIGINT NOT NULL,"programPrint" BYTEA NOT NULL);
 alter table "programs"."SiliconResults" drop constraint if exists "silPE_FK";
-alter table "programs"."SiliconResults" add constraint "silPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete NO ACTION;
+alter table "programs"."SiliconResults" add constraint "silPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete CASCADE;
 alter table "programs"."CarbonResults" drop constraint if exists "carbPE_FK";
-alter table "programs"."CarbonResults" add constraint "carbPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete NO ACTION;
+alter table "programs"."CarbonResults" add constraint "carbPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete CASCADE;
 alter table "programs"."ProgramPrintEntry" drop constraint if exists "pprintPE_FK";
-alter table "programs"."ProgramPrintEntry" add constraint "pprintPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete NO ACTION;
+alter table "programs"."ProgramPrintEntry" add constraint "pprintPE_FK" foreign key("programEntryId") references "programs"."ProgramEntries"("programEntryId") on update NO ACTION on delete CASCADE;

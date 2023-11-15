@@ -1,7 +1,7 @@
 package dataCollection
 
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
-import viper.silver.logger.{SilentLogger, ViperLogger}
+import viper.silver.logger.{SilentLogger, ViperLogger, ViperStdOutLogger}
 import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
 import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
 
@@ -9,7 +9,7 @@ import scala.collection.immutable.ArraySeq
 
 /** SiliconFrontend Implementation that measures runtimes in the different stages of the Verifier,
  * results can be called using [[getRuntimes]], only valid after running [[runMain]] */
-class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, SilentLogger().get) {
+class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get) {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
   private var benchmarkAnaResults: Seq[(String, Long)] = Seq()

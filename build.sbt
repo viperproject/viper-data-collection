@@ -14,7 +14,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.10",
     libraryDependencies += munit % Test,
     libraryDependencies += "com.lihaoyi" %% "upickle" % "1.3.0",
-    libraryDependencies += "org.slf4j" % "slf4j-nop" % "2.0.5",
+    libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.30" % Provided,
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick" % "3.3.3",
       "org.postgresql" % "postgresql" % "42.3.4",

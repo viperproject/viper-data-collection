@@ -1,13 +1,13 @@
 package dataCollection
 
 import viper.carbon.CarbonFrontend
-import viper.silver.logger.{SilentLogger, ViperLogger}
+import viper.silver.logger.{SilentLogger, ViperLogger, ViperStdOutLogger}
 import viper.silver.reporter.{NoopReporter, StdIOReporter}
 import viper.silver.verifier.{Success => CarbSuccess}
 
 import scala.concurrent.{Await, Future, TimeoutException}
 
-class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, logger = SilentLogger().get) {
+class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
 
   def main(args: Array[String]): Unit = {

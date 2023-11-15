@@ -9,4 +9,4 @@ if [ ! -f "$CP_FILE" ]; then
     (cd "$BASEDIR"; sbt "export runtime:dependencyClasspath" | tail -n1 > "$CP_FILE")
 fi
 
-exec java -Xss30M -cp "$(cat "$CP_FILE")" dataCollection.SiliconStageRunner "$@"
+exec java -Xss30M -Dlogback.configurationFile="$BASEDIR/silicon/src/main/resources/logback.xml" -cp "$(cat "$CP_FILE")" dataCollection.SiliconStageRunner "$@"

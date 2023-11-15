@@ -72,7 +72,7 @@ object ProcessingHelper {
     val potMatches = DBQueryInterface.getPotentialMatchingEntryTuples(et.programEntry)
     val matchState = new BooleanCarrier()
     val matchResults = potMatches.mapResult(otherEntry => {
-      if(matchState.bool) true
+      if (matchState.bool) true
       else {
         val dm = doEntriesMatch(et, otherEntry)
         matchState.bool = dm
@@ -80,24 +80,24 @@ object ProcessingHelper {
       }
     })
     var foundMatch = false
-    matchResults.foreach(r => foundMatch = foundMatch || r)
+    val evaluation = matchResults.foreach(r => foundMatch = foundMatch || r)
+    Await.ready(evaluation, Duration.Inf)
     foundMatch
   }
-
 
 
   /** Compares one EntryTuple to another
    *
    * @return true if the entries are too similar */
   private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple): Boolean = {
-      lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
-      lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
-      lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
-      lazy val pprint1 = et1.programPrintEntry.programPrint
-      lazy val pprint2 = et2.programPrintEntry.programPrint
-      lazy val pprintMatch = doProgramPrintsMatch(pprint1, pprint2, et1.programEntry.frontend)
+    lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
+    lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
+    lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
+    lazy val pprint1 = et1.programPrintEntry.programPrint
+    lazy val pprint2 = et2.programPrintEntry.programPrint
+    lazy val pprintMatch = doProgramPrintsMatch(pprint1, pprint2, et1.programEntry.frontend)
 
-      peMatch && srMatch && crMatch && pprintMatch
+    peMatch && srMatch && crMatch && pprintMatch
   }
 
   def doProgramPrintsMatch(pprint1: ProgramPrint, pprint2: ProgramPrint, frontend: String): Boolean = {
@@ -107,8 +107,6 @@ object ProcessingHelper {
     val matchResult1 = cpprint1 matchTrees cpprint2
     val matchResult2 = cpprint2 matchTrees cpprint1
     val isSubset = matchResult1.isSubset || matchResult2.isSubset
-    println(matchResult1)
-    println(matchResult2)
     val similarTrees = if (frontend == "Silicon" || frontend == "Carbon") {
       matchResult1.isViperMatch && matchResult2.isViperMatch
     } else {
