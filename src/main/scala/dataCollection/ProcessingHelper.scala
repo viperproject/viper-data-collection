@@ -59,6 +59,10 @@ object ProcessingHelper {
     )
   }
 
+  /** Class that stores a boolean to indicate whether an event occurred. Usage example: Passed into a closure in [[existsSimilarEntry]]
+   * to avoid unnecessary computations once match has been found. */
+  private class BooleanCarrier(var bool: Boolean = false)
+
   /** Searches database for ProgramEntries that could be a match, then compares the entry, newest siliconResult,
    * CarbonResult and ProgramPrint for each to see if they are too similar. This is done using a DatabasePublisher
    * to avoid loading all Entries into memory at once.
@@ -66,16 +70,26 @@ object ProcessingHelper {
    * @return true if there is a database entry that is too similar to the argument */
   def existsSimilarEntry(et: EntryTuple): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntryTuples(et.programEntry)
-    val matchResults = potMatches.mapResult(otherEntry => doEntriesMatch(et, otherEntry))
+    val matchState = new BooleanCarrier()
+    val matchResults = potMatches.mapResult(otherEntry => {
+      if(matchState.bool) true
+      else {
+        val dm = doEntriesMatch(et, otherEntry)
+        matchState.bool = dm
+        dm
+      }
+    })
     var foundMatch = false
     matchResults.foreach(r => foundMatch = foundMatch || r)
     foundMatch
   }
 
+
+
   /** Compares one EntryTuple to another
    *
    * @return true if the entries are too similar */
-  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple)(implicit ec: ExecutionContext): Boolean = {
+  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple): Boolean = {
       lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
       lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
       lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
