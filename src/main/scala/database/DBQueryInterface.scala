@@ -150,6 +150,16 @@ object DBQueryInterface {
     srCount
   }
 
+  def getUniqueSRCount(): Future[Int] = {
+    val srCount = db.run(PGSlickTables.siliconResultTable.groupBy(_.programEntryId).length.result)
+    srCount
+  }
+
+  def getUniqueCRCount(): Future[Int] = {
+    val crCount = db.run(PGSlickTables.carbonResultTable.groupBy(_.programEntryId).length.result)
+    crCount
+  }
+
   def getCRCount(): Future[Int] = {
     val crCount = db.run(PGSlickTables.carbonResultTable.length.result)
     crCount
@@ -158,6 +168,47 @@ object DBQueryInterface {
   def getPPCount(): Future[Int] = {
     val ppCount = db.run(PGSlickTables.programPrintEntryTable.length.result)
     ppCount
+  }
+
+
+  def getFrontendCount(frontend: String): Future[Int] = {
+    val feCount = db.run(PGSlickTables.programEntryTable.filter(_.frontend === frontend).length.result)
+    feCount
+  }
+
+  def getVerifierCount(verifier: String): Future[Int] = {
+    val vCount = db.run(PGSlickTables.programEntryTable.filter(_.originalVerifier === verifier).length.result)
+    vCount
+  }
+
+  def getParseSuccessCount(success: Boolean): Future[Int] = {
+    val psCount = db.run(PGSlickTables.programEntryTable.filter(_.parseSuccess === success).length.result)
+    psCount
+  }
+
+  def getSilSuccessCount(success: Boolean): Future[Int] = {
+    val ssCount = db.run(PGSlickTables.siliconResultTable.filter(_.success === success).length.result)
+    ssCount
+  }
+
+  def getCarbonSuccessCount(success: Boolean): Future[Int] = {
+    val csCount = db.run(PGSlickTables.carbonResultTable.filter(_.success === success).length.result)
+    csCount
+  }
+
+  def getLocRangeCount(lower: Int, upper: Int): Future[Int] = {
+    val lrCount = db.run(PGSlickTables.programEntryTable.filter(_.loc >= lower).filter(_.loc <= upper).length.result)
+    lrCount
+  }
+
+  def getSiliconRuntimeRangeCount(lower: Long, upper: Long): Future[Int] = {
+    val srrCount = db.run(PGSlickTables.siliconResultTable.filter(_.runtime >= lower).filter(_.runtime <= upper).length.result)
+    srrCount
+  }
+
+  def getCarbonRuntimeRangeCount(lower: Long, upper: Long): Future[Int] = {
+    val crrCount = db.run(PGSlickTables.carbonResultTable.filter(_.runtime >= lower).filter(_.runtime <= upper).length.result)
+    crrCount
   }
 
   def clearDB(): Future[Unit] = {

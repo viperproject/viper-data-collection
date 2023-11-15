@@ -173,10 +173,18 @@ object ProcessingPipeline {
     val carbonResult = deserialize[CarbonResult](cRByteArr)
     val programPrintEntry = deserialize[ProgramPrintEntry](ppByteArr)
 
+    val entryTuple = EntryTuple(programEntry, programPrintEntry, siliconResult, carbonResult)
+
     // Deciding whether to drop entry based on similarity
-    val similarEntryExists = existsSimilarEntry(EntryTuple(programEntry, programPrintEntry, siliconResult, carbonResult))
+    val similarEntryExists = existsSimilarEntry(entryTuple)
     if (similarEntryExists) {
       println("Entry deemed too similar, will not be stored.")
+      return
+    }
+
+    val isInteresting = areFeaturesInteresting(entryTuple)
+    if(!isInteresting) {
+      println("Too many programs with similar features, will not be stored.")
       return
     }
 
