@@ -247,7 +247,7 @@ object ProcessingHelper {
     if (argInd == -1) {
       return args
     } else {
-      args.dropRight(args.length - argInd) ++ args.drop(argInd+2)
+      args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
     }
   }
 

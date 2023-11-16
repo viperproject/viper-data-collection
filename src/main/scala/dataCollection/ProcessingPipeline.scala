@@ -185,12 +185,10 @@ object ProcessingPipeline {
     }
 
     val isInteresting = areFeaturesInteresting(entryTuple)
-    if(!isInteresting) {
+    if (!isInteresting) {
       println("Too many programs with similar features, will not be stored.")
       return
     }
-
-    //TODO: Filtering out by Features
 
     // Passed all filters, store in database
 

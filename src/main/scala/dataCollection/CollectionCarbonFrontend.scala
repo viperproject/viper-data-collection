@@ -15,14 +15,15 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutL
 
   def main(args: Array[String], timeOutSeconds: Int = 0): Unit = {
     try {
-      val execution = Future {execute(args)}
-      if(timeOutSeconds != 0) {
+      val execution = Future {
+        execute(args)
+      }
+      if (timeOutSeconds != 0) {
         try {
           Await.ready(execution, Duration(timeOutSeconds * 1000, MILLISECONDS))
         } catch {
           case te: TimeoutException => {
-            //TODO: Ask to make carbonInstance protected instead of private / create protected getter method
-            this.carbonInstance.stop()
+            _ver.stop()
             this._errors = _errors :+ TimeoutOccurred(timeOutSeconds.toLong, "seconds")
           }
         }
