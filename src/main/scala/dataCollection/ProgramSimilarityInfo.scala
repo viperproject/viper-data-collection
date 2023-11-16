@@ -116,12 +116,19 @@ object ProgramInfoAnalyser {
     val runner = new CollectionSilFrontend
     runner.runMain(args)
     println(runner.getPhaseRuntimes ++ runner.getBenchmarkResults)
+    runner.getVerificationResult match {
+      case Some(value) => value match {
+        case SilSuccess => ()
+        case SilFailure(errors) => println(errors map (_.fullId))
+      }
+      case None => ()
+    }
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }
 
   private def getCarbonVerifierResults(args: Array[String]): VerifierResult = {
     val runner = new CollectionCarbonFrontend
-    runner.main(args)
+    runner.main(Array(args(0), "--boogieOpt", "/timeLimit:1"))
     println(runner.getPhaseRuntimes)
     VerifierResult(runner.getVerificationResult.map(v => VerRes.toVerRes(v)), runner.getTime)
   }

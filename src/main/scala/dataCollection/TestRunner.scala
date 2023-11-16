@@ -22,8 +22,8 @@ object TestRunner extends App {
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
   //showAST()
-  getPrograms()
-  //println(PGSlickTables.getDDL)
+  //getPrograms()
+  println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()

@@ -1,9 +1,9 @@
 package dataCollection
 
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
-import viper.silver.logger.{SilentLogger, ViperLogger, ViperStdOutLogger}
-import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
-import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
+import viper.silver.logger.{ViperStdOutLogger}
+import viper.silver.reporter.{BenchmarkingPhase, Message, NoopReporter, Reporter}
+import viper.silver.verifier.{Success => SilSuccess}
 
 import scala.collection.immutable.ArraySeq
 

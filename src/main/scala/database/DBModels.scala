@@ -34,6 +34,7 @@ case class ProgramEntry(programEntryId: Long,
                         frontend: String,
                         originalVerifier: String,
                         args: Array[String],
+                        originalRuntime: Long,
                         parseSuccess: Boolean,
                         hasPreamble: Boolean) extends Similarity[ProgramEntry] with Serializable {
 
@@ -116,7 +117,8 @@ case class SiliconResult(silResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5
+    lazy val similarTime = ((this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
+      || (this.runtime - other.runtime).abs <= 2000) // either time in +-50% of other or +-2seconds (for variance in small programs)
     similarTime && sameRes
   }
 }
@@ -157,7 +159,8 @@ case class CarbonResult(carbResId: Long,
       val otherErrorIds = Set(other.errors map (_.fullId))
       !other.success && errorIds == otherErrorIds
     }
-    lazy val similarTime = this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5
+    lazy val similarTime = ((this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
+      || (this.runtime - other.runtime).abs <= 2000)
     similarTime && sameRes
   }
 }
@@ -242,6 +245,8 @@ class SlickTables(val profile: PostgresProfile) {
 
     def args = column[Array[String]]("args")
 
+    def originalRuntime = column[Long]("originalRuntime")
+
     def parseSuccess = column[Boolean]("parseSuccess")
 
     def hasPreamble = column[Boolean]("hasPreamble")
@@ -254,6 +259,7 @@ class SlickTables(val profile: PostgresProfile) {
       frontend,
       originalVerifier,
       args,
+      originalRuntime,
       parseSuccess,
       hasPreamble) <> (ProgramEntry.tupled, ProgramEntry.unapply)
 

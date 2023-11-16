@@ -81,7 +81,7 @@ class ComparableFPNode(val fp: Fingerprint, val children: Seq[ComparableFPNode],
   /** Clears all matched fields in this subtree */
   def clearMatches: Unit = {
     matched = false
-    children map (_.clearMatches)
+    children foreach (_.clearMatches)
   }
 }
 
@@ -120,7 +120,7 @@ class ComparableProgramPrint(val domainTree: ComparableFPNode,
 
   /** Clears the matched fields in all subtrees of this program. */
   def clearMatches(): Unit = {
-    Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree) map (_.clearMatches)
+    Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree) foreach (_.clearMatches)
   }
 
   /** Returns the amount of nodes in [[root]] that could be matched to one in [[otherRoot]]. This is a separate method to

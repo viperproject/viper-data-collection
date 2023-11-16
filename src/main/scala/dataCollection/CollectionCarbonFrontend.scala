@@ -12,7 +12,7 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutL
 
   def main(args: Array[String]): Unit = {
     try {
-      execute(Array(args(0)))
+      execute(args)
     } catch {
       case e: Exception => println(s"encountered: ${e}")
     }

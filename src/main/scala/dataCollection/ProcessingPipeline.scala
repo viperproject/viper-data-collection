@@ -86,7 +86,8 @@ object ProcessingPipeline {
 
     val programEntry = deserialize[ProgramEntry](byteArr)
 
-    val siliconResult = generateSiliconResults(programEntry)
+    val maxRuntime = (programEntry.originalRuntime * 2) / 1000
+    val siliconResult = generateSiliconResults(programEntry, timeOutSeconds = maxRuntime.toInt)
 
     val resFileName = s"tmp/$dirName/silRes.bin"
     val resultBin = serialize(siliconResult)
@@ -113,7 +114,8 @@ object ProcessingPipeline {
 
     val programEntry = deserialize[ProgramEntry](byteArr)
 
-    val carbonResult = generateCarbonResults(programEntry)
+    val maxRuntime = (programEntry.originalRuntime * 2) / 1000
+    val carbonResult = generateCarbonResults(programEntry, timeOutSeconds = maxRuntime.toInt)
 
     val resFileName = s"tmp/$dirName/carbRes.bin"
     val resultBin = serialize(carbonResult)

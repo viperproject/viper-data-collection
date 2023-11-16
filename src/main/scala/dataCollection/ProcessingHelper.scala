@@ -4,6 +4,7 @@ import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry
 import viper.silver.parser.FastParser
 import database.ExecContext._
 import slick.basic.DatabasePublisher
+import viper.silver.verifier.{Failure, Success}
 
 import java.io.{File, FileWriter}
 import java.nio.file.Paths
@@ -54,6 +55,7 @@ object ProcessingHelper {
       us.frontend,
       us.originalVerifier,
       us.args,
+      us.runtime,
       parseSuccess,
       hasPreamble,
     )
@@ -166,7 +168,7 @@ object ProcessingHelper {
 
   /** @param pe       ProgramEntry for which to get the results of verifying it through Silicon
    * @param extraArgs arguments that will be passed into Silicon alongside the original ones */
-  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): SiliconResult = {
+  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     var args: Array[String] = Array(tmpFile) ++ extraArgs
@@ -174,13 +176,21 @@ object ProcessingHelper {
     if (pe.originalVerifier == "Silicon") {
       args = args ++ pe.args
     }
+    args = filterArgs(args, "--timeout")
+    args ++= Array("--timeout", timeOutSeconds.toString)
     runner.runMain(args)
     val runtime = runner.getTime
     val siliconHash = runner.siliconHash
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val benchmarkResults = runner.getBenchmarkResults.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors.toArray map VerError.toError
+    val errors = runner.getVerificationResult match {
+      case Some(value) => value match {
+        case Success => Array[VerError]()
+        case Failure(errors) => errors.toArray map VerError.toError
+      }
+      case None => Array[VerError]()
+    }
 
     removeTempProgramFile(tmpFile)
 
@@ -198,7 +208,7 @@ object ProcessingHelper {
 
   /** @param pe       ProgramEntry for which to get the results of verifying it through Carbon
    * @param extraArgs arguments that will be passed into Carbon alongside the original ones */
-  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array()): CarbonResult = {
+  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): CarbonResult = {
     val runner = new CollectionCarbonFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     var args: Array[String] = Array(tmpFile) ++ extraArgs
@@ -206,12 +216,20 @@ object ProcessingHelper {
     if (pe.originalVerifier == "Carbon") {
       args = args ++ pe.args
     }
+    args = filterArgs(args, "--boogieOpt")
+    args ++= Array("--boogieOpt", s"/timeLimit:$timeOutSeconds")
     runner.main(args)
     val runtime = runner.getTime
     val carbonHash = runner.carbonHash
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
     val success = runner.hasSucceeded
-    val errors = runner.errors.toArray map VerError.toError
+    val errors = runner.getVerificationResult match {
+      case Some(value) => value match {
+        case Success => Array[VerError]()
+        case Failure(errors) => errors.toArray map VerError.toError
+      }
+      case None => Array[VerError]()
+    }
 
     removeTempProgramFile(tmpFile)
 
@@ -225,6 +243,16 @@ object ProcessingHelper {
       phaseRuntimes
     )
   }
+
+  def filterArgs(args: Array[String], toFilter: String): Array[String] = {
+    val argInd = args.indexOf(toFilter)
+    if (argInd == -1) {
+      return args
+    } else {
+      args.dropRight(args.length - argInd) ++ args.drop(argInd+2)
+    }
+  }
+
 
   /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
   def createTempProgramFile(id: Long, program: String): String = {
