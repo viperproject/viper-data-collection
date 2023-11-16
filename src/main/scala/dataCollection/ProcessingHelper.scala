@@ -216,9 +216,7 @@ object ProcessingHelper {
     if (pe.originalVerifier == "Carbon") {
       args = args ++ pe.args
     }
-    args = filterArgs(args, "--boogieOpt")
-    args ++= Array("--boogieOpt", s"/timeLimit:$timeOutSeconds")
-    runner.main(args)
+    runner.main(args, timeOutSeconds)
     val runtime = runner.getTime
     val carbonHash = runner.carbonHash
     val phaseRuntimes = runner.getPhaseRuntimes.toArray

@@ -3,16 +3,31 @@ package dataCollection
 import viper.carbon.CarbonFrontend
 import viper.silver.logger.{SilentLogger, ViperLogger, ViperStdOutLogger}
 import viper.silver.reporter.{NoopReporter, StdIOReporter}
-import viper.silver.verifier.{Success => CarbSuccess}
+import viper.silver.verifier.{TimeoutOccurred, Success => CarbSuccess}
 
+import java.util.concurrent.TimeoutException
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future, TimeoutException}
 
 class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String], timeOutSeconds: Int = 0): Unit = {
     try {
-      execute(args)
+      val execution = Future {execute(args)}
+      if(timeOutSeconds != 0) {
+        try {
+          Await.ready(execution, Duration(timeOutSeconds * 1000, MILLISECONDS))
+        } catch {
+          case te: TimeoutException => {
+            //TODO: Ask to make carbonInstance protected instead of private / create protected getter method
+            this.carbonInstance.stop()
+            this._errors = _errors :+ TimeoutOccurred(timeOutSeconds.toLong, "seconds")
+          }
+        }
+      }
+      Await.ready(execution, Duration.Inf)
     } catch {
       case e: Exception => println(s"encountered: ${e}")
     }
