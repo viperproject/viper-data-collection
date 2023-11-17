@@ -13,16 +13,17 @@ lazy val root = (project in file("."))
     version := "0.1.0-SNAPSHOT",
     scalaVersion := "2.13.10",
     libraryDependencies += munit % Test,
-    libraryDependencies += "com.lihaoyi" %% "upickle" % "1.3.0",
-    libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.30" % Provided,
     libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-nop" % "1.7.30" % Provided,
+      "com.lihaoyi" %% "cask" % "0.9.1" % Provided,
+      "com.lihaoyi" %% "upickle" % "3.0.0" % Provided,
       "com.typesafe.slick" %% "slick" % "3.3.3",
       "org.postgresql" % "postgresql" % "42.3.4",
       "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
       "com.github.tminglei" %% "slick-pg" % "0.20.3",
-      "com.github.tminglei" %% "slick-pg_play-json" % "0.20.3"
-    ),
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.11" % Test
+      "com.github.tminglei" %% "slick-pg_play-json" % "0.20.3",
+      "org.scalatest" %% "scalatest" % "3.2.11" % Test
+    )
 
   )
 
