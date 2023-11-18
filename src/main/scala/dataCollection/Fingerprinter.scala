@@ -94,7 +94,7 @@ class ComparableProgramPrint(val domainTree: ComparableFPNode,
 
     matchTuples match {
       case Seq(r1, r2, r3, r4, r5, r6) => MatchResult(r1, r2, r3, r4, r5, r6)
-      case _ => throw ShouldNeverOccurException()
+      case _ => throw new IllegalStateException("trees should always return a sequence with 6 elements")
     }
   }
 
@@ -123,7 +123,7 @@ object ComparableProgramPrint {
     val convTrees = pp.trees map ComparableFPNode.convert
     convTrees match {
       case Seq(t1, t2, t3, t4, t5, t6) => new ComparableProgramPrint(t1, t2, t3, t4, t5, t6, pp.numMethods, pp.numFunctions)
-      case _ => throw ShouldNeverOccurException()
+      case _ => throw new IllegalStateException("trees should always return a sequence with 6 elements")
     }
   }
 }
