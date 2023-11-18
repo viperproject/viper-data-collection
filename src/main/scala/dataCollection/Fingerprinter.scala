@@ -195,24 +195,17 @@ object Fingerprinter {
    * Child Nodes are sorted by weight, not original order.
    * */
   def fingerprintPProgram(pp: PProgram): ProgramPrint = {
-    ProgramPrint(domainTree = trimTree(fingerprintPNode(RootPNode(pp.domains)(null))),
-      fieldTree = trimTree(fingerprintPNode(RootPNode(pp.fields)(null))),
-      functionTree = trimTree(fingerprintPNode(RootPNode(pp.functions)(null))),
-      predicateTree = trimTree(fingerprintPNode(RootPNode(pp.predicates)(null))),
-      methodTree = trimTree(fingerprintPNode(RootPNode(pp.methods)(null))),
-      extensionTree = trimTree(fingerprintPNode(RootPNode(pp.extensions)(null))),
-      numMethods = pp.methods.size,
-      numFunctions = pp.functions.size)
+    val programTrees = Seq(pp.domains, pp.fields, pp.functions, pp.predicates, pp.methods, pp.extensions)
+    val fpTrees = programTrees map (t => trimTree(fingerprintPNode(RootPNode(t)(null))))
+    fpTrees match {
+      case Seq(t1, t2, t3, t4, t5, t6) => ProgramPrint(t1, t2, t3, t4, t5, t6, pp.methods.size, pp.functions.size)
+      case _ => throw new IllegalStateException("This sequence should always contain 6 elements")
+    }
   }
 
   private def fingerprintPNode(pn: PNode): FPNode = {
     // Split pres and posts that are combined with && into separate statements, semantically equivalent
-    val flatPN: PNode = pn match {
-      case pm: PMethod => pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(pm.pos, pm.annotations)
-      case pf: PFunction => pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(pf.pos, pf.annotations)
-      case _ => pn
-    }
-
+    val flatPN = flatten(pn)
     val childPrints = subnodes(flatPN) map fingerprintPNode
     val sortedPrints = if (isCommutative(flatPN)) childPrints.sorted(FPNodeOrdering) else childPrints
     val currHash = hashNode(flatPN, sortedPrints)
@@ -255,6 +248,14 @@ object Fingerprinter {
       case _ => false
     }
     case _ => false
+  }
+
+  private def flatten(pn: PNode): PNode = {
+    pn match {
+      case pm: PMethod => pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(pm.pos, pm.annotations)
+      case pf: PFunction => pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(pf.pos, pf.annotations)
+      case _ => pn
+    }
   }
 
   private def flattenBinExpAnd(pn: PExp): Seq[PExp] = {

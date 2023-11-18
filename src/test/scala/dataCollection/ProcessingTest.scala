@@ -33,7 +33,7 @@ class ProcessingTest extends AnyFunSuite {
         sampleProg,
         getLOC(sampleProg),
         "Silicon",
-        Array(),
+        Array("--timeout", "10"),
         "Silicon",
         true,
         1500
@@ -44,7 +44,7 @@ class ProcessingTest extends AnyFunSuite {
         sampleProg2,
         getLOC(sampleProg2),
         "Silicon",
-        Array(),
+        Array("--timeout", "20"),
         "Silicon",
         true,
         1500
@@ -73,6 +73,10 @@ class ProcessingTest extends AnyFunSuite {
           assert(sampleUS.frontend == entry.frontend)
           assert(sampleUS.success == entry.success)
           assert(sampleUS.runtime == entry.runtime)
+
+          //check args array deserialized correctly
+          val args = Array("--timeout", "10")
+          assert(entry.args.sameElements(args))
         }
         case None => assert(false)
       }
