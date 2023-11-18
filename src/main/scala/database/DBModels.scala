@@ -54,6 +54,12 @@ case class ProgramEntry(programEntryId: Long,
 
 object ProgramEntry {
 
+  implicit val rw: RW[ProgramEntry] = macroRW
+  implicit val tsRW: RW[Timestamp] = upickle.default.readwriter[String].bimap[Timestamp](
+    t => s"${t.getTime}",
+    str => new Timestamp(str.toLong)
+  )
+
   def tupled = (ProgramEntry.apply _).tupled
 }
 

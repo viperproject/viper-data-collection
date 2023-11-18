@@ -5,6 +5,7 @@ import upickle.default.{macroRW, write, ReadWriter => RW}
 import viper.silver.parser.FastParser
 import viper.silver.verifier.{AbstractError, VerificationResult}
 import viper.silver.verifier.{Failure => SilFailure, Success => SilSuccess}
+import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.charset.CodingErrorAction

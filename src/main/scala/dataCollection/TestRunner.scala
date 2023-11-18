@@ -3,6 +3,7 @@ import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
+import webAPI.JSONReadWriters._
 
 import java.io.File
 import java.nio.charset.CodingErrorAction
@@ -81,10 +82,10 @@ object TestRunner extends App {
   def specificResult(num1: Int, num2: Int): Unit = {
     val sourcefile1: BufferedSource = fromFile(testFolder + s"results/prog${num1}pprint.json")
     val pprintJSON1: String = try sourcefile1.mkString finally sourcefile1.close()
-    val progres1 = ComparableProgramPrint convert read(pprintJSON1)(ProgramPrint.rw)
+    val progres1 = ComparableProgramPrint convert read[ProgramPrint](pprintJSON1)
     val sourcefile2: BufferedSource = fromFile(testFolder + s"results/prog${num2}pprint.json")
     val pprintJSON2: String = try sourcefile2.mkString finally sourcefile2.close()
-    val progres2 = ComparableProgramPrint convert read(pprintJSON2)(ProgramPrint.rw)
+    val progres2 = ComparableProgramPrint convert read[ProgramPrint](pprintJSON2)
     val matchres1 = progres1.matchTrees(progres2)
     val matchres2 = progres1.matchTrees(progres2)
     println(matchres1)
@@ -96,7 +97,7 @@ object TestRunner extends App {
     for (num <- Seq.range(0, 901)) {
       val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}pprint.json")
       val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-      val progres = ComparableProgramPrint convert read(pprintJSON)(ProgramPrint.rw)
+      val progres = ComparableProgramPrint convert read[ProgramPrint](pprintJSON)
       progresults = progresults :+ progres
     }
     var dupCount = 0

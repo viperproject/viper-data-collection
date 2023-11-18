@@ -6,6 +6,7 @@ import viper.silver.parser._
 import java.security.MessageDigest
 import scala.math.Ordered.orderingToOrdered
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
+import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, FileWriter}
 import scala.io.Source.fromFile
@@ -19,16 +20,8 @@ import scala.io.Source.fromFile
  * */
 case class Fingerprint(weight: Int, hashVal: String)
 
-object Fingerprint {
-  implicit val rw: RW[Fingerprint] = macroRW
-}
-
 /** Tree to store [[Fingerprint]]s of nodes and their children in a structurally similar way to the original program */
 case class FPNode(fp: Fingerprint, children: Seq[FPNode])
-
-object FPNode {
-  implicit val rw: RW[FPNode] = macroRW
-}
 
 /** Descending ordering by [[weight]], then [[hashVal]] of the [[FPNode]]'s fingerprint */
 object FPNodeOrdering extends Ordering[FPNode] {
@@ -54,12 +47,11 @@ case class ProgramPrint(domainTree: FPNode,
 }
 
 object ProgramPrint {
-  implicit val rw: RW[ProgramPrint] = macroRW
 
   def load(p: String): ProgramPrint = {
     val source = fromFile(p)
     val pprintJSON = try source.mkString finally source.close()
-    read(pprintJSON)
+    read[ProgramPrint](pprintJSON)
   }
 }
 
