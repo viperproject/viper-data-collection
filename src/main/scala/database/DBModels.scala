@@ -7,11 +7,11 @@ import slick.ast.BaseTypedType
 import slick.jdbc.{JdbcType, PostgresProfile}
 import slick.lifted.ProvenShape
 import upickle.default.{macroRW, ReadWriter => RW}
-import viper.silver.parser._
 import viper.silver.verifier.AbstractError
 
 import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
+import scala.reflect.ClassTag
 
 
 /** Case class to represent a row in the programs.ProgramEntries table of the database
@@ -47,19 +47,12 @@ case class ProgramEntry(programEntryId: Long,
     lazy val similarLength = this.loc <= 1.2 * other.loc && this.loc >= 0.8 * other.loc
     lazy val sameFrontend = this.frontend == other.frontend
     lazy val sameVerifier = this.originalVerifier == other.originalVerifier
-    lazy val similarArgs = this.args.toSet.intersect(other.args.toSet).size >= 0.8 * this.args.length
+    lazy val similarArgs = this.args.toSet.filter(_.startsWith("--")) == other.args.toSet.filter(_.startsWith("--"))
     similarLength && sameFrontend && sameVerifier && similarArgs
   }
 }
 
 object ProgramEntry {
-
-  implicit val rw: RW[ProgramEntry] = macroRW
-  implicit val tsRW: RW[Timestamp] = upickle.default.readwriter[String].bimap[Timestamp](
-    t => s"${t.getTime}",
-    str => new Timestamp(str.toLong)
-  )
-
   def tupled = (ProgramEntry.apply _).tupled
 }
 
@@ -92,6 +85,30 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
+sealed trait Result extends Similarity[Result] {
+  def errors: Array[VerError]
+
+  def runtime: Long
+
+  def success: Boolean
+
+  def isSimilarTo(other: Result): Boolean = {
+    lazy val sameRes: Boolean = if (this.success) {
+      other.success
+    } else {
+      val errorIds = Set(this.errors map (_.fullId))
+      val otherErrorIds = Set(other.errors map (_.fullId))
+      !other.success && errorIds == otherErrorIds
+    }
+    lazy val similarRuntime = similarTime(this.runtime, other.runtime) // either time in +-50% of other or +-2seconds (for variance in small programs)
+    similarRuntime && sameRes
+  }
+
+  private def similarTime(t1: Long, t2: Long): Boolean = {
+    ((t1 <= t2 * 1.5 && t1 >= t2 / 1.5) || (t1 - t2).abs <= 2000)
+  }
+}
+
 /** Case class to represent a row in the programs.SiliconResults table of the database
  *
  * @param silResId         unique identifier for the entry
@@ -111,28 +128,9 @@ case class SiliconResult(silResId: Long,
                          runtime: Long,
                          errors: Array[VerError],
                          phaseRuntimes: Array[(String, Long)],
-                         benchmarkResults: Array[(String, Long)]) extends Similarity[SiliconResult] with Serializable {
-
-  /** @return [[true]] if results have the same success, errors and their runtimes are within 50% of each other,
-   *          [[false]] else */
-  def isSimilarTo(other: SiliconResult): Boolean = {
-    lazy val sameRes: Boolean = if (this.success) {
-      other.success
-    } else {
-      val errorIds = Set(this.errors map (_.fullId))
-      val otherErrorIds = Set(other.errors map (_.fullId))
-      !other.success && errorIds == otherErrorIds
-    }
-    lazy val similarTime = ((this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
-      || (this.runtime - other.runtime).abs <= 2000) // either time in +-50% of other or +-2seconds (for variance in small programs)
-    similarTime && sameRes
-  }
-}
+                         benchmarkResults: Array[(String, Long)]) extends Result with Serializable
 
 object SiliconResult {
-
-  import BinarySerializer._
-
   def tupled = (SiliconResult.apply _).tupled
 }
 
@@ -153,23 +151,7 @@ case class CarbonResult(carbResId: Long,
                         success: Boolean,
                         runtime: Long,
                         errors: Array[VerError],
-                        phaseRuntimes: Array[(String, Long)]) extends Similarity[CarbonResult] with Serializable {
-
-  /** @return [[true]] if results have the same success, errors and their runtimes are within 50% of each other,
-   *          [[false]] else */
-  def isSimilarTo(other: CarbonResult): Boolean = {
-    lazy val sameRes: Boolean = if (this.success) {
-      other.success
-    } else {
-      val errorIds = Set(this.errors map (_.fullId))
-      val otherErrorIds = Set(other.errors map (_.fullId))
-      !other.success && errorIds == otherErrorIds
-    }
-    lazy val similarTime = ((this.runtime <= other.runtime * 1.5 && this.runtime >= other.runtime / 1.5)
-      || (this.runtime - other.runtime).abs <= 2000)
-    similarTime && sameRes
-  }
-}
+                        phaseRuntimes: Array[(String, Long)]) extends Result with Serializable
 
 object CarbonResult {
   def tupled = (CarbonResult.apply _).tupled
@@ -212,27 +194,26 @@ class SlickTables(val profile: PostgresProfile) {
   import profile.api._
   import BinarySerializer._
 
+  private def serializableColumnType[T: ClassTag]: JdbcType[T] with BaseTypedType[T] = MappedColumnType.base[T, Array[Byte]](
+    t => serialize(t),
+    ba => deserialize[T](ba)
+  )
+
   //Implicit converters for column types that can't be stored natively in Postgres
 
-  implicit val pprintColumnType: JdbcType[ProgramPrint] with BaseTypedType[ProgramPrint] = MappedColumnType.base[ProgramPrint, Array[Byte]](
-    pp => serialize(pp),
-    ba => deserialize[ProgramPrint](ba)
-  )
+  implicit val pprintColumnType = serializableColumnType[ProgramPrint]
 
-  implicit val stringArrColumnType: JdbcType[Array[String]] with BaseTypedType[Array[String]] = MappedColumnType.base[Array[String], Array[Byte]](
-    seq => serialize(seq),
-    ba => deserialize[Array[String]](ba)
-  )
+  implicit val stringArrColumnType = serializableColumnType[Array[String]]
 
-  implicit val strLongArrColumnType: JdbcType[Array[(String, Long)]] with BaseTypedType[Array[(String, Long)]] = MappedColumnType.base[Array[(String, Long)], Array[Byte]](
-    seq => serialize(seq),
-    ba => deserialize[Array[(String, Long)]](ba)
-  )
+  implicit val strLongArrColumnType = serializableColumnType[Array[(String, Long)]]
 
-  implicit val verErrorArrColumnType: JdbcType[Array[VerError]] with BaseTypedType[Array[VerError]] = MappedColumnType.base[Array[VerError], Array[Byte]](
-    seq => serialize(seq),
-    ba => deserialize[Array[VerError]](ba)
-  )
+  implicit val verErrorArrColumnType = serializableColumnType[Array[VerError]]
+
+  lazy val userSubmissionTable = TableQuery[UserSubmissionTable]
+  lazy val programEntryTable = TableQuery[ProgramEntryTable]
+  lazy val siliconResultTable = TableQuery[SiliconResultTable]
+  lazy val carbonResultTable = TableQuery[CarbonResultTable]
+  lazy val programPrintEntryTable = TableQuery[ProgramPrintEntryTable]
 
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntry](tag, Some("programs"), "ProgramEntries") {
     def programEntryId = column[Long]("programEntryId", O.PrimaryKey, O.AutoInc)
@@ -271,8 +252,6 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
-  lazy val programEntryTable = TableQuery[ProgramEntryTable]
-
   class UserSubmissionTable(tag: Tag) extends Table[UserSubmission](tag, Some("programs"), "UserSubmissions") {
     def submissionId = column[Long]("submissionId", O.PrimaryKey, O.AutoInc)
 
@@ -307,7 +286,6 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
-  lazy val userSubmissionTable = TableQuery[UserSubmissionTable]
 
   class SiliconResultTable(tag: Tag) extends Table[SiliconResult](tag, Some("programs"), "SiliconResults") {
     def silResId = column[Long]("silResId", O.PrimaryKey, O.AutoInc)
@@ -343,8 +321,6 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
-  lazy val siliconResultTable = TableQuery[SiliconResultTable]
-
 
   class CarbonResultTable(tag: Tag) extends Table[CarbonResult](tag, Some("programs"), "CarbonResults") {
     def carbResId = column[Long]("carbResId", O.PrimaryKey, O.AutoInc)
@@ -377,8 +353,6 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
-  lazy val carbonResultTable = TableQuery[CarbonResultTable]
-
 
   class ProgramPrintEntryTable(tag: Tag) extends Table[ProgramPrintEntry](tag, Some("programs"), "ProgramPrintEntry") {
     def pprintId = column[Long]("pprintID", O.PrimaryKey, O.AutoInc)
@@ -397,11 +371,15 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
-  lazy val programPrintEntryTable = TableQuery[ProgramPrintEntryTable]
-
 
   def getDDL: String = {
-    val schema = programEntryTable.schema ++ userSubmissionTable.schema ++ siliconResultTable.schema ++ carbonResultTable.schema ++ programPrintEntryTable.schema
+    val schema = (
+      programEntryTable.schema
+        ++ userSubmissionTable.schema
+        ++ siliconResultTable.schema
+        ++ carbonResultTable.schema
+        ++ programPrintEntryTable.schema
+      )
     schema.createIfNotExistsStatements.mkString(";\n")
   }
 }
@@ -414,8 +392,13 @@ object PGSlickTables extends SlickTables(PostgresProfile)
  * Used to store more complex types in database */
 object BinarySerializer {
 
-  /** Takes serializable object and converts it to Array[Byte] */
-  def serialize[T <: Serializable](value: T): Array[Byte] = {
+  /** Takes serializable object and converts it to Array[Byte]
+   *
+   * @throws IllegalArgumentException if not serializable, can't add type upper bound directly as a requirement
+   *                                  due to conflict with [[serializableColumnType]] */
+  def serialize[T](value: T): Array[Byte] = {
+    if (!value.isInstanceOf[Serializable]) throw new IllegalArgumentException()
+
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val outStream = new ObjectOutputStream(stream)
     outStream.writeObject(value)
@@ -427,42 +410,16 @@ object BinarySerializer {
    *
    * @param bytes byte representation of object to deserialize
    * @return Either deserialized object or null in case of an exception */
-  def deserialize[T <: Serializable](bytes: Array[Byte]): T = {
+  def deserialize[T](bytes: Array[Byte]): T = {
     try {
       val inputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))
       val value = inputStream.readObject.asInstanceOf[T]
       inputStream.close()
       value
     } catch {
-      case cex: ClassNotFoundException => {
-        cex.printStackTrace()
+      case ex: Exception =>
+        ex.printStackTrace()
         null.asInstanceOf[T]
-      }
-      case iex: IOException => {
-        iex.printStackTrace()
-        null.asInstanceOf[T]
-      }
     }
   }
-}
-
-object FeatureExtractor {
-
-  def pnodeHasQP(pn: PNode): Boolean = pn match {
-    case PForall(_, _, _) | PExists(_, _, _) | PForPerm(_, _, _) => true
-    case _ => {
-      lazy val subTreeRes = Nodes.subnodes(pn) map pnodeHasQP
-      subTreeRes.exists(identity)
-    }
-  }
-
-  def hasPreamble(pp: PProgram): Boolean = {
-    (Seq(pp.predicates, pp.functions, pp.fields, pp.domains, pp.extensions) map (l => l == List())).exists(identity)
-  }
-
-  def parsedSuccessfully(pp: PProgram): Boolean = pp.errors match {
-    case List() => true
-    case _ => false
-  }
-
 }

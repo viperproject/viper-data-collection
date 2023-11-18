@@ -22,7 +22,7 @@ class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, Vip
     }
     finally {
       siliconInstance.reporter match {
-        case bmreporter: BenchmarkingResultReporter => benchmarkRuntimes = bmreporter.getBenchmarkResults
+        case bmrReporter: BenchmarkingResultReporter => benchmarkRuntimes = bmrReporter.getBenchmarkResults
         case _ => benchmarkRuntimes = Seq()
       }
       siliconInstance.stop()

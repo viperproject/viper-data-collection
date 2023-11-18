@@ -1,7 +1,7 @@
 package dataCollection
 
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
-import viper.silver.parser.FastParser
+import viper.silver.parser.{FastParser, PProgram}
 import database.ExecContext._
 import slick.basic.DatabasePublisher
 import viper.silver.verifier.{Failure, Success}
@@ -22,31 +22,34 @@ object ProcessingHelper {
   def processOldestSubmission(): Option[ProgramEntry] = {
     val submissionOpt = Await.result(DBQueryInterface.getOldestUserSubmission(), Duration.Inf)
     submissionOpt match {
-      case Some(submission) => {
+      case Some(submission) =>
         val progEntry = createProgramEntryFromSubmission(submission)
         Await.result(DBQueryInterface.deleteUserSubmission(submission.submissionId), Duration.Inf)
         Some(progEntry)
-      }
       case None => None
     }
   }
 
   def createProgramPrintEntry(program: String): ProgramPrintEntry = {
     val tmpFile = createTempProgramFile(program.hashCode, program)
+
     val parsedProgram = fastParser.parse(program, Paths.get(tmpFile))
     val programPrint = fPrinter.fingerprintPProgram(parsedProgram)
+
     removeTempProgramFile(tmpFile)
-    ProgramPrintEntry(0,
-      0,
-      programPrint)
+
+    ProgramPrintEntry(0, 0, programPrint)
   }
 
   def createProgramEntryFromSubmission(us: UserSubmission): ProgramEntry = {
     val tmpFile = createTempProgramFile(us.submissionId, us.program)
+
     val parsedProgram = fastParser.parse(us.program, Paths.get(tmpFile))
     val parseSuccess = parsedProgram.errors.isEmpty
-    val hasPreamble = parsedProgram.predicates.nonEmpty || parsedProgram.domains.nonEmpty || parsedProgram.fields.nonEmpty || parsedProgram.extensions.nonEmpty
+    val hasPre = hasPreamble(parsedProgram)
+
     removeTempProgramFile(tmpFile)
+
     ProgramEntry(0,
       Timestamp.valueOf(LocalDateTime.now()),
       us.originalName,
@@ -57,7 +60,7 @@ object ProcessingHelper {
       us.args,
       us.runtime,
       parseSuccess,
-      hasPreamble,
+      hasPre,
     )
   }
 
@@ -171,6 +174,7 @@ object ProcessingHelper {
   def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): SiliconResult = {
     val runner = new CollectionSilFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
+
     var args: Array[String] = Array(tmpFile) ++ extraArgs
     // original arguments are only used if the program was also originally run with silicon
     if (pe.originalVerifier == "Silicon") {
@@ -179,6 +183,7 @@ object ProcessingHelper {
     args = filterArgs(args, "--timeout")
     args ++= Array("--timeout", timeOutSeconds.toString)
     runner.runMain(args)
+
     val runtime = runner.getTime
     val siliconHash = runner.siliconHash
     val phaseRuntimes = runner.getPhaseRuntimes.toArray
@@ -211,6 +216,7 @@ object ProcessingHelper {
   def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): CarbonResult = {
     val runner = new CollectionCarbonFrontend
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
+
     var args: Array[String] = Array(tmpFile) ++ extraArgs
     // original arguments are only used if the program was also originally run with carbon
     if (pe.originalVerifier == "Carbon") {
@@ -245,10 +251,14 @@ object ProcessingHelper {
   def filterArgs(args: Array[String], toFilter: String): Array[String] = {
     val argInd = args.indexOf(toFilter)
     if (argInd == -1) {
-      return args
+      args
     } else {
       args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
     }
+  }
+
+  def hasPreamble(pp: PProgram): Boolean = {
+    pp.predicates.nonEmpty || pp.domains.nonEmpty || pp.fields.nonEmpty || pp.extensions.nonEmpty
   }
 
 

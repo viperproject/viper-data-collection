@@ -1,8 +1,8 @@
 package dataCollection
 
 import viper.carbon.CarbonFrontend
-import viper.silver.logger.{SilentLogger, ViperLogger, ViperStdOutLogger}
-import viper.silver.reporter.{NoopReporter, StdIOReporter}
+import viper.silver.logger.{ViperStdOutLogger}
+import viper.silver.reporter.{NoopReporter}
 import viper.silver.verifier.{TimeoutOccurred, Success => CarbSuccess}
 
 import java.util.concurrent.TimeoutException
@@ -22,10 +22,9 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutL
         try {
           Await.ready(execution, Duration(timeOutSeconds * 1000, MILLISECONDS))
         } catch {
-          case te: TimeoutException => {
+          case _: TimeoutException =>
             _ver.stop()
             this._errors = _errors :+ TimeoutOccurred(timeOutSeconds.toLong, "seconds")
-          }
         }
       }
       Await.ready(execution, Duration.Inf)

@@ -8,6 +8,7 @@ package object util {
   }
 
   case class NothingToDoException() extends Exception
+  case class ShouldNeverOccurException() extends Exception
 
   def getLOC(program: String): Int = {
     program.split("\n").length

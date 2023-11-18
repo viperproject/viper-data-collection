@@ -192,7 +192,7 @@ object ProcessingPipeline {
 
     // Passed all filters, store in database
 
-    DBQueryInterface.insertEntry(programEntry, siliconResult, carbonResult, programPrintEntry)
+    DBQueryInterface.insertEntry(entryTuple)
   }
 
 

@@ -1,11 +1,11 @@
-import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint, ProgramSimilarityInfo}
+import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
 import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
 import webAPI.JSONReadWriters._
 
-import java.io.File
+import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Paths}
 import scala.concurrent.Await
@@ -123,35 +123,6 @@ object TestRunner extends App {
     println(s"Time: ${System.currentTimeMillis() - starttime}ms")
   }
 
-  def findDups(): Unit = {
-    val starttime = System.currentTimeMillis()
-    var progresults: Seq[ProgramSimilarityInfo] = Seq()
-    for (num <- Seq.range(0, 901)) {
-      val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}_analysis.json")
-      val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-      val progres = read(pprintJSON)(ProgramSimilarityInfo.rw)
-      progresults = progresults :+ progres
-    }
-    var dupCount = 0
-    for (num <- Seq.range(0, 901)) {
-      val prog1 = progresults(num)
-      var matches: Seq[Int] = Seq()
-      for (num2 <- Seq.range(num + 1, 901)) {
-        val prog2 = progresults(num2)
-        if (prog1 != prog2) {
-          if (!prog1.isSimilarTo(prog2, 90)) {
-            if (prog1.isSimilarTo(prog2, 80))
-              matches = matches :+ num2
-          }
-        }
-      }
-      println(s"Matches with ${num}: ${matches}")
-      if (!(matches == List())) dupCount += 1
-    }
-    println(s"${dupCount} duplicates found")
-    println(s"Time: ${System.currentTimeMillis() - starttime}ms")
-  }
-
   def fpAllPrograms(): Unit = {
     val fp = Fingerprinter
     val starttime = System.currentTimeMillis()
@@ -161,7 +132,9 @@ object TestRunner extends App {
       val sourcestring: String = try sourcefile.mkString finally sourcefile.close()
       val prog = fastParser.parse(sourcestring, Paths.get(testFolder + s"others/prog${num}.vpr"))
       val pprint = Fingerprinter.fingerprintPProgram(prog)
-      pprint.store(testFolder + s"results/prog${num}pprint.json")
+      val w = new BufferedWriter(new FileWriter(s"results/prog${num}pprint.json"))
+      w.write(write(pprint))
+      w.close()
     }
     println(s"Time: ${System.currentTimeMillis() - starttime}")
   }

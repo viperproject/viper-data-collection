@@ -6,7 +6,6 @@ import slick.basic.DatabasePublisher
 import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.io.Source
 
 object ExecContext {
   implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(8))
@@ -36,8 +35,8 @@ object DBQueryInterface {
       pp <- PGSlickTables.programPrintEntryTable if pp.programEntryId === proge.programEntryId
     } yield (proge, pp, sr, cr)
     val filteredQuery = tupleQuery
-      .filter(_._1.loc >= (pe.loc * 0.8).toInt)
-      .filter(_._1.loc <= (pe.loc * 1.2).toInt)
+      .filter(_._1.loc >= (pe.loc * 0.5).toInt)
+      .filter(_._1.loc <= (pe.loc * 2.0).toInt)
       .filter(_._1.originalVerifier === pe.originalVerifier)
       .filter(_._1.frontend === pe.frontend)
       .filter(_._1.parseSuccess === pe.parseSuccess)
@@ -100,12 +99,12 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
-  def insertEntry(pe: ProgramEntry, sr: SiliconResult, cr: CarbonResult, ppe: ProgramPrintEntry): Future[Unit] = {
-    val peId = Await.result(insertProgramEntry(pe), Duration.Inf)
+  def insertEntry(et: EntryTuple): Future[Unit] = {
+    val peId = Await.result(insertProgramEntry(et.programEntry), Duration.Inf)
     val inserts = DBIO.seq(
-      PGSlickTables.siliconResultTable += sr.copy(programEntryId = peId),
-      PGSlickTables.carbonResultTable += cr.copy(programEntryId = peId),
-      PGSlickTables.programPrintEntryTable += ppe.copy(programEntryId = peId)
+      PGSlickTables.siliconResultTable += et.siliconResult.copy(programEntryId = peId),
+      PGSlickTables.carbonResultTable += et.carbonResult.copy(programEntryId = peId),
+      PGSlickTables.programPrintEntryTable += et.programPrintEntry.copy(programEntryId = peId)
     )
     Await.ready(db.run(inserts), Duration.Inf)
   }

@@ -5,11 +5,11 @@ import viper.silver.parser._
 
 import java.security.MessageDigest
 import scala.math.Ordered.orderingToOrdered
-import upickle.default.{macroRW, read, write, ReadWriter => RW}
+import upickle.default.write
+import util.ShouldNeverOccurException
 import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, FileWriter}
-import scala.io.Source.fromFile
 
 /** Represents a structural fingerprint of a [[PNode]]
  *
@@ -38,21 +38,7 @@ case class ProgramPrint(domainTree: FPNode,
                         extensionTree: FPNode,
                         numMethods: Int,
                         numFunctions: Int) extends Serializable {
-  def store(p: String): Unit = {
-    val pprintJSON = write(this)
-    val w = new BufferedWriter(new FileWriter(p))
-    w.write(pprintJSON)
-    w.close()
-  }
-}
-
-object ProgramPrint {
-
-  def load(p: String): ProgramPrint = {
-    val source = fromFile(p)
-    val pprintJSON = try source.mkString finally source.close()
-    read[ProgramPrint](pprintJSON)
-  }
+  def trees: Seq[FPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
 }
 
 /** Fingerprint Tree Node for comparisons. If a node in this tree is matched to one in another tree, the other node is marked as matched to ensure a 1:1
@@ -95,24 +81,26 @@ class ComparableProgramPrint(val domainTree: ComparableFPNode,
                              val numMethods: Int,
                              val numFunctions: Int) {
 
+  def trees: Seq[ComparableFPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
+
   /** Matches all subtrees of this program to the associated subtrees in [[oPP]]. Clears the [[oPP]] tree after comparison.
    * The dummy parent node is ignored in node weights.
    *
    * @return A [[MatchResult]] containing a tuple per tree with the number of nodes that were matched and total number of nodes. */
   def matchTrees(oPP: ComparableProgramPrint): MatchResult = {
-    val mr = MatchResult((matchesInTree(this.domainTree, oPP.domainTree), domainTree.fp.weight - 1),
-      (matchesInTree(this.fieldTree, oPP.fieldTree), fieldTree.fp.weight - 1),
-      (matchesInTree(this.functionTree, oPP.functionTree), functionTree.fp.weight - 1),
-      (matchesInTree(this.predicateTree, oPP.predicateTree), predicateTree.fp.weight - 1),
-      (matchesInTree(this.methodTree, oPP.methodTree), methodTree.fp.weight - 1),
-      (matchesInTree(this.extensionTree, oPP.extensionTree), extensionTree.fp.weight - 1))
+    val matchCounts: Seq[Int] = (trees zip oPP.trees) map Function.tupled(matchesInTree)
+    val matchTuples = matchCounts zip (trees map (_.fp.weight - 1))
     oPP.clearMatches()
-    mr
+
+    matchTuples match {
+      case Seq(r1, r2, r3, r4, r5, r6) => MatchResult(r1, r2, r3, r4, r5, r6)
+      case _ => throw ShouldNeverOccurException()
+    }
   }
 
   /** Clears the matched fields in all subtrees of this program. */
   def clearMatches(): Unit = {
-    Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree) foreach (_.clearMatches)
+    trees foreach (_.clearMatches)
   }
 
   /** Returns the amount of nodes in [[root]] that could be matched to one in [[otherRoot]]. This is a separate method to
@@ -132,26 +120,24 @@ class ComparableProgramPrint(val domainTree: ComparableFPNode,
 
 object ComparableProgramPrint {
   def convert(pp: ProgramPrint): ComparableProgramPrint = {
-    val compDomainTree = ComparableFPNode.convert(pp.domainTree)
-    val compFieldTree = ComparableFPNode.convert(pp.fieldTree)
-    val compFunctionTree = ComparableFPNode.convert(pp.functionTree)
-    val compPredicateTree = ComparableFPNode.convert(pp.predicateTree)
-    val compMethodTree = ComparableFPNode.convert(pp.methodTree)
-    val compExtensionTree = ComparableFPNode.convert(pp.extensionTree)
-    new ComparableProgramPrint(compDomainTree,
-      compFieldTree,
-      compFunctionTree,
-      compPredicateTree,
-      compMethodTree,
-      compExtensionTree,
-      pp.numMethods,
-      pp.numFunctions)
+    val convTrees = pp.trees map ComparableFPNode.convert
+    convTrees match {
+      case Seq(t1, t2, t3, t4, t5, t6) => new ComparableProgramPrint(t1, t2, t3, t4, t5, t6, pp.numMethods, pp.numFunctions)
+      case _ => throw ShouldNeverOccurException()
+    }
   }
 }
 
 
 /** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes */
-case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (Int, Int), pMatches: (Int, Int), mMatches: (Int, Int), extMatches: (Int, Int)) {
+case class MatchResult(dMatches: (Int, Int) = (1, 1),
+                       fMatches: (Int, Int) = (1, 1),
+                       funMatches: (Int, Int) = (1, 1),
+                       pMatches: (Int, Int) = (1, 1),
+                       mMatches: (Int, Int) = (1, 1),
+                       extMatches: (Int, Int) = (1, 1)) {
+
+  def tuples: Seq[(Int, Int)] = Seq(dMatches, fMatches, funMatches, pMatches, mMatches, extMatches)
 
   def methMatchP: Double = {
     100.0 * (mMatches._1.toDouble / mMatches._2.toDouble)
@@ -172,7 +158,7 @@ case class MatchResult(dMatches: (Int, Int), fMatches: (Int, Int), funMatches: (
   }
 
   def totalMatchP: Double = {
-    100.0 * ((Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._1)).sum.toDouble / (Seq(dMatches, fMatches, funMatches, pMatches, mMatches) map (_._2)).sum)
+    100.0 * ((tuples map (_._1)).sum.toDouble / (tuples map (_._2)).sum)
   }
 
   def isSubset: Boolean = {
@@ -243,8 +229,8 @@ object Fingerprinter {
   /** Removes all leaf nodes, updates weights */
   private def trimTree(root: FPNode): FPNode = {
     val trimmedTree = dropSmallNodes(root, 1)
-    updateWeights(trimmedTree)
-    trimmedTree
+    val uwTree = updateWeights(trimmedTree)
+    uwTree
   }
 
   private def dropSmallNodes(root: FPNode, limit: Int): FPNode = {
