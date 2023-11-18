@@ -194,7 +194,7 @@ class SlickTables(val profile: PostgresProfile) {
   import profile.api._
   import BinarySerializer._
 
-  private def serializableColumnType[T: ClassTag]: JdbcType[T] with BaseTypedType[T] = MappedColumnType.base[T, Array[Byte]](
+  private def serializableColumnType[T <: Serializable : ClassTag]: JdbcType[T] with BaseTypedType[T] = MappedColumnType.base[T, Array[Byte]](
     t => serialize(t),
     ba => deserialize[T](ba)
   )
@@ -392,13 +392,8 @@ object PGSlickTables extends SlickTables(PostgresProfile)
  * Used to store more complex types in database */
 object BinarySerializer {
 
-  /** Takes serializable object and converts it to Array[Byte]
-   *
-   * @throws IllegalArgumentException if not serializable, can't add type upper bound directly as a requirement
-   *                                  due to conflict with [[serializableColumnType]] */
-  def serialize[T](value: T): Array[Byte] = {
-    if (!value.isInstanceOf[Serializable]) throw new IllegalArgumentException()
-
+  /** Takes serializable object and converts it to Array[Byte]*/
+  def serialize[T <: Serializable](value: T): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val outStream = new ObjectOutputStream(stream)
     outStream.writeObject(value)
@@ -410,7 +405,7 @@ object BinarySerializer {
    *
    * @param bytes byte representation of object to deserialize
    * @return Either deserialized object or null in case of an exception */
-  def deserialize[T](bytes: Array[Byte]): T = {
+  def deserialize[T <: Serializable](bytes: Array[Byte]): T = {
     try {
       val inputStream = new ObjectInputStream(new ByteArrayInputStream(bytes))
       val value = inputStream.readObject.asInstanceOf[T]
