@@ -57,7 +57,7 @@ object TestRunner extends App {
       val sourcefile = fromFile(f)
       val text = try sourcefile.mkString finally sourcefile.close()
       val prog = fastParser.parse(text, f.toPath)
-      pprints = pprints :+ (f.getName, ComparableProgramPrint.convert(Fingerprinter.fingerprintPProgram(prog)))
+      pprints = pprints :+ (f.getName, new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(prog)))
     }
     var dups: Set[String] = Set()
     for ((name1, pprint1) <- pprints) {
@@ -82,10 +82,10 @@ object TestRunner extends App {
   def specificResult(num1: Int, num2: Int): Unit = {
     val sourcefile1: BufferedSource = fromFile(testFolder + s"results/prog${num1}pprint.json")
     val pprintJSON1: String = try sourcefile1.mkString finally sourcefile1.close()
-    val progres1 = ComparableProgramPrint convert read[ProgramPrint](pprintJSON1)
+    val progres1 = new ComparableProgramPrint(read[ProgramPrint](pprintJSON1))
     val sourcefile2: BufferedSource = fromFile(testFolder + s"results/prog${num2}pprint.json")
     val pprintJSON2: String = try sourcefile2.mkString finally sourcefile2.close()
-    val progres2 = ComparableProgramPrint convert read[ProgramPrint](pprintJSON2)
+    val progres2 = new ComparableProgramPrint(read[ProgramPrint](pprintJSON2))
     val matchres1 = progres1.matchTrees(progres2)
     val matchres2 = progres1.matchTrees(progres2)
     println(matchres1)
@@ -97,7 +97,7 @@ object TestRunner extends App {
     for (num <- Seq.range(0, 901)) {
       val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}pprint.json")
       val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-      val progres = ComparableProgramPrint convert read[ProgramPrint](pprintJSON)
+      val progres = new ComparableProgramPrint(read[ProgramPrint](pprintJSON))
       progresults = progresults :+ progres
     }
     var dupCount = 0
@@ -155,16 +155,16 @@ object TestRunner extends App {
     val string4 = Source.fromInputStream(Files.newInputStream(file4)).mkString
 
     val pp1 = fastParser.parse(string1, file1)
-    val pp1_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp1)
+    val pp1_print = new ComparableProgramPrint(fp.fingerprintPProgram(pp1))
 
     val pp2 = fastParser.parse(string2, file2)
-    val pp2_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp2)
+    val pp2_print = new ComparableProgramPrint(fp.fingerprintPProgram(pp2))
 
     val pp3 = fastParser.parse(string3, file3)
-    val pp3_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp3)
+    val pp3_print = new ComparableProgramPrint(fp.fingerprintPProgram(pp3))
 
     val pp4 = fastParser.parse(string4, file4)
-    val pp4_print = ComparableProgramPrint convert fp.fingerprintPProgram(pp4)
+    val pp4_print = new ComparableProgramPrint(fp.fingerprintPProgram(pp4))
 
     // only variable names, whitespaces changed: expected full match
     println(pp1_print.matchTrees(pp2_print))

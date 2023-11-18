@@ -132,8 +132,8 @@ object ProcessingHelper {
   }
 
   def doProgramPrintsMatch(pprint1: ProgramPrint, pprint2: ProgramPrint, frontend: String): Boolean = {
-    val cpprint1 = ComparableProgramPrint convert pprint1
-    val cpprint2 = ComparableProgramPrint convert pprint2
+    val cpprint1 = new ComparableProgramPrint(pprint1)
+    val cpprint2 = new ComparableProgramPrint(pprint2)
     val sameNumMethFunc = cpprint1.numMethods == cpprint2.numMethods && cpprint1.numFunctions == cpprint2.numFunctions
     val matchResult1 = cpprint1 matchTrees cpprint2
     val matchResult2 = cpprint2 matchTrees cpprint1

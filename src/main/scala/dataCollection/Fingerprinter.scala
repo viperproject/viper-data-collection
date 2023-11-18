@@ -5,10 +5,32 @@ import viper.silver.parser._
 
 import java.security.MessageDigest
 import scala.math.Ordered.orderingToOrdered
-import upickle.default.write
-import webAPI.JSONReadWriters._
 
-import java.io.{BufferedWriter, FileWriter}
+trait FingerprintNode {
+  def fp: Fingerprint
+
+  def children: Seq[FingerprintNode]
+}
+
+trait ProgramFingerprint {
+  def domainTree: FingerprintNode
+
+  def fieldTree: FingerprintNode
+
+  def functionTree: FingerprintNode
+
+  def predicateTree: FingerprintNode
+
+  def methodTree: FingerprintNode
+
+  def extensionTree: FingerprintNode
+
+  def numMethods: Int
+
+  def numFunctions: Int
+
+  def trees: Seq[FingerprintNode]
+}
 
 /** Represents a structural fingerprint of a [[PNode]]
  *
@@ -20,7 +42,7 @@ import java.io.{BufferedWriter, FileWriter}
 case class Fingerprint(weight: Int, hashVal: String)
 
 /** Tree to store [[Fingerprint]]s of nodes and their children in a structurally similar way to the original program */
-case class FPNode(fp: Fingerprint, children: Seq[FPNode])
+case class FPNode(fp: Fingerprint, children: Seq[FPNode]) extends FingerprintNode
 
 /** Descending ordering by [[weight]], then [[hashVal]] of the [[FPNode]]'s fingerprint */
 object FPNodeOrdering extends Ordering[FPNode] {
@@ -36,13 +58,15 @@ case class ProgramPrint(domainTree: FPNode,
                         methodTree: FPNode,
                         extensionTree: FPNode,
                         numMethods: Int,
-                        numFunctions: Int) extends Serializable {
+                        numFunctions: Int) extends ProgramFingerprint with Serializable {
   def trees: Seq[FPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
 }
 
 /** Fingerprint Tree Node for comparisons. If a node in this tree is matched to one in another tree, the other node is marked as matched to ensure a 1:1
  * matching between trees. Nodes in this tree aren't marked since they won't be checked more than once. */
-class ComparableFPNode(val fp: Fingerprint, val children: Seq[ComparableFPNode], var matched: Boolean = false) {
+class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends FingerprintNode {
+  val fp = fpNode.fp.copy()
+  val children = fpNode.children map (c => new ComparableFPNode(c))
 
   /** Returns true if the tree of [[root]] contains a node with the same Fingerprint, marks that node in the other tree as matched */
   def containedInTree(root: ComparableFPNode): Boolean = {
@@ -62,23 +86,17 @@ class ComparableFPNode(val fp: Fingerprint, val children: Seq[ComparableFPNode],
   }
 }
 
-object ComparableFPNode {
-  def convert(pn: FPNode): ComparableFPNode = {
-    val compChildren = pn.children map ComparableFPNode.convert
-    new ComparableFPNode(pn.fp.copy(), compChildren)
-  }
-}
-
 /** Class used to compare ProgramPrints. In contrast to a [[ProgramPrint]], this class is mutable and the nodes contain boolean fields to indicate that
  * they were matched to another node, to avoid duplicate matches that could overestimate the similarity of two programs. */
-class ComparableProgramPrint(val domainTree: ComparableFPNode,
-                             val fieldTree: ComparableFPNode,
-                             val functionTree: ComparableFPNode,
-                             val predicateTree: ComparableFPNode,
-                             val methodTree: ComparableFPNode,
-                             val extensionTree: ComparableFPNode,
-                             val numMethods: Int,
-                             val numFunctions: Int) {
+class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint {
+  val domainTree = new ComparableFPNode(pp.domainTree)
+  val fieldTree = new ComparableFPNode(pp.fieldTree)
+  val functionTree = new ComparableFPNode(pp.functionTree)
+  val predicateTree = new ComparableFPNode(pp.predicateTree)
+  val methodTree = new ComparableFPNode(pp.methodTree)
+  val extensionTree = new ComparableFPNode(pp.extensionTree)
+  val numMethods = pp.numMethods
+  val numFunctions = pp.numFunctions
 
   def trees: Seq[ComparableFPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
 
@@ -116,17 +134,6 @@ class ComparableProgramPrint(val domainTree: ComparableFPNode,
     currNode.children.map(c => numSubTreeMatches(c, root)).sum
   }
 }
-
-object ComparableProgramPrint {
-  def convert(pp: ProgramPrint): ComparableProgramPrint = {
-    val convTrees = pp.trees map ComparableFPNode.convert
-    convTrees match {
-      case Seq(t1, t2, t3, t4, t5, t6) => new ComparableProgramPrint(t1, t2, t3, t4, t5, t6, pp.numMethods, pp.numFunctions)
-      case _ => throw new IllegalStateException("trees should always return a sequence with 6 elements")
-    }
-  }
-}
-
 
 /** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes */
 case class MatchResult(dMatches: (Int, Int) = (1, 1),
@@ -204,7 +211,6 @@ object Fingerprinter {
   }
 
   private def fingerprintPNode(pn: PNode): FPNode = {
-    // Split pres and posts that are combined with && into separate statements, semantically equivalent
     val flatPN = flatten(pn)
     val childPrints = subnodes(flatPN) map fingerprintPNode
     val sortedPrints = if (isCommutative(flatPN)) childPrints.sorted(FPNodeOrdering) else childPrints
@@ -251,6 +257,7 @@ object Fingerprinter {
   }
 
   private def flatten(pn: PNode): PNode = {
+    // Split pres and posts that are combined with && into separate statements, semantically equivalent
     pn match {
       case pm: PMethod => pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(pm.pos, pm.annotations)
       case pf: PFunction => pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(pf.pos, pf.annotations)
