@@ -6,7 +6,6 @@ import viper.silver.parser._
 import java.security.MessageDigest
 import scala.math.Ordered.orderingToOrdered
 import upickle.default.write
-import util.ShouldNeverOccurException
 import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, FileWriter}
