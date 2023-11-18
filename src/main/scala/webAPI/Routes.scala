@@ -11,8 +11,13 @@ import scala.concurrent.duration.Duration
 
 object Routes extends cask.MainRoutes {
 
+  @cask.get("/")
+  def default() = {
+    "This is an API for the viper-data-collection database"
+  }
+
   @cask.postJson("/submit-program")
-  def submitProgram(originalName: String, program: String, frontend: String, args: Array[String], originalVerifier: String, success: Boolean, runtime: Long) = {
+  def submitProgram(originalName: String, program: String, frontend: String, args: Array[String], originalVerifier: String, success: Boolean, runtime: Long): Unit = {
     val userSubmission = UserSubmission(0,
       Timestamp.valueOf(LocalDateTime.now()),
       originalName,
