@@ -65,10 +65,9 @@ object ProcessingHelper {
   }
 
   /** Searches the database for programs with the same or similar features as the entry. Returns true if at least a third of the entry's
-   * features are present in less than half of all entries. Always returns true if there are less than 100 programs in the database. */
+   * features are present in less than half of all entries. */
   def areFeaturesInteresting(et: EntryTuple): Boolean = {
-    val totalEntries = Await.result(DBQueryInterface.getPECount(), Duration.Inf)
-    if (totalEntries < 100) return true
+    val totalEntries = DBQueryInterface.getPECount()
     val totalSilRes = DBQueryInterface.getUniqueSRCount()
     val totalCarbRes = DBQueryInterface.getUniqueCRCount()
 
@@ -81,9 +80,12 @@ object ProcessingHelper {
     val sameCarbSuccess = DBQueryInterface.getCarbonSuccessCount(et.carbonResult.success)
     val similarCarbRuntime = DBQueryInterface.getCarbonRuntimeRangeCount((et.carbonResult.runtime / 1.5).toLong, (et.carbonResult.runtime * 1.5).toLong)
 
-    val programFeaturePercentages = Seq(sameFrontend, sameVerifier, sameParseSuccess, similarLOC) map (fc => fc map (c => c.toDouble / totalEntries))
-    val siliconFeaturePercentages = Seq(sameSilSuccess, similarSilRuntime) map (fc => fc flatMap (c => totalSilRes map (t => c.toDouble / t)))
-    val carbonFeaturePercentages = Seq(sameCarbSuccess, similarCarbRuntime) map (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
+    val programFeaturePercentages = Seq(sameFrontend, sameVerifier, sameParseSuccess, similarLOC) map
+      (fc => fc flatMap (c => totalEntries map (t => c.toDouble / t)))
+    val siliconFeaturePercentages = Seq(sameSilSuccess, similarSilRuntime) map
+      (fc => fc flatMap (c => totalSilRes map (t => c.toDouble / t)))
+    val carbonFeaturePercentages = Seq(sameCarbSuccess, similarCarbRuntime) map
+      (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
 
     val allPercentages = Await.result(Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages), Duration.Inf)
     val isInteresting = allPercentages.count(p => p <= 0.5) >= (allPercentages.length / 3)
