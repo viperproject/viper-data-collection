@@ -26,7 +26,8 @@ lazy val root = (project in file("."))
       "org.scalatest" %% "scalatest" % "3.2.11" % Test
     ),
     dependencyOverrides += "com.lihaoyi" %% "geny" % "1.0.0",
-    dependencyOverrides += "org.slf4j" % "slf4j-nop" % "2.0.5"
+    dependencyOverrides += "org.slf4j" % "slf4j-nop" % "2.0.5",
+    Test / fork := true
 
   )
 
