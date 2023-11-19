@@ -17,6 +17,7 @@ lazy val root = (project in file("."))
       "org.slf4j" % "slf4j-nop" % "2.0.5" % Provided,
       "com.lihaoyi" %% "cask" % "0.9.1",
       "com.lihaoyi" %% "upickle" % "3.0.0",
+      "com.lihaoyi" %% "requests" % "0.8.0",
       "com.typesafe.slick" %% "slick" % "3.3.3",
       "org.postgresql" % "postgresql" % "42.3.4",
       "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",

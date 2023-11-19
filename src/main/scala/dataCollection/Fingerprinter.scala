@@ -12,24 +12,24 @@ trait FingerprintNode {
   def children: Seq[FingerprintNode]
 }
 
-trait ProgramFingerprint {
-  def domainTree: FingerprintNode
+trait ProgramFingerprint[T <: FingerprintNode] {
+  def domainTree: T
 
-  def fieldTree: FingerprintNode
+  def fieldTree: T
 
-  def functionTree: FingerprintNode
+  def functionTree: T
 
-  def predicateTree: FingerprintNode
+  def predicateTree: T
 
-  def methodTree: FingerprintNode
+  def methodTree: T
 
-  def extensionTree: FingerprintNode
+  def extensionTree: T
 
   def numMethods: Int
 
   def numFunctions: Int
 
-  def trees: Seq[FingerprintNode]
+  def trees: Seq[T] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
 }
 
 /** Represents a structural fingerprint of a [[PNode]]
@@ -58,9 +58,7 @@ case class ProgramPrint(domainTree: FPNode,
                         methodTree: FPNode,
                         extensionTree: FPNode,
                         numMethods: Int,
-                        numFunctions: Int) extends ProgramFingerprint with Serializable {
-  def trees: Seq[FPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
-}
+                        numFunctions: Int) extends ProgramFingerprint[FPNode] with Serializable
 
 /** Fingerprint Tree Node for comparisons. If a node in this tree is matched to one in another tree, the other node is marked as matched to ensure a 1:1
  * matching between trees. Nodes in this tree aren't marked since they won't be checked more than once. */
@@ -88,7 +86,7 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
 
 /** Class used to compare ProgramPrints. In contrast to a [[ProgramPrint]], this class is mutable and the nodes contain boolean fields to indicate that
  * they were matched to another node, to avoid duplicate matches that could overestimate the similarity of two programs. */
-class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint {
+class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[ComparableFPNode] {
   val domainTree = new ComparableFPNode(pp.domainTree)
   val fieldTree = new ComparableFPNode(pp.fieldTree)
   val functionTree = new ComparableFPNode(pp.functionTree)
@@ -97,8 +95,6 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint {
   val extensionTree = new ComparableFPNode(pp.extensionTree)
   val numMethods = pp.numMethods
   val numFunctions = pp.numFunctions
-
-  def trees: Seq[ComparableFPNode] = Seq(domainTree, fieldTree, functionTree, predicateTree, methodTree, extensionTree)
 
   /** Matches all subtrees of this program to the associated subtrees in [[oPP]]. Clears the [[oPP]] tree after comparison.
    * The dummy parent node is ignored in node weights.

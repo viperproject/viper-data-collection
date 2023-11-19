@@ -1,7 +1,9 @@
 package dataCollection
 
 import database.UserSubmission
+import webAPI.JSONReadWriters._
 import org.scalatest.funsuite.AnyFunSuite
+import ujson.{Arr, Obj}
 import util.getLOC
 
 import java.io.File
@@ -11,6 +13,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.sys.process.Process
+import upickle.default.write
 
 class ProcessingTest extends AnyFunSuite {
 
@@ -19,8 +22,13 @@ class ProcessingTest extends AnyFunSuite {
   test("Pipeline integration test") {
     val dbProcess = Process("docker-compose up").run
     val webAPIProcess = Process("processing_scripts/webAPI.sh").run
+    Thread.sleep(1000) // let processes startup
+
     try {
+      //clear database
       Await.ready(clearDB(), Duration.Inf)
+
+      val host = "http://localhost:8080"
 
       //two almost identical programs
       val sampleProg = readProgram(new File("src/test/resources/ProcessingTest/sample.vpr"))
@@ -60,12 +68,14 @@ class ProcessingTest extends AnyFunSuite {
         true,
         3000
       )
-      insertUserSubmission(sampleUS)
+
+      requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS))
+      Thread.sleep(500) // let database insert
+
       val usEntry = Await.result(getOldestUserSubmission(), Duration.Inf)
       //check returned entry is identical to stored entry
       usEntry match {
         case Some(entry) => {
-          assert(sampleUS.submissionDate == entry.submissionDate)
           assert(sampleUS.originalName == entry.originalName)
           assert(sampleUS.program == entry.program)
           assert(sampleUS.loc == entry.loc)
@@ -90,7 +100,9 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getCRCount(), Duration.Inf) == 1)
       assert(Await.result(getPPCount(), Duration.Inf) == 1)
 
-      insertUserSubmission(sampleUS2)
+      requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS2))
+      Thread.sleep(500)// let database insert
+
       ProcessingPipeline.main(Array())
 
       //program is similar, make sure no new entries
@@ -100,7 +112,9 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getCRCount(), Duration.Inf) == 1)
       assert(Await.result(getPPCount(), Duration.Inf) == 1)
 
-      insertUserSubmission(sampleUS3)
+      requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS3))
+      Thread.sleep(500)// let database insert
+
       ProcessingPipeline.main(Array())
 
       //program is different, make sure not filtered out
@@ -119,5 +133,17 @@ class ProcessingTest extends AnyFunSuite {
     val fBuffer = fromFile(file)
     val prog = try fBuffer.mkString finally fBuffer.close()
     prog
+  }
+
+  def jsonifySubmission(us: UserSubmission): Obj = {
+    Obj(
+      "originalName" -> us.originalName,
+      "program" -> us.program,
+      "frontend" -> us.frontend,
+      "args" -> Arr.from[String](us.args),
+      "originalVerifier" -> us.originalVerifier,
+      "success" -> us.success,
+      "runtime" -> us.runtime
+    )
   }
 }
