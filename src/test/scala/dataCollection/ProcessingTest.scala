@@ -4,7 +4,7 @@ import database.UserSubmission
 import webAPI.JSONReadWriters._
 import org.scalatest.funsuite.AnyFunSuite
 import ujson.{Arr, Obj}
-import util.getLOC
+import util.{DEFAULT_DB_TIMEOUT, getLOC}
 
 import java.io.File
 import java.sql.Timestamp
@@ -15,10 +15,12 @@ import scala.io.Source.fromFile
 import scala.sys.process.Process
 import upickle.default.write
 
+
 class ProcessingTest extends AnyFunSuite {
 
   import database.DBQueryInterface._
 
+  /**IMPORTANT: This test will clear the database, do not run once actually in use*/
   test("Pipeline integration test") {
     val dbProcess = Process("docker-compose up").run
     val webAPIProcess = Process("processing_scripts/webAPI.sh").run
@@ -26,7 +28,7 @@ class ProcessingTest extends AnyFunSuite {
 
     try {
       //clear database
-      Await.ready(clearDB(), Duration.Inf)
+      Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
 
       val host = "http://localhost:8080"
 
@@ -72,7 +74,7 @@ class ProcessingTest extends AnyFunSuite {
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS))
       Thread.sleep(500) // let database insert
 
-      val usEntry = Await.result(getOldestUserSubmission(), Duration.Inf)
+      val usEntry = Await.result(getOldestUserSubmission(), DEFAULT_DB_TIMEOUT)
       //check returned entry is identical to stored entry
       usEntry match {
         case Some(entry) => {
@@ -94,11 +96,11 @@ class ProcessingTest extends AnyFunSuite {
       ProcessingPipeline.main(Array())
 
       //check that UserSubmission was deleted and an Entry was created for each table
-      assert(Await.result(getUSCount(), Duration.Inf) == 0)
-      assert(Await.result(getPECount(), Duration.Inf) == 1)
-      assert(Await.result(getSRCount(), Duration.Inf) == 1)
-      assert(Await.result(getCRCount(), Duration.Inf) == 1)
-      assert(Await.result(getPPCount(), Duration.Inf) == 1)
+      assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)
+      assert(Await.result(getPECount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getSRCount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getCRCount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 1)
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS2))
       Thread.sleep(500)// let database insert
@@ -106,11 +108,11 @@ class ProcessingTest extends AnyFunSuite {
       ProcessingPipeline.main(Array())
 
       //program is similar, make sure no new entries
-      assert(Await.result(getUSCount(), Duration.Inf) == 0)
-      assert(Await.result(getPECount(), Duration.Inf) == 1)
-      assert(Await.result(getSRCount(), Duration.Inf) == 1)
-      assert(Await.result(getCRCount(), Duration.Inf) == 1)
-      assert(Await.result(getPPCount(), Duration.Inf) == 1)
+      assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)
+      assert(Await.result(getPECount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getSRCount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getCRCount(), DEFAULT_DB_TIMEOUT) == 1)
+      assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 1)
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS3))
       Thread.sleep(500)// let database insert
@@ -118,11 +120,11 @@ class ProcessingTest extends AnyFunSuite {
       ProcessingPipeline.main(Array())
 
       //program is different, make sure not filtered out
-      assert(Await.result(getUSCount(), Duration.Inf) == 0)
-      assert(Await.result(getPECount(), Duration.Inf) == 2)
-      assert(Await.result(getSRCount(), Duration.Inf) == 2)
-      assert(Await.result(getCRCount(), Duration.Inf) == 2)
-      assert(Await.result(getPPCount(), Duration.Inf) == 2)
+      assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)
+      assert(Await.result(getPECount(), DEFAULT_DB_TIMEOUT) == 2)
+      assert(Await.result(getSRCount(), DEFAULT_DB_TIMEOUT) == 2)
+      assert(Await.result(getCRCount(), DEFAULT_DB_TIMEOUT) == 2)
+      assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 2)
     } finally {
       dbProcess.destroy()
       webAPIProcess.destroy()

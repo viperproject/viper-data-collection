@@ -198,7 +198,7 @@ object ProcessingPipeline {
       }
 
       //skip feature check if fewer than 100 entries in database
-      val totalEntries = Await.result(DBQueryInterface.getPECount(), Duration.Inf)
+      val totalEntries = Await.result(DBQueryInterface.getPECount(), DEFAULT_DB_TIMEOUT)
       if (totalEntries > 100) {
         val isInteresting = areFeaturesInteresting(entryTuple)
         if (!isInteresting) {

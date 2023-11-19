@@ -2,7 +2,9 @@ package database
 
 import dataCollection.EntryTuple
 import slick.basic.DatabasePublisher
+import util.DEFAULT_DB_TIMEOUT
 
+import java.sql.Timestamp
 import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -46,6 +48,36 @@ object DBQueryInterface {
     val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(queryWithParams)
     val entryTuples: DatabasePublisher[EntryTuple] = tuples.mapResult(t => EntryTuple.tupled(t))
     entryTuples
+  }
+
+  def getEntriesByFeatures(earliestDate: Timestamp,
+                           latestDate: Timestamp,
+                           minLOC: Int,
+                           maxLOC: Int,
+                           frontend: Option[String],
+                           verifier: Option[String],
+                           parseSuccess: Option[Boolean]): Future[Seq[ProgramEntry]] = {
+    val baseQuery = PGSlickTables.programEntryTable
+    val dateFilter = baseQuery
+      .filter(_.submissionDate >= earliestDate)
+      .filter(_.submissionDate <= latestDate)
+    val locFilter = dateFilter
+      .filter(_.loc >= minLOC)
+      .filter(_.loc <= maxLOC)
+    val frontendFilter = frontend match {
+      case Some(f) => locFilter.filter(_.frontend === f)
+      case None => locFilter
+    }
+    val verifierFilter = verifier match {
+      case Some(v) => frontendFilter.filter(_.originalVerifier === v)
+      case None => frontendFilter
+    }
+    val parseFilter = parseSuccess match {
+      case Some(p) => verifierFilter.filter(_.parseSuccess === p)
+      case None => verifierFilter
+    }
+    val entries: Future[Seq[ProgramEntry]] = db.run(parseFilter.result)
+    entries
   }
 
   def getPEIdsWithoutSilRes(): Future[Seq[Long]] = {
@@ -100,17 +132,23 @@ object DBQueryInterface {
   }
 
   def insertEntry(et: EntryTuple): Future[Unit] = {
-    val peId = Await.result(insertProgramEntry(et.programEntry), Duration.Inf)
+    val peId = Await.result(insertProgramEntry(et.programEntry), DEFAULT_DB_TIMEOUT)
     val inserts = DBIO.seq(
       PGSlickTables.siliconResultTable += et.siliconResult.copy(programEntryId = peId),
       PGSlickTables.carbonResultTable += et.carbonResult.copy(programEntryId = peId),
       PGSlickTables.programPrintEntryTable += et.programPrintEntry.copy(programEntryId = peId)
     )
-    Await.ready(db.run(inserts), Duration.Inf)
+    Await.ready(db.run(inserts), DEFAULT_DB_TIMEOUT)
   }
 
   def getSiliconResultsForEntry(peId: Long): Future[Seq[SiliconResult]] = {
     val siliconResults = db.run(PGSlickTables.siliconResultTable.filter(_.programEntryId === peId).result)
+    siliconResults
+  }
+
+  def getSiliconResultsForEntries(peIds: Seq[Long]): Future[Seq[SiliconResult]] = {
+    val idSet = peIds.toSet
+    val siliconResults = db.run(PGSlickTables.siliconResultTable.filter(s => s.programEntryId.inSet(idSet)).result)
     siliconResults
   }
 
@@ -126,6 +164,12 @@ object DBQueryInterface {
 
   def getCarbonResultsForEntry(peId: Long): Future[Seq[CarbonResult]] = {
     val carbonResults = db.run(PGSlickTables.carbonResultTable.filter(_.programEntryId === peId).result)
+    carbonResults
+  }
+
+  def getCarbonResultsForEntries(peIds: Seq[Long]): Future[Seq[CarbonResult]] = {
+    val idSet = peIds.toSet
+    val carbonResults = db.run(PGSlickTables.carbonResultTable.filter(c => c.programEntryId.inSet(idSet)).result)
     carbonResults
   }
 

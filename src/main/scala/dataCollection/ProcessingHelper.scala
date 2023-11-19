@@ -4,13 +4,14 @@ import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry
 import viper.silver.parser.{FastParser, PProgram}
 import database.ExecContext._
 import slick.basic.DatabasePublisher
+import util.DEFAULT_DB_TIMEOUT
 import viper.silver.verifier.{Failure, Success}
 
 import java.io.{File, FileWriter}
 import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** Provides functions to aid in the processing of submissions and generating database entries */
@@ -20,11 +21,11 @@ object ProcessingHelper {
 
   /** Tries to get userSubmission with the oldest submissionDate and converts it to ProgramEntry */
   def processOldestSubmission(): Option[ProgramEntry] = {
-    val submissionOpt = Await.result(DBQueryInterface.getOldestUserSubmission(), Duration.Inf)
+    val submissionOpt = Await.result(DBQueryInterface.getOldestUserSubmission(), DEFAULT_DB_TIMEOUT)
     submissionOpt match {
       case Some(submission) =>
         val progEntry = createProgramEntryFromSubmission(submission)
-        Await.result(DBQueryInterface.deleteUserSubmission(submission.submissionId), Duration.Inf)
+        Await.result(DBQueryInterface.deleteUserSubmission(submission.submissionId), DEFAULT_DB_TIMEOUT)
         Some(progEntry)
       case None => None
     }
@@ -87,7 +88,7 @@ object ProcessingHelper {
     val carbonFeaturePercentages = Seq(sameCarbSuccess, similarCarbRuntime) map
       (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
 
-    val allPercentages = Await.result(Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages), Duration.Inf)
+    val allPercentages = Await.result(Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages), DEFAULT_DB_TIMEOUT)
     val isInteresting = allPercentages.count(p => p <= 0.5) >= (allPercentages.length / 3)
     isInteresting
   }
@@ -114,7 +115,7 @@ object ProcessingHelper {
     })
     var foundMatch = false
     val evaluation = matchResults.foreach(r => foundMatch = foundMatch || r)
-    Await.ready(evaluation, Duration.Inf)
+    Await.ready(evaluation, Duration(200, SECONDS))
     foundMatch
   }
 
@@ -150,22 +151,22 @@ object ProcessingHelper {
 
   /** Takes the ID of an existing programEntry, creates a SiliconResult for this entry and inserts it into the SiliconResults table */
   def silBenchmarkProgramEntry(programEntryId: Long): Unit = {
-    val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), Duration.Inf)
+    val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), DEFAULT_DB_TIMEOUT)
     entryOpt match {
       case Some(entry) =>
         val silRes = generateSiliconResults(entry)
-        Await.result(DBQueryInterface.insertSiliconResult(silRes), Duration.Inf)
+        Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
 
   /** Takes the ID of an existing programEntry, creates a CarbonResult for this entry and inserts it into the CarbonResult table */
   def carbBenchmarkProgramEntry(programEntryId: Long): Unit = {
-    val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), Duration.Inf)
+    val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), DEFAULT_DB_TIMEOUT)
     entryOpt match {
       case Some(entry) =>
         val carbRes = generateCarbonResults(entry)
-        Await.result(DBQueryInterface.insertCarbonResult(carbRes), Duration.Inf)
+        Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
