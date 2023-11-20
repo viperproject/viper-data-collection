@@ -135,13 +135,13 @@ object ProcessingHelper {
   }
 
   def doProgramPrintsMatch(pprint1: ProgramPrint, pprint2: ProgramPrint, frontend: String): Boolean = {
-    val cpprint1 = new ComparableProgramPrint(pprint1)
-    val cpprint2 = new ComparableProgramPrint(pprint2)
-    val sameNumMethFunc = cpprint1.numMethods == cpprint2.numMethods && cpprint1.numFunctions == cpprint2.numFunctions
-    val matchResult1 = cpprint1 matchTrees cpprint2
-    val matchResult2 = cpprint2 matchTrees cpprint1
-    val isSubset = matchResult1.isSubset || matchResult2.isSubset
-    val similarTrees = if (frontend == "Silicon" || frontend == "Carbon") {
+    lazy val cpprint1 = new ComparableProgramPrint(pprint1)
+    lazy val cpprint2 = new ComparableProgramPrint(pprint2)
+    lazy val sameNumMethFunc = cpprint1.numMethods == cpprint2.numMethods && cpprint1.numFunctions == cpprint2.numFunctions
+    lazy val matchResult1 = cpprint1 matchTrees cpprint2
+    lazy val matchResult2 = cpprint2 matchTrees cpprint1
+    lazy val isSubset = matchResult1.isSubset || matchResult2.isSubset
+    lazy val similarTrees = if (frontend == "Silicon" || frontend == "Carbon") {
       matchResult1.isViperMatch && matchResult2.isViperMatch
     } else {
       matchResult1.isFrontendMatch && matchResult2.isFrontendMatch

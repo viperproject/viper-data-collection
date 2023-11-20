@@ -29,7 +29,9 @@ object TestRunner extends App {
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
-  //naginiDups()
+  val startTime = System.currentTimeMillis()
+  naginiDups()
+  println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
 
@@ -54,25 +56,20 @@ object TestRunner extends App {
 
   def naginiDups(): Unit = {
     val folder = new File(testFolder + "nagini_full/")
-    var pprints: Seq[(String, ComparableProgramPrint)] = Seq()
+    var pprints: Seq[(String, ProgramPrint)] = Seq()
     for (f <- folder.listFiles()) {
       val sourcefile = fromFile(f)
       val text = try sourcefile.mkString finally sourcefile.close()
       val prog = fastParser.parse(text, f.toPath)
-      pprints = pprints :+ (f.getName, new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(prog)))
+      pprints = pprints :+ (f.getName, Fingerprinter.fingerprintPProgram(prog))
     }
     var dups: Set[String] = Set()
     for ((name1, pprint1) <- pprints) {
       for ((name2, pprint2) <- pprints) {
         if (pprint1 != pprint2) {
-          val matchres1 = pprint1.matchTrees(pprint2)
-          val matchres2 = pprint2.matchTrees(pprint1)
-          if (matchres1.methFunMatchP >= 80 && matchres2.methFunMatchP >= 80) {
-            if (matchres1.methFunMatchP <= 90 && matchres2.methFunMatchP <= 90) {
-              println(matchres1)
+          if(doProgramPrintsMatch(pprint1, pprint2, "Nagini")) {
               println(s"MATCH FOUND: ${name1}, ${name2}")
-              dups = dups.union(Set(name1, name2))
-            }
+            dups = dups.union(Set(name1, name2))
           }
         }
       }
