@@ -142,25 +142,29 @@ case class MatchResult(dMatches: (Int, Int) = (1, 1),
   def tuples: Seq[(Int, Int)] = Seq(dMatches, fMatches, funMatches, pMatches, mMatches, extMatches)
 
   def methMatchP: Double = {
-    100.0 * (mMatches._1.toDouble / mMatches._2.toDouble)
+    tupleMatchP(Seq(mMatches))
   }
 
   def funMatchP: Double = {
-    100.0 * (funMatches._1.toDouble / funMatches._2.toDouble)
+    tupleMatchP(Seq(funMatches))
   }
 
   def methFunMatchP: Double = {
-    100.0 * ((funMatches._1.toDouble + mMatches._1.toDouble) / (funMatches._2.toDouble + mMatches._2))
+    tupleMatchP(Seq(mMatches, funMatches))
   }
 
   def preambleMatchP: Double = {
-    val numMatches = (Seq(dMatches, fMatches, pMatches, extMatches) map (_._1)).sum.toDouble
-    val numNodes = (Seq(dMatches, fMatches, pMatches, extMatches) map (_._2)).sum
-    if (numNodes == 0) 100.0 else 100.0 * (numMatches / numNodes)
+    tupleMatchP(Seq(dMatches, fMatches, pMatches, extMatches))
   }
 
   def totalMatchP: Double = {
-    100.0 * ((tuples map (_._1)).sum.toDouble / (tuples map (_._2)).sum)
+    tupleMatchP(tuples)
+  }
+
+  def tupleMatchP(tups: Seq[(Int, Int)]): Double = {
+    val numMatches = (tups map (_._1)).sum.toDouble
+    val numNodes = (tups map (_._2)).sum
+    if (numNodes == 0) 0.0 else 100.0 * (numMatches / numNodes)
   }
 
   def isSubset: Boolean = {
@@ -168,11 +172,11 @@ case class MatchResult(dMatches: (Int, Int) = (1, 1),
   }
 
   def isViperMatch: Boolean = {
-    totalMatchP >= 80
+    totalMatchP >= 70
   }
 
   def isFrontendMatch: Boolean = {
-    methFunMatchP >= 80
+    methFunMatchP >= 70
   }
 
   override def toString: String = {
@@ -184,7 +188,8 @@ case class MatchResult(dMatches: (Int, Int) = (1, 1),
     Method: ${mMatches._1} out of ${mMatches._2}
     Extension: ${extMatches._1} out of ${extMatches._2}
     Preamble: $preambleMatchP%1.2f%%
-    Methods: $methMatchP%1.2f%%"""
+    Methods: $methMatchP%1.2f%%
+    Total: $totalMatchP%1.2f%%"""
   }
 }
 
@@ -208,11 +213,11 @@ object Fingerprinter {
 
   private def fingerprintPNode(pn: PNode): FPNode = {
     val flatPN = flatten(pn)
-    val childPrints = subnodes(flatPN) map fingerprintPNode
-    val sortedPrints = if (isCommutative(flatPN)) childPrints.sorted(FPNodeOrdering) else childPrints
-    val currHash = hashNode(flatPN, sortedPrints)
-    val treeWeight = sortedPrints.map(_.fp.weight).sum + 1
-    FPNode(Fingerprint(treeWeight, currHash), sortedPrints)
+    val children = subnodes(flatPN)
+    val childPrints = (children._1 map fingerprintPNode) ++ (children._2 map fingerprintPNode).sorted(FPNodeOrdering)
+    val currHash = hashNode(flatPN, childPrints)
+    val treeWeight = childPrints.map(_.fp.weight).sum + 1
+    FPNode(Fingerprint(treeWeight, currHash), childPrints)
   }
 
   private def hashNode(pn: PNode, childPrints: Seq[FPNode]): String = {
@@ -238,23 +243,23 @@ object Fingerprinter {
     FPNode(Fingerprint(updatedChildren.map(_.fp.weight).sum + 1, root.fp.hashVal), updatedChildren)
   }
 
-  private def subnodes(pn: PNode): Seq[PNode] = pn match {
-    case RootPNode(c) => c
-    case _ => Nodes.subnodes(pn)
+  /**
+   * @return Two sequences of child nodes. First contains all regular children, second ones that should be treated as commutative
+   */
+  private def subnodes(pn: PNode): (Seq[PNode], Seq[PNode]) = pn match {
+    // this list is probably incomplete
+    case PMethod(idndef, args, rets, pres, posts, body) => (Seq(idndef) ++ args ++ rets ++ body.toSeq, pres ++ posts)
+    case PFunction(name, args, typ, pres, posts, body) => (Seq(name) ++ args ++ Seq(typ) ++ body.toSeq, pres ++ posts)
+    case PWhile(cond, invs, body) => (Seq(cond) ++ Seq(body), invs)
+    case PBinExp(l, op, r) => if (commutativeOps.contains(op)) (Seq(), Seq(l, r)) else (Seq(l, r), Seq())
+    case RootPNode(c) => (c, Seq())
+    case _ => (Nodes.subnodes(pn), Seq())
   }
 
-  private def isCommutative(pn: PNode): Boolean = pn match {
-    case _: PMethod | _: PFunction => true
-    case PBinExp(_, op, _) => op match {
-      case "union" | "intersection" | "+" | "*" | "==" | "!=" | "&&" | "||" | "<==>" => true
-      case _ => false
-    }
-    case _ => false
-  }
-
+  /** Splits pres, posts and invariants of methods, functions and while loops that are combined with && into separate statements */
   private def flatten(pn: PNode): PNode = {
-    // Split pres and posts that are combined with && into separate statements, semantically equivalent
     pn match {
+      case wh: PWhile => wh.copy(invs = wh.invs flatMap flattenBinExpAnd)(wh.pos)
       case pm: PMethod => pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(pm.pos, pm.annotations)
       case pf: PFunction => pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(pf.pos, pf.annotations)
       case _ => pn
@@ -267,6 +272,8 @@ object Fingerprinter {
       case _ => Seq(pn)
     }
   }
+
+  private def commutativeOps = Seq("union", "intersection", "+", "*", "==", "!=", "&&", "||", "<==>")
 }
 
 object ConstNodeHashes {

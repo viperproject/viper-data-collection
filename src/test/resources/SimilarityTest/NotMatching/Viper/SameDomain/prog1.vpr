@@ -1,0 +1,31 @@
+domain Fib {
+function fib(n: Int ): Int
+axiom fib_0 { fib (0) == 0 }
+axiom fib_1 { fib (1) == 1 }
+axiom fib_n { forall n: Int :: fib(n +2) == fib(n+1) + fib(n) }
+}
+
+
+method a(n: Int) returns (r: Int)
+  requires 0 <= n
+  ensures  r == fib(n)
+{
+    if(n == 0)
+    {
+        r := 0
+    }
+    else
+    {
+        r := 1
+        var prev:Int := 0
+        var i:Int := 1
+        while(i < n)
+            invariant i <= n // ok
+        {
+            var next:Int := r + prev
+            prev:= r
+            r:= next
+            i:= i + 1 
+        }
+    }
+}

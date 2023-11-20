@@ -1,0 +1,29 @@
+method Task910c(n: Int) returns (r: Int)
+  requires n >= 0
+  ensures  r == fib(n)
+{
+  var c: Int := n;
+  var r1: Int := 0;
+  var r2: Int := 1;
+  r := 0
+  
+  if (n >= 1) {
+    r := 1
+  }
+  
+  while(c >= 2)
+    invariant r == r1 + r2
+  {
+    r := r1 + r2;
+    r1 := r2;
+    r2 := r;
+    c := c - 1
+  }
+}
+
+domain Fib {
+    function fib(n: Int ): Int
+        axiom fib_0 { fib (0) == 0 }
+        axiom fib_1 { fib (1) == 1 }
+        axiom fib_n { forall n: Int :: fib(n +2) == fib(n+1) + fib(n) }
+}

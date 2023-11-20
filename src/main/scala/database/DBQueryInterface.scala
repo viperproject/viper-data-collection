@@ -9,14 +9,14 @@ import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-object ExecContext {
+object DBExecContext {
   implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(8))
 }
 
 object DBQueryInterface {
   private val db = DBConnection.db
 
-  import ExecContext._
+  import DBExecContext._
   import PGSlickTables.profile.api._
 
   def getAllProgramEntries(): Future[Seq[ProgramEntry]] = {
@@ -58,15 +58,14 @@ object DBQueryInterface {
                            verifier: Option[String],
                            parseSuccess: Option[Boolean]): Future[Seq[ProgramEntry]] = {
     val baseQuery = PGSlickTables.programEntryTable
-    val dateFilter = baseQuery
+    val rangeFilter = baseQuery
       .filter(_.submissionDate >= earliestDate)
       .filter(_.submissionDate <= latestDate)
-    val locFilter = dateFilter
       .filter(_.loc >= minLOC)
       .filter(_.loc <= maxLOC)
     val frontendFilter = frontend match {
-      case Some(f) => locFilter.filter(_.frontend === f)
-      case None => locFilter
+      case Some(f) => rangeFilter.filter(_.frontend === f)
+      case None => rangeFilter
     }
     val verifierFilter = verifier match {
       case Some(v) => frontendFilter.filter(_.originalVerifier === v)

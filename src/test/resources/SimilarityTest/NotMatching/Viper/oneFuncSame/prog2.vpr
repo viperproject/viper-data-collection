@@ -1,0 +1,31 @@
+// since a^b is not built in (write pow(a,b) for a^b)
+function pow(a: Int, b: Int): Int
+  requires b >= 0;
+  requires a > 0;
+{
+  ( b == 0 ? 1 : a * pow(a,b-1) )
+}
+
+method program_1(n:Int) returns (b:Int)
+  requires  n > 0; // pre-condition
+  ensures b >= 0 && pow(10,b) <= n && pow(10,b+1)>n;   // post-condition
+{
+  var a : Int;
+  
+  a := 1;
+  b := 0;
+
+  while (a < n)
+    invariant b >= 0 
+        && (
+            a < n && pow(10, b) == a 
+            || a == n && pow(10, b) == a
+            || a > n && pow(10, b + 1) == a
+        ); // your invariant should replace "true", here
+  {
+    a := 10 * a;
+    if (a <= n) {
+        b := b + 1;
+    } else {}
+  }
+}

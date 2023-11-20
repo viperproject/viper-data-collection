@@ -1,3 +1,4 @@
+import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
 import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
@@ -22,18 +23,19 @@ object TestRunner extends App {
   private val fastParser = new FastParser()
   private val decoder = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  showAST()
+  //showAST()
   //getPrograms()
   //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
   //naginiDups()
-  //specificResult(233, 245)
+  //specificResult(825, 834)
+  //specificFingerPrint(2)
 
 
   def getPrograms(): Unit = {
-    import database.ExecContext._
+    import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()
     programs.onComplete {
       case Success(value) => println(value)
@@ -82,22 +84,30 @@ object TestRunner extends App {
   def specificResult(num1: Int, num2: Int): Unit = {
     val sourcefile1: BufferedSource = fromFile(testFolder + s"results/prog${num1}pprint.json")
     val pprintJSON1: String = try sourcefile1.mkString finally sourcefile1.close()
-    val progres1 = new ComparableProgramPrint(read[ProgramPrint](pprintJSON1))
+    val progres1 = read[ProgramPrint](pprintJSON1)
     val sourcefile2: BufferedSource = fromFile(testFolder + s"results/prog${num2}pprint.json")
     val pprintJSON2: String = try sourcefile2.mkString finally sourcefile2.close()
-    val progres2 = new ComparableProgramPrint(read[ProgramPrint](pprintJSON2))
-    val matchres1 = progres1.matchTrees(progres2)
-    val matchres2 = progres1.matchTrees(progres2)
-    println(matchres1)
+    val progres2 = read[ProgramPrint](pprintJSON2)
+    doProgramPrintsMatch(progres1, progres2, "Silicon")
+  }
+
+  def specificFingerPrint(num: Int): Unit = {
+    val sourcefile: BufferedSource = fromFile(testFolder + s"others/prog${num}.vpr")(decoder)
+    val sourcestring: String = try sourcefile.mkString finally sourcefile.close()
+    val prog = fastParser.parse(sourcestring, Paths.get(testFolder + s"others/prog${num}.vpr"))
+    val pprint = Fingerprinter.fingerprintPProgram(prog)
+    val w = new BufferedWriter(new FileWriter(testFolder + s"results/prog${num}pprint.json"))
+    w.write(write(pprint))
+    w.close()
   }
 
   def findDupTrees(): Unit = {
     val starttime = System.currentTimeMillis()
-    var progresults: Seq[ComparableProgramPrint] = Seq()
+    var progresults: Seq[ProgramPrint] = Seq()
     for (num <- Seq.range(0, 901)) {
       val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}pprint.json")
       val pprintJSON: String = try sourcefile.mkString finally sourcefile.close()
-      val progres = new ComparableProgramPrint(read[ProgramPrint](pprintJSON))
+      val progres = read[ProgramPrint](pprintJSON)
       progresults = progresults :+ progres
     }
     var dupCount = 0
@@ -106,14 +116,8 @@ object TestRunner extends App {
       var matches: Seq[Int] = Seq()
       for (num2 <- Seq.range(num + 1, 901)) {
         val prog2 = progresults(num2)
-        val matchres1 = prog1.matchTrees(prog2)
-        val matchres2 = prog2.matchTrees(prog1)
-        if (matchres1.totalMatchP >= 80 && matchres2.totalMatchP >= 80) {
-          if (matchres1.totalMatchP <= 100 && matchres2.totalMatchP <= 100) {
-            if (prog1.numFunctions == prog2.numFunctions && prog1.numMethods == prog2.numMethods) {
+        if (doProgramPrintsMatch(prog1, prog2, "Silicon")) {
               matches = matches :+ num2
-            }
-          }
         }
       }
       println(s"Matches with ${num}: ${matches}")
@@ -126,13 +130,12 @@ object TestRunner extends App {
   def fpAllPrograms(): Unit = {
     val fp = Fingerprinter
     val starttime = System.currentTimeMillis()
-    var pprints: Seq[ProgramPrint] = Seq()
     for (num <- Seq.range(0, 901)) {
       val sourcefile: BufferedSource = fromFile(testFolder + s"others/prog${num}.vpr")(decoder)
       val sourcestring: String = try sourcefile.mkString finally sourcefile.close()
       val prog = fastParser.parse(sourcestring, Paths.get(testFolder + s"others/prog${num}.vpr"))
-      val pprint = Fingerprinter.fingerprintPProgram(prog)
-      val w = new BufferedWriter(new FileWriter(s"results/prog${num}pprint.json"))
+      val pprint = fp.fingerprintPProgram(prog)
+      val w = new BufferedWriter(new FileWriter(testFolder + s"results/prog${num}pprint.json"))
       w.write(write(pprint))
       w.close()
     }

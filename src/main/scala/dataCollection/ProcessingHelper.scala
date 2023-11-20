@@ -2,7 +2,7 @@ package dataCollection
 
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
 import viper.silver.parser.{FastParser, PProgram}
-import database.ExecContext._
+import database.DBExecContext._
 import slick.basic.DatabasePublisher
 import util.DEFAULT_DB_TIMEOUT
 import viper.silver.verifier.{Failure, Success}

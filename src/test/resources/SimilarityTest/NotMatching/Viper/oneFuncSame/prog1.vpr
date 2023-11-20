@@ -1,0 +1,26 @@
+import <decreases/int.vpr>
+
+// since a^b is not built in (write pow(a,b) for a^b)
+function pow(a: Int, b: Int): Int
+	requires b >= 0;
+	requires a > 0;
+{
+	b == 0 ? 1 : a * pow(a, b-1)
+}
+
+
+method exponentiation(x : Int) returns (y : Int)
+	requires true
+	ensures true
+{
+	var z: Int
+	
+	y := 1
+	z := 0
+	while (z < x)
+        invariant y == pow(2, z) && z >= x && x >= 0
+	{
+		y := y * 2
+		z := z + 1
+	}
+}

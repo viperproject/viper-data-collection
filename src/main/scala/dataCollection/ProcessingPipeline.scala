@@ -14,7 +14,6 @@ object ProcessingPipeline {
 
   import ProcessingHelper._
   import database.BinarySerializer._
-  import database.ExecContext._
 
   /** Combines the different processing stages, meant to be called periodically from some outside source */
   def main(args: Array[String]): Unit = {
