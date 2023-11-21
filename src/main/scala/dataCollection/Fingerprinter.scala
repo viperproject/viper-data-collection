@@ -1,5 +1,6 @@
 package dataCollection
 
+import util.Config._
 import viper.silver.ast.Position
 import viper.silver.parser._
 
@@ -172,11 +173,11 @@ case class MatchResult(dMatches: (Int, Int) = (1, 1),
   }
 
   def isViperMatch: Boolean = {
-    totalMatchP >= 70
+    totalMatchP >= VIPER_MATCH_THRESHOLD
   }
 
   def isFrontendMatch: Boolean = {
-    methFunMatchP >= 70
+    methFunMatchP >= FRONTEND_MATCH_THRESHOLD
   }
 
   override def toString: String = {
@@ -227,7 +228,7 @@ object Fingerprinter {
 
   /** Removes all leaf nodes, updates weights */
   private def trimTree(root: FPNode): FPNode = {
-    val trimmedTree = dropSmallNodes(root, 3)
+    val trimmedTree = dropSmallNodes(root, FP_TREE_DROP_LIMIT)
     val uwTree = updateWeights(trimmedTree)
     uwTree
   }

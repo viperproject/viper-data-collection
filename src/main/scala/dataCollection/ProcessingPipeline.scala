@@ -2,6 +2,7 @@ package dataCollection
 
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult}
 import util._
+import util.Config._
 
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream}
 import scala.concurrent.duration.Duration
@@ -90,7 +91,7 @@ object ProcessingPipeline {
       val programEntry = deserialize[ProgramEntry](byteArr)
 
       // TODO: Make variable, make config for most variables, flag on siliconSide
-      val maxRuntime = (programEntry.originalRuntime * 2) / 1000
+      val maxRuntime = (programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000
       val siliconResult = generateSiliconResults(programEntry, timeOutSeconds = maxRuntime.toInt)
 
       val resFileName = s"tmp/$dirName/silRes.bin"
@@ -122,7 +123,7 @@ object ProcessingPipeline {
 
       val programEntry = deserialize[ProgramEntry](byteArr)
 
-      val maxRuntime = (programEntry.originalRuntime * 2) / 1000
+      val maxRuntime = (programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000
       val carbonResult = generateCarbonResults(programEntry, timeOutSeconds = maxRuntime.toInt)
 
       val resFileName = s"tmp/$dirName/carbRes.bin"

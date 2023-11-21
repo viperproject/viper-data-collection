@@ -4,7 +4,7 @@ import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry
 import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._
 import slick.basic.DatabasePublisher
-import util.DEFAULT_DB_TIMEOUT
+import util.Config._
 import viper.silver.verifier.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -89,7 +89,7 @@ object ProcessingHelper {
       (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
 
     val allPercentages = Await.result(Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages), DEFAULT_DB_TIMEOUT)
-    val isInteresting = allPercentages.count(p => p <= 0.5) >= (allPercentages.length / 3)
+    val isInteresting = allPercentages.count(p => p <= FEATURE_FILTER_THRESHOLD) >= (allPercentages.length * FEATURE_AMOUNT_THRESHOLD).toInt
     isInteresting
   }
 

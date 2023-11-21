@@ -2,7 +2,7 @@ package database
 
 import dataCollection.EntryTuple
 import slick.basic.DatabasePublisher
-import util.DEFAULT_DB_TIMEOUT
+import util.Config._
 
 import java.sql.Timestamp
 import java.util.concurrent.Executors
