@@ -4,6 +4,7 @@ import database.UserSubmission
 import database.DBQueryInterface
 import JSONReadWriters._
 import cask.Response
+import dataCollection.PatternMatcher
 import util._
 import util.Config._
 import upickle.default._
@@ -55,6 +56,17 @@ object Routes extends cask.MainRoutes {
       val results = Await.result(DBQueryInterface.getCarbonResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
       val rJSON = write(results)
       cask.Response(data = rJSON, statusCode = 200)
+    } catch {
+      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+    }
+  }
+
+  @cask.postJson("/match-regex")
+  def matchRegex(regex: String): Response[String] = {
+    try {
+      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)
+      val mrJSON = write(matchResults)
+      cask.Response(data = mrJSON, statusCode = 200)
     } catch {
       case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }

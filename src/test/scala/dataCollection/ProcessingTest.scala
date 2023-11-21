@@ -125,7 +125,7 @@ class ProcessingTest extends AnyFunSuite {
 
       val patternMatches = PatternMatcher.matchRegexAgainstDatabase("while\\([^)]*\\)")
       //assert that the while( ) pattern was found on the 7th line of sampleUS
-      assert(patternMatches.exists(pm => pm.matchIndices.contains(7))) 
+      assert(patternMatches.exists(pm => pm.matchIndices.contains(7)))
     } finally {
       dbProcess.destroy()
       webAPIProcess.destroy()
