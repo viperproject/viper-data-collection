@@ -9,34 +9,45 @@ import scala.concurrent.duration.{Duration, SECONDS}
 
 object PatternMatcher {
 
-  def matchRegex(programs: Seq[String], regexStr: String): Seq[PatternMatchResult] = {
-    val pattern: Pattern = Pattern.compile(regexStr)
+  def matchProgramsToRegex(programs: Seq[String], regexStr: String): Seq[PatternMatchResult] = {
+    val pattern: Pattern = Pattern.compile(regexStr, Pattern.CASE_INSENSITIVE)
     var futureResults = Seq[Future[Option[PatternMatchResult]]]()
 
     programs foreach {
-      program => futureResults = futureResults :+ matchProgramToRegex(program, pattern)
+      program => futureResults = futureResults :+ matchRegex(program, pattern)
     }
 
     val results = Await.result(Future.sequence(futureResults), Duration(100, SECONDS)).flatten
     results
   }
 
-  def matchProgramToRegex(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Option[PatternMatchResult]] = {
+  private def matchRegex(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Option[PatternMatchResult]] = {
+    Future {
+      val matcher = pattern.matcher(program)
+      var matchIndices = Seq[Int]()
+      while(matcher.find()) {
+        matchIndices = matchIndices :+ matcher.start()
+      }
+      matchIndices = matchIndices map (m => charIndexToLine(program, m))
+      if (matchIndices.nonEmpty) Some(PatternMatchResult(0, matchIndices)) else None
+    }
+  }
+
+  private def matchRegexByLine(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Option[PatternMatchResult]] = {
     Future {
       val matcher = pattern.matcher("")
-      var matches = Seq[Int]()
+      var matchIndices = Seq[Int]()
       program.split("\n").zipWithIndex foreach {
-        case (line, ind) => if (matcher.reset(line).find()) matches = matches :+ ind
+        case (line, ind) => if (matcher.reset(line).find()) matchIndices = matchIndices :+ ind
       }
-      if (matches.nonEmpty) Some(PatternMatchResult(0, matches)) else None
+      if (matchIndices.nonEmpty) Some(PatternMatchResult(0, matchIndices)) else None
     }
+  }
+
+  private def charIndexToLine(str: String, index: Int) = {
+    str.substring(0, index).count(_ == '\n')
   }
 }
 
-case class PatternMatchResult(programEntryId: Long, matchIndices: Seq[Int]) {
-  override def toString: String = {
-    s"""Regex pattern was matched in programEntry $programEntryId at lines:
-       | ${matchIndices.mkString(", ")}""".stripMargin
-  }
-}
+case class PatternMatchResult(programEntryId: Long, matchIndices: Seq[Int])
 
