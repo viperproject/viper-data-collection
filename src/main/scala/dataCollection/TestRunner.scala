@@ -1,5 +1,5 @@
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
-import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
+import dataCollection.{ComparableProgramPrint, Fingerprinter, PatternMatcher, ProgramPrint}
 import database.{DBQueryInterface, PGSlickTables}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
@@ -25,7 +25,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  println(PGSlickTables.getDDL)
+  //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -34,8 +34,20 @@ object TestRunner extends App {
   //println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
+  regexPerformance()
 
 
+  def regexPerformance() = {
+    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
+    val buffer = fromFile(file)
+    val prog = try buffer.mkString finally buffer.close()
+    val progs = (for(i <- 1 to 1000) yield prog).toList
+    val regexStr = "\\{.*\\([^)]*\\).*\\}"
+    val startTime = System.currentTimeMillis()
+    val res = PatternMatcher.matchRegex(progs, regexStr)
+    println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
+    println(res.map(_.matchIndices.length).sum + " lines were matched")
+  }
   def getPrograms(): Unit = {
     import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()

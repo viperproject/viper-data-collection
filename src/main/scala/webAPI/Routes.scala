@@ -4,7 +4,8 @@ import database.UserSubmission
 import database.DBQueryInterface
 import JSONReadWriters._
 import cask.Response
-import util.{DEFAULT_DB_TIMEOUT, getLOC}
+import util._
+import util.Config._
 import upickle.default._
 
 import java.sql.Timestamp

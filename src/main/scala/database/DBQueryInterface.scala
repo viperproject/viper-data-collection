@@ -10,7 +10,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 object DBExecContext {
-  implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(8))
+  implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(DB_EXEC_CONTEXT_PARALLELISM))
 }
 
 object DBQueryInterface {
