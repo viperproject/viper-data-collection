@@ -25,13 +25,13 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  //println(PGSlickTables.getDDL)
+  println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
-  val startTime = System.currentTimeMillis()
-  naginiDups()
-  println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
+  //val startTime = System.currentTimeMillis()
+  //naginiDups()
+  //println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
 

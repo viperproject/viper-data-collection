@@ -89,6 +89,7 @@ object ProcessingPipeline {
 
       val programEntry = deserialize[ProgramEntry](byteArr)
 
+      // TODO: Make variable, make config for most variables, flag on siliconSide
       val maxRuntime = (programEntry.originalRuntime * 2) / 1000
       val siliconResult = generateSiliconResults(programEntry, timeOutSeconds = maxRuntime.toInt)
 

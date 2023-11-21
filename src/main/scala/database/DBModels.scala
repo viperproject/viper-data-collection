@@ -13,7 +13,6 @@ import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutp
 import java.sql.Timestamp
 import scala.reflect.ClassTag
 
-
 /** Case class to represent a row in the programs.ProgramEntries table of the database
  *
  * @param programEntryId   unique identifier for the entry
@@ -165,6 +164,23 @@ object ProgramPrintEntry {
   def tupled = (ProgramPrintEntry.apply _).tupled
 }
 
+case class Feature(featureId: Long,
+                   name: String,
+                   useForFiltering: Boolean)
+
+object Feature {
+  def tupled = (Feature.apply _).tupled
+}
+
+case class FeatureEntry(featureEntryId: Long,
+                        featureId: Long,
+                        resultId: Long,
+                        value: String)
+
+object FeatureEntry {
+  def tupled = (FeatureEntry.apply _).tupled
+}
+
 /** A wrapper class for an [[AbstractError]] to facilitate comparison and serialization and remove unneeded information
  * Comparison is only done through [[fullId]], since [[message]]s are too specific to a given program
  *
@@ -214,6 +230,15 @@ class SlickTables(val profile: PostgresProfile) {
   lazy val siliconResultTable = TableQuery[SiliconResultTable]
   lazy val carbonResultTable = TableQuery[CarbonResultTable]
   lazy val programPrintEntryTable = TableQuery[ProgramPrintEntryTable]
+  lazy val featureTable = TableQuery[FeatureTable]
+  lazy val silFeatureEntryTable = TableQuery[SilFeatureEntryTable]
+  lazy val carbFeatureEntryTable = TableQuery[CarbFeatureEntryTable]
+
+  def tables = Seq(userSubmissionTable, programEntryTable, siliconResultTable, carbonResultTable, programPrintEntryTable,
+    featureTable, silFeatureEntryTable, carbFeatureEntryTable)
+
+  //abbreviation
+  private val casc = ForeignKeyAction.Cascade
 
   class ProgramEntryTable(tag: Tag) extends Table[ProgramEntry](tag, Some("programs"), "ProgramEntries") {
     def programEntryId = column[Long]("programEntryId", O.PrimaryKey, O.AutoInc)
@@ -296,7 +321,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def programEntryId = column[Long]("programEntryId")
 
-    def programEntry = foreignKey("silPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+    def programEntry = foreignKey("silPE_FK", programEntryId, programEntryTable)(_.programEntryId, onDelete = casc, onUpdate = casc)
 
     def success = column[Boolean]("success")
 
@@ -331,7 +356,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def programEntryId = column[Long]("programEntryId")
 
-    def programEntry = foreignKey("carbPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+    def programEntry = foreignKey("carbPE_FK", programEntryId, programEntryTable)(_.programEntryId, onDelete = casc, onUpdate = casc)
 
     def success = column[Boolean]("success")
 
@@ -359,7 +384,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def programEntryId = column[Long]("programEntryId")
 
-    def programEntry = foreignKey("pprintPE_FK", programEntryId, programEntryTable)(_.programEntryId)
+    def programEntry = foreignKey("pprintPE_FK", programEntryId, programEntryTable)(_.programEntryId, onDelete = casc, onUpdate = casc)
 
 
     def programPrint = column[ProgramPrint]("programPrint")
@@ -371,15 +396,66 @@ class SlickTables(val profile: PostgresProfile) {
 
   }
 
+  class FeatureTable(tag: Tag) extends Table[Feature](tag, Some("programs"), "Features") {
+    def featureId = column[Long]("featureId", O.PrimaryKey, O.AutoInc)
+
+    def name = column[String]("name")
+
+    def useForFiltering = column[Boolean]("useForFiltering")
+
+    override def * : ProvenShape[Feature] = (featureId,
+      name,
+      useForFiltering
+    ) <> (Feature.tupled, Feature.unapply)
+
+  }
+
+  class SilFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "SiliconFeatureEntries") {
+    def featureEntryId = column[Long]("silFeatureEntryId", O.PrimaryKey, O.AutoInc)
+
+    def featureId = column[Long]("featureId")
+
+    def feature = foreignKey("sfeF_FK", featureId, featureTable)(_.featureId, onDelete = casc, onUpdate = casc)
+
+    def resultId = column[Long]("resultId")
+
+    def result = foreignKey("sfeSR_FK", resultId, siliconResultTable)(_.silResId, onDelete = casc, onUpdate = casc)
+
+    def value = column[String]("value")
+
+    override def * : ProvenShape[FeatureEntry] = (featureEntryId,
+      featureId,
+      resultId,
+      value
+    ) <> (FeatureEntry.tupled, FeatureEntry.unapply)
+
+  }
+
+  class CarbFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "CarbonFeatureEntries") {
+    def featureEntryId = column[Long]("silFeatureEntryId", O.PrimaryKey, O.AutoInc)
+
+    def featureId = column[Long]("featureId")
+
+    def feature = foreignKey("cfeF_FK", featureId, featureTable)(_.featureId, onDelete = casc, onUpdate = casc)
+
+    def resultId = column[Long]("resultId")
+
+    def result = foreignKey("cfeSR_FK", resultId, carbonResultTable)(_.carbResId, onDelete = casc, onUpdate = casc)
+
+    def value = column[String]("value")
+
+    override def * : ProvenShape[FeatureEntry] = (featureEntryId,
+      featureId,
+      resultId,
+      value
+    ) <> (FeatureEntry.tupled, FeatureEntry.unapply)
+
+  }
+
+
 
   def getDDL: String = {
-    val schema = (
-      programEntryTable.schema
-        ++ userSubmissionTable.schema
-        ++ siliconResultTable.schema
-        ++ carbonResultTable.schema
-        ++ programPrintEntryTable.schema
-      )
+    val schema = (tables map (_.schema)).reduce((s1, s2) => s1 ++ s2)
     schema.createIfNotExistsStatements.mkString(";\n")
   }
 }
