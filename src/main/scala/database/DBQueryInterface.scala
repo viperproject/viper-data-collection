@@ -24,6 +24,12 @@ object DBQueryInterface {
     programEntries
   }
 
+  def getAllProgramEntriesBatched(): DatabasePublisher[ProgramEntry] = {
+    val query = PGSlickTables.programEntryTable.result.transactionally.withStatementParameters(fetchSize = DB_BATCH_SIZE)
+    val entryStream = db.stream(query)
+    entryStream
+  }
+
   def getProgramEntryByID(programEntryId: Long): Future[Option[ProgramEntry]] = {
     val entryOpt = db.run(PGSlickTables.programEntryTable.filter(_.programEntryId === programEntryId).result.headOption)
     entryOpt
@@ -44,7 +50,7 @@ object DBQueryInterface {
       .filter(_._1.parseSuccess === pe.parseSuccess)
       .result
     val queryWithParams = filteredQuery.transactionally
-      .withStatementParameters(fetchSize = 100)
+      .withStatementParameters(fetchSize = DB_BATCH_SIZE)
     val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(queryWithParams)
     val entryTuples: DatabasePublisher[EntryTuple] = tuples.mapResult(t => EntryTuple.tupled(t))
     entryTuples

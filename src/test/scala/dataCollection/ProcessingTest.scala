@@ -4,7 +4,8 @@ import database.UserSubmission
 import webAPI.JSONReadWriters._
 import org.scalatest.funsuite.AnyFunSuite
 import ujson.{Arr, Obj}
-import util.{DEFAULT_DB_TIMEOUT, getLOC}
+import util._
+import util.Config._
 
 import java.io.File
 import java.sql.Timestamp
@@ -72,7 +73,6 @@ class ProcessingTest extends AnyFunSuite {
       )
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS))
-      Thread.sleep(500) // let database insert
 
       val usEntry = Await.result(getOldestUserSubmission(), DEFAULT_DB_TIMEOUT)
       //check returned entry is identical to stored entry
@@ -103,7 +103,6 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 1)
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS2))
-      Thread.sleep(500)// let database insert
 
       ProcessingPipeline.main(Array())
 
@@ -115,8 +114,6 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 1)
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS3))
-      Thread.sleep(500)// let database insert
-
       ProcessingPipeline.main(Array())
 
       //program is different, make sure not filtered out
@@ -125,6 +122,10 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getSRCount(), DEFAULT_DB_TIMEOUT) == 2)
       assert(Await.result(getCRCount(), DEFAULT_DB_TIMEOUT) == 2)
       assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 2)
+
+      val patternMatches = PatternMatcher.matchRegexAgainstDatabase("while\\([^)]*\\)")
+      //assert that the while( ) pattern was found on the 7th line of sampleUS
+      assert(patternMatches.exists(pm => pm.matchIndices.contains(7))) 
     } finally {
       dbProcess.destroy()
       webAPIProcess.destroy()
