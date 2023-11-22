@@ -23,10 +23,10 @@ object ProcessingPipeline {
     try {
       tmpDirName = programEntryStage()
 
-      val siliconProcess = Process(s"$baseDir/processing_scripts/siliconStage.sh $tmpDirName")
+      val siliconProcess = Process(s"$baseDir/bash_scripts/siliconStage.sh $tmpDirName")
       if (siliconProcess.! == -1) return
 
-      val carbonProcess = Process(s"$baseDir/processing_scripts/carbonStage.sh $tmpDirName")
+      val carbonProcess = Process(s"$baseDir/bash_scripts/carbonStage.sh $tmpDirName")
       if (carbonProcess.! == -1) return
 
       filterAndInsertStage(tmpDirName)

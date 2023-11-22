@@ -143,6 +143,11 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
+  def insertFeature(feature: Feature): Future[Int] = {
+    val insertQuery = sTables.featureTable += feature
+    db.run(insertQuery)
+  }
+
   def insertEntry(et: EntryTuple): Future[Unit] = {
     val peId = Await.result(insertProgramEntry(et.programEntry), DEFAULT_DB_TIMEOUT)
     val inserts = DBIO.seq(
@@ -223,6 +228,11 @@ object DBQueryInterface {
   def getPPCount(): Future[Int] = {
     val ppCount = db.run(sTables.programPrintEntryTable.length.result)
     ppCount
+  }
+
+  def getFeatCount(): Future[Int] = {
+    val featCount = db.run(sTables.featureTable.length.result)
+    featCount
   }
 
   def getFeatureCount(feature: String): Future[Int] = {

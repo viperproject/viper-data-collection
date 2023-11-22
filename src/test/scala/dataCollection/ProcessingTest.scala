@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.UserSubmission
+import database.{Feature, UserSubmission}
 import webAPI.JSONReadWriters._
 import org.scalatest.funsuite.AnyFunSuite
 import ujson.{Arr, Obj}
@@ -21,10 +21,26 @@ class ProcessingTest extends AnyFunSuite {
 
   import database.DBQueryInterface._
 
+  /*test("Backup and restore") {
+    val dbProcess = Process("docker-compose up").run
+    Thread.sleep(1000)
+    try {
+      Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
+      Await.ready(insertFeature(Feature(0, "test", false)), DEFAULT_DB_TIMEOUT)
+      Process("bash_scripts/db_backup.sh").!
+      Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
+      Process("bash_scripts/db_restore.sh dump.sql").!
+      assert(Await.result(getFeatCount(), DEFAULT_DB_TIMEOUT) == 1)
+    } finally {
+      dbProcess.destroy()
+    }*/
+
+  }
+
   /**IMPORTANT: This test will clear the database, do not run once actually in use*/
   test("Pipeline integration test") {
     val dbProcess = Process("docker-compose up").run
-    val webAPIProcess = Process("processing_scripts/webAPI.sh").run
+    val webAPIProcess = Process("bash_scripts/webAPI.sh").run
     Thread.sleep(1000) // let processes startup
 
     try {

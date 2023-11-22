@@ -5,7 +5,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 /** Contains constant parameters used in viper-data-collection*/
 object Config {
   /** Number of threads to use for database operations*/
-  val DB_EXEC_CONTEXT_PARALLELISM: Int = 8
+  val DB_EXEC_CONTEXT_PARALLELISM: Int = 10
   /** Used as the default timeout parameter for most database queries*/
   val DEFAULT_DB_TIMEOUT: Duration = Duration(10, SECONDS)
   /** Default timeout for operations that might take longer than a simple query*/
