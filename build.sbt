@@ -14,7 +14,7 @@ lazy val root = (project in file("."))
     scalaVersion := "2.13.10",
     libraryDependencies += munit % Test,
     libraryDependencies ++= Seq(
-      "org.slf4j" % "slf4j-nop" % "2.0.5",
+      "org.slf4j" % "slf4j-nop" % "2.0.5" % Provided,
       "com.lihaoyi" %% "cask" % "0.9.1",
       "com.lihaoyi" %% "upickle" % "3.0.0",
       "com.lihaoyi" %% "requests" % "0.8.0",

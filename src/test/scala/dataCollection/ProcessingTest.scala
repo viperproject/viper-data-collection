@@ -33,14 +33,13 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getFeatCount(), DEFAULT_DB_TIMEOUT) == 1)
     } finally {
       dbProcess.destroy()
-    }*/
+    }
 
-  }
+  }*/
 
   /**IMPORTANT: This test will clear the database, do not run once actually in use*/
   test("Pipeline integration test") {
-    val dbProcess = Process("docker-compose up").run
-    val webAPIProcess = Process("bash_scripts/webAPI.sh").run
+    val dbProcess = Process("./run.sh").run
     Thread.sleep(1000) // let processes startup
 
     try {
@@ -144,7 +143,6 @@ class ProcessingTest extends AnyFunSuite {
       assert(patternMatches.exists(pm => pm.matchIndices.contains(7)))
     } finally {
       dbProcess.destroy()
-      webAPIProcess.destroy()
     }
   }
 
