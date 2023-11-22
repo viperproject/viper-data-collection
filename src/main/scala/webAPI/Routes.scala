@@ -5,6 +5,7 @@ import database.DBQueryInterface
 import JSONReadWriters._
 import cask.Response
 import dataCollection.PatternMatcher
+import ujson.Obj
 import util._
 import util.Config._
 import upickle.default._
@@ -14,8 +15,24 @@ import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, SECONDS}
 
+/**This object defines HTTP endpoints to retrieve information from the Database.
+ *
+ * Things to note if you want to add more endpoints:
+ *
+ * - Cask requires method annotation to define endpoints, you can either set a GET endpoint @cask.get(path) or a POST endpoint
+ * using @cask.post(path) or @cask.postJson(path)
+ *
+ * - I would recommend using postJson instead of get, since get method parameters have to be passed with ?param=someParam in
+ * the URL. If you use postJson, Cask automatically tries to parse the method parameters from the JSON that was sent along the request
+ * (The JSON fields have to have the same name as the method parameter!).
+ *
+ * - To serialize your response data, you can either use the read, write functions from [[upickle]],
+ * or define your own JSON object using [[ujson]]
+ *
+ * - If you need non-primitive JSON parsers, you can define them in [[JSONReadWriters]]
+ *
+ * - If you need to query the database, there are a lot of predefined queries in [[DBQueryInterface]]*/
 object Routes extends cask.MainRoutes {
-
 
   @cask.get("/")
   def default() = {
@@ -61,8 +78,19 @@ object Routes extends cask.MainRoutes {
     }
   }
 
-  @cask.postJson("/match-regex")
-  def matchRegex(regex: String): Response[String] = {
+  @cask.postJson("/frontend-count-by-ids")
+  def frontendCountByIds(ids: Seq[Long]): Response[String] = {
+    try {
+      val frontendCounts = Await.result(DBQueryInterface.getFrontendCountByIds(ids), DEFAULT_DB_TIMEOUT)
+      val fcJSON = write(frontendCounts)
+      cask.Response(data = fcJSON, statusCode = 200)
+    } catch {
+      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+    }
+  }
+
+  @cask.postJson("/match-regex-detailed")
+  def matchRegexDetailed(regex: String): Response[String] = {
     try {
       val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)
       val mrJSON = write(matchResults)
@@ -71,6 +99,20 @@ object Routes extends cask.MainRoutes {
       case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }
   }
+
+  @cask.postJson("/match-regex")
+  def matchRegex(regex: String): Response[String] = {
+    try {
+      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)
+      val matchIds = matchResults.map(_.programEntryId)
+      val miJSON = write(matchIds)
+      cask.Response(data = miJSON, statusCode = 200)
+    } catch {
+      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+    }
+  }
+
+
 
   @cask.postJson("/submit-program")
   def submitProgram(originalName: String, program: String, frontend: String, args: Array[String], originalVerifier: String, success: Boolean, runtime: Long): Response[String] = {

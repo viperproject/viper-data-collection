@@ -1,6 +1,6 @@
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.{ComparableProgramPrint, Fingerprinter, PatternMatcher, ProgramPrint}
-import database.{DBQueryInterface, PGSlickTables}
+import database.{DBQueryInterface, PGSlickTables, ProgramEntry}
 import viper.silver.parser.FastParser
 import upickle.default.{macroRW, read, write, ReadWriter => RW}
 import slick.jdbc.MySQLProfile.api._
@@ -9,11 +9,14 @@ import webAPI.JSONReadWriters._
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Paths}
+import java.sql.Timestamp
+import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.io.{BufferedSource, Codec}
 import scala.io.Source
+import scala.sys.process.Process
 import scala.util.{Failure, Success}
 
 //number of methods, maybe store larger one
@@ -34,20 +37,42 @@ object TestRunner extends App {
   //println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
+  //regexDBPerformance()
   regexPerformance()
 
 
-  def regexPerformance() = {
+  def regexDBPerformance() = {
+    val dbProcess = Process("docker-compose up").run
+    Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
     val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
+    //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
     val buffer = fromFile(file)
     val prog = try buffer.mkString finally buffer.close()
-    val progs = (for(i <- 1 to 1000) yield prog).toList
+    val programEntry: ProgramEntry = ProgramEntry(0, Timestamp.valueOf(LocalDateTime.now()), "lol.vpr", prog, 1400, "Nagini", "Silicon", Array(), 3000, true, true)
+    val progs = (for(i <- 1 to 5000) yield programEntry).toList
+    val insertQ = DBQueryInterface.insertProgramEntries(progs)
+    Await.ready(insertQ, Duration.Inf)
+    val regexStr = "\\{.*\\([^)]*\\).*\\}"
+    val startTime = System.currentTimeMillis()
+    val res = PatternMatcher.matchRegexAgainstDatabase(regexStr)
+    println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
+    println(res.map(_.matchIndices.length).sum + " lines were matched")
+    dbProcess.destroy()
+  }
+
+  def regexPerformance() = {
+    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
+    //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
+    val buffer = fromFile(file)
+    val prog = try buffer.mkString finally buffer.close()
+    val progs = (for (i <- 1 to 5000) yield prog).toList
     val regexStr = "\\{.*\\([^)]*\\).*\\}"
     val startTime = System.currentTimeMillis()
     val res = PatternMatcher.matchProgramsToRegex(progs, regexStr)
     println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
     println(res.map(_.matchIndices.length).sum + " lines were matched")
   }
+
   def getPrograms(): Unit = {
     import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()

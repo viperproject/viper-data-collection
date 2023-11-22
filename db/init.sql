@@ -6,7 +6,7 @@ create table if not exists "programs"."CarbonResults" ("carbResId" BIGSERIAL NOT
 create table if not exists "programs"."ProgramPrintEntry" ("pprintID" BIGSERIAL NOT NULL PRIMARY KEY,"programEntryId" BIGINT NOT NULL,"programPrint" BYTEA NOT NULL);
 create table if not exists "programs"."Features" ("featureId" BIGSERIAL NOT NULL PRIMARY KEY,"name" VARCHAR NOT NULL,"useForFiltering" BOOLEAN NOT NULL);
 create table if not exists "programs"."SiliconFeatureEntries" ("silFeatureEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"featureId" BIGINT NOT NULL,"resultId" BIGINT NOT NULL,"value" VARCHAR NOT NULL);
-create table if not exists "programs"."CarbonFeatureEntries" ("silFeatureEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"featureId" BIGINT NOT NULL,"resultId" BIGINT NOT NULL,"value" VARCHAR NOT NULL)
+create table if not exists "programs"."CarbonFeatureEntries" ("carbFeatureEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"featureId" BIGINT NOT NULL,"resultId" BIGINT NOT NULL,"value" VARCHAR NOT NULL);
 
 alter table "programs"."SiliconResults" drop constraint if exists "silPE_FK";
 alter table "programs"."CarbonResults" drop constraint if exists "carbPE_FK";

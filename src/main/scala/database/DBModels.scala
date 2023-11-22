@@ -432,7 +432,7 @@ class SlickTables(val profile: PostgresProfile) {
   }
 
   class CarbFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "CarbonFeatureEntries") {
-    def featureEntryId = column[Long]("silFeatureEntryId", O.PrimaryKey, O.AutoInc)
+    def featureEntryId = column[Long]("carbFeatureEntryId", O.PrimaryKey, O.AutoInc)
 
     def featureId = column[Long]("featureId")
 
@@ -453,7 +453,6 @@ class SlickTables(val profile: PostgresProfile) {
   }
 
 
-
   def getDDL: String = {
     val schema = (tables map (_.schema)).reduce((s1, s2) => s1 ++ s2)
     schema.createIfNotExistsStatements.mkString(";\n")
@@ -468,7 +467,7 @@ object PGSlickTables extends SlickTables(PostgresProfile)
  * Used to store more complex types in database */
 object BinarySerializer {
 
-  /** Takes serializable object and converts it to Array[Byte]*/
+  /** Takes serializable object and converts it to Array[Byte] */
   def serialize[T <: Serializable](value: T): Array[Byte] = {
     val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val outStream = new ObjectOutputStream(stream)
