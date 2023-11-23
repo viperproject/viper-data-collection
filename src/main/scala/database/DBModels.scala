@@ -84,7 +84,7 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
-sealed trait Result extends Similarity[Result] {
+sealed trait Result extends Similarity[Result] with Serializable {
   def errors: Array[VerError]
 
   def runtime: Long

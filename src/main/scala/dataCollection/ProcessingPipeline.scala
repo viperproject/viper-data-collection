@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, Result, SiliconResult}
 import util._
 import util.Config._
 
@@ -75,9 +75,10 @@ object ProcessingPipeline {
 
   }
 
-  /** Takes the ProgramEntry stored in [[dirName]], tries to verify it through Silicon and stores the SiliconResult in ./tmp/[[dirName]]
-   * Has to be run through own JVM Instance to guarantee consistency in measurements */
-  def siliconStage(dirName: String): Unit = {
+  /** Takes the ProgramEntry stored in ./tmp/[[dirName]], tries to verify it through the given [[verifierFunction]] and stores the Result in ./tmp/[[dirName]]/[[outFileName]]
+   *
+   * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]*/
+  def verifierStage(dirName: String, outFileName: String, verifierFunction: (ProgramEntry, Array[String], Int) => Result): Unit = {
     val peFileName = s"tmp/$dirName/programEntry.bin"
     try {
       val fileReader = new BufferedInputStream(new FileInputStream(peFileName))
@@ -89,12 +90,11 @@ object ProcessingPipeline {
 
       val programEntry = deserialize[ProgramEntry](byteArr)
 
-      // TODO: Make variable, make config for most variables, flag on siliconSide
-      val maxRuntime = (programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000
-      val siliconResult = generateSiliconResults(programEntry, timeOutSeconds = maxRuntime.toInt)
+      val maxRuntime = ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
+      val verifierResult = verifierFunction(programEntry, Array(), maxRuntime)
 
-      val resFileName = s"tmp/$dirName/silRes.bin"
-      val resultBin = serialize(siliconResult)
+      val resFileName = s"tmp/$dirName/$outFileName"
+      val resultBin = serialize(verifierResult)
       val fileWriter = new BufferedOutputStream(new FileOutputStream(resFileName))
       try {
         fileWriter.write(resultBin)
@@ -107,39 +107,7 @@ object ProcessingPipeline {
 
   }
 
-
-  /** Takes the ProgramEntry stored in [[dirName]], tries to verify it through Carbon and stores the CarbonResult in ./tmp/[[dirName]]
-   * Has to be run through own JVM Instance to guarantee consistency in measurements */
-  def carbonStage(dirName: String): Unit = {
-    val peFileName = s"tmp/$dirName/programEntry.bin"
-    try {
-      val fileReader = new BufferedInputStream(new FileInputStream(peFileName))
-      val byteArr = try {
-        fileReader.readAllBytes()
-      } finally {
-        fileReader.close()
-      }
-
-      val programEntry = deserialize[ProgramEntry](byteArr)
-
-      val maxRuntime = (programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000
-      val carbonResult = generateCarbonResults(programEntry, timeOutSeconds = maxRuntime.toInt)
-
-      val resFileName = s"tmp/$dirName/carbRes.bin"
-      val resultBin = serialize(carbonResult)
-      val fileWriter = new BufferedOutputStream(new FileOutputStream(resFileName))
-      try {
-        fileWriter.write(resultBin)
-      } finally {
-        fileWriter.close()
-      }
-    } catch {
-      case e: Exception => e.printStackTrace(); throw StageIncompleteException()
-    }
-
-  }
-
-  /** Loads the generated ProgramEntry, SiliconResult and CarbonResult from [[dirName]]. Then checks if entry should be filtered out or inserted.
+  /** Loads the generated ProgramEntry, SiliconResult and CarbonResult from ./tmp/[[dirName]]. Then checks if entry should be filtered out or inserted.
    * First checks if an entry that is too similar already exists in the database, if yes drops entry.
    * Then checks if entry is unique enough in its features to be added to the database, if no drops entry.
    * If filters were passed, the ProgramEntry, SiliconResult and CarbonResult are stored in the database. */

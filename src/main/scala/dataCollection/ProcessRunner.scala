@@ -1,5 +1,7 @@
 package dataCollection
 
+import dataCollection.ProcessingHelper.{generateCarbonResults, generateSiliconResults}
+import dataCollection.ProcessingPipeline.verifierStage
 import util.StageIncompleteException
 
 /** Represents a runner for jobs that should be called in a new JVM instance to ensure consistency in performance */
@@ -26,12 +28,11 @@ object CarbonBenchmarkRunner extends ProcessRunner {
 /** Takes a folder name and runs [[dataCollection.ProcessingPipeline.siliconStage]] */
 object SiliconStageRunner extends ProcessRunner {
 
-  import ProcessingPipeline.siliconStage
 
   def main(args: Array[String]): Unit = {
     if (args.length != 1) return
     try {
-      siliconStage(args(0))
+      verifierStage(args(0), "silRes.bin", generateSiliconResults)
     } catch {
       case _: StageIncompleteException => System.exit(-1)
     }
@@ -41,12 +42,11 @@ object SiliconStageRunner extends ProcessRunner {
 /** Takes a folder name and runs [[dataCollection.ProcessingPipeline.carbonStage]] */
 object CarbonStageRunner extends ProcessRunner {
 
-  import ProcessingPipeline.carbonStage
 
   def main(args: Array[String]): Unit = {
     if (args.length != 1) return
     try {
-      carbonStage(args(0))
+      verifierStage(args(0), "carbRes.bin", generateCarbonResults)
     } catch {
       case _: StageIncompleteException => System.exit(-1)
     }
