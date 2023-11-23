@@ -15,7 +15,7 @@ import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, SECONDS}
 
-/**This object defines HTTP endpoints to retrieve information from the Database.
+/** This object defines HTTP endpoints to retrieve information from the Database.
  *
  * Things to note if you want to add more endpoints:
  *
@@ -31,7 +31,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
  *
  * - If you need non-primitive JSON parsers, you can define them in [[JSONReadWriters]]
  *
- * - If you need to query the database, there are a lot of predefined queries in [[DBQueryInterface]]*/
+ * - If you need to query the database, there are a lot of predefined queries in [[DBQueryInterface]] */
 object Routes extends cask.MainRoutes {
 
   @cask.get("/")
@@ -111,7 +111,6 @@ object Routes extends cask.MainRoutes {
       case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }
   }
-
 
 
   @cask.postJson("/submit-program")

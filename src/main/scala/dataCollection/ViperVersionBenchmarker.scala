@@ -12,8 +12,12 @@ trait ViperVersionBenchmarker {
 
   def main(args: Array[String]): Unit = {
     if (args.length != 1) return
+    versionHash = args(0)
+    run()
+  }
+
+  def run(): Unit = {
     try {
-      versionHash = args(0)
       if (swapVerifierVersion() != -1) {
         benchmark()
       }

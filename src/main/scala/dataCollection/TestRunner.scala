@@ -49,7 +49,7 @@ object TestRunner extends App {
     val buffer = fromFile(file)
     val prog = try buffer.mkString finally buffer.close()
     val programEntry: ProgramEntry = ProgramEntry(0, Timestamp.valueOf(LocalDateTime.now()), "lol.vpr", prog, 1400, "Nagini", "Silicon", Array(), 3000, true, true)
-    val progs = (for(i <- 1 to 5000) yield programEntry).toList
+    val progs = (for (i <- 1 to 5000) yield programEntry).toList
     val insertQ = DBQueryInterface.insertProgramEntries(progs)
     Await.ready(insertQ, Duration.Inf)
     val regexStr = "\\{.*\\([^)]*\\).*\\}"
@@ -104,8 +104,8 @@ object TestRunner extends App {
     for ((name1, pprint1) <- pprints) {
       for ((name2, pprint2) <- pprints) {
         if (pprint1 != pprint2) {
-          if(doProgramPrintsMatch(pprint1, pprint2, "Nagini")) {
-              println(s"MATCH FOUND: ${name1}, ${name2}")
+          if (doProgramPrintsMatch(pprint1, pprint2, "Nagini")) {
+            println(s"MATCH FOUND: ${name1}, ${name2}")
             dups = dups.union(Set(name1, name2))
           }
         }
@@ -151,7 +151,7 @@ object TestRunner extends App {
       for (num2 <- Seq.range(num + 1, 901)) {
         val prog2 = progresults(num2)
         if (doProgramPrintsMatch(prog1, prog2, "Silicon")) {
-              matches = matches :+ num2
+          matches = matches :+ num2
         }
       }
       println(s"Matches with ${num}: ${matches}")

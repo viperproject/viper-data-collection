@@ -25,7 +25,7 @@ object PatternMatcher {
       }
     }
     var matchResults = Seq[Future[Option[PatternMatchResult]]]()
-    val appendAction = matchResultPublisher foreach {r => matchResults = matchResults :+ r}
+    val appendAction = matchResultPublisher foreach { r => matchResults = matchResults :+ r }
     Await.ready(appendAction, LONG_TIMEOUT)
     Await.result(Future.sequence(matchResults), LONG_TIMEOUT).flatten
   }

@@ -11,6 +11,7 @@ package object util {
   }
 
   case class NothingToDoException() extends Exception
+
   case class StageIncompleteException() extends Exception
 
   def getLOC(program: String): Int = {
