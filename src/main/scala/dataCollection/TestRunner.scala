@@ -68,7 +68,7 @@ object TestRunner extends App {
     val progs = (for (i <- 1 to 5000) yield prog).toList
     val regexStr = "\\{.*\\([^)]*\\).*\\}"
     val startTime = System.currentTimeMillis()
-    val res = PatternMatcher.matchProgramsToRegex(progs, regexStr)
+    val res = PatternMatcher.matchRegexOnPrograms(progs, regexStr)
     println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
     println(res.map(_.matchIndices.length).sum + " lines were matched")
   }

@@ -132,7 +132,7 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
   }
 }
 
-/** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes */
+/** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes of the first program*/
 case class MatchResult(dMatches: (Int, Int) = (1, 1),
                        fMatches: (Int, Int) = (1, 1),
                        funMatches: (Int, Int) = (1, 1),

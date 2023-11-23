@@ -19,7 +19,7 @@ object ProcessingHelper {
   private val fastParser = new FastParser()
   private val fPrinter = Fingerprinter
 
-  /** Tries to get userSubmission with the oldest submissionDate and converts it to ProgramEntry */
+  /** Tries to get userSubmission with the oldest submissionDate and converts it to ProgramEntry, then deletes userSubmission from database */
   def processOldestSubmission(): Option[ProgramEntry] = {
     val submissionOpt = Await.result(DBQueryInterface.getOldestUserSubmission(), DEFAULT_DB_TIMEOUT)
     submissionOpt match {

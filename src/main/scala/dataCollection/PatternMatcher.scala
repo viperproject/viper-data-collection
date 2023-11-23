@@ -17,7 +17,7 @@ object PatternMatcher {
     val programEntryPublisher: DatabasePublisher[ProgramEntry] = DBQueryInterface.getAllProgramEntriesBatched()
     val matchResultPublisher = programEntryPublisher mapResult {
       pe => {
-        val matchIndices = matchRegex(pe.program, pattern)
+        val matchIndices = matchRegexOnProgram(pe.program, pattern)
         matchIndices map {
           case Seq() => None
           case res: Seq[Int] => Some(PatternMatchResult(pe.programEntryId, res))
@@ -31,19 +31,19 @@ object PatternMatcher {
   }
 
   /** Only for testing purposes */
-  def matchProgramsToRegex(programs: Seq[String], regexStr: String): Seq[PatternMatchResult] = {
+  def matchRegexOnPrograms(programs: Seq[String], regexStr: String): Seq[PatternMatchResult] = {
     val pattern: Pattern = Pattern.compile(regexStr, Pattern.CASE_INSENSITIVE)
     var futureResults = Seq[Future[PatternMatchResult]]()
 
     programs foreach {
-      program => futureResults = futureResults :+ (matchRegex(program, pattern) map (r => PatternMatchResult(0, r)))
+      program => futureResults = futureResults :+ (matchRegexOnProgram(program, pattern) map (r => PatternMatchResult(0, r)))
     }
 
     val results = Await.result(Future.sequence(futureResults), LONG_TIMEOUT)
     results
   }
 
-  private def matchRegex(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Seq[Int]] = {
+  private def matchRegexOnProgram(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Seq[Int]] = {
     Future {
       val matcher = pattern.matcher(program)
       var matchIndices = Seq[Int]()
