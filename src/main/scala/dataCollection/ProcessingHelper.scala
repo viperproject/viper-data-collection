@@ -154,7 +154,8 @@ object ProcessingHelper {
     val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), DEFAULT_DB_TIMEOUT)
     entryOpt match {
       case Some(entry) =>
-        val silRes = generateSiliconResults(entry)
+        val runtimeLimit = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
+        val silRes = generateSiliconResults(entry, timeOutSeconds = runtimeLimit)
         Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
@@ -165,7 +166,8 @@ object ProcessingHelper {
     val entryOpt = Await.result(DBQueryInterface.getProgramEntryByID(programEntryId), DEFAULT_DB_TIMEOUT)
     entryOpt match {
       case Some(entry) =>
-        val carbRes = generateCarbonResults(entry)
+        val runtimeLimit = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
+        val carbRes = generateCarbonResults(entry, timeOutSeconds = runtimeLimit)
         Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }

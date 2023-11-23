@@ -18,15 +18,14 @@ object ProcessingPipeline {
 
   /** Combines the different processing stages, meant to be called periodically from some outside source */
   def main(args: Array[String]): Unit = {
-    val baseDir = System.getProperty("user.dir")
     var tmpDirName: String = "default"
     try {
       tmpDirName = programEntryStage()
 
-      val siliconProcess = Process(s"$baseDir/bash_scripts/siliconStage.sh $tmpDirName")
+      val siliconProcess = Process(s"$SILICON_STAGE_BASH_FILE $tmpDirName")
       if (siliconProcess.! == -1) return
 
-      val carbonProcess = Process(s"$baseDir/bash_scripts/carbonStage.sh $tmpDirName")
+      val carbonProcess = Process(s"$CARBON_STAGE_BASH_FILE $tmpDirName")
       if (carbonProcess.! == -1) return
 
       filterAndInsertStage(tmpDirName)
@@ -232,32 +231,5 @@ object ProcessingPipeline {
 
 }
 
-object SiliconStageRunner {
-
-  import ProcessingPipeline.siliconStage
-
-  def main(args: Array[String]): Unit = {
-    if (args.length != 1) return
-    try {
-      siliconStage(args(0))
-    } catch {
-      case _: StageIncompleteException => System.exit(-1)
-    }
-  }
-}
-
-object CarbonStageRunner {
-
-  import ProcessingPipeline.carbonStage
-
-  def main(args: Array[String]): Unit = {
-    if (args.length != 1) return
-    try {
-      carbonStage(args(0))
-    } catch {
-      case _: StageIncompleteException => System.exit(-1)
-    }
-  }
-}
 
 
