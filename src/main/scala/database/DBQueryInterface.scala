@@ -9,10 +9,12 @@ import java.util.concurrent.Executors
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
+/** ExecutionContext in which queries are run */
 object DBExecContext {
   implicit val ec = ExecutionContext.fromExecutor(Executors.newWorkStealingPool(DB_EXEC_CONTEXT_PARALLELISM))
 }
 
+/** Contains slick queries to fetch entries from the database */
 object DBQueryInterface {
   private val db = DBConnection.db
   private val sTables = PGSlickTables

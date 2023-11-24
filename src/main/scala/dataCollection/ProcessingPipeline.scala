@@ -41,14 +41,15 @@ object ProcessingPipeline {
       filterAndInsertStage(tmpDirName)
     } finally {
       removeTempDir(tmpDirName)
-      if(globalLock != null) globalLock.release()
+      if (globalLock != null) globalLock.release()
     }
   }
 
   /** Tries to get the oldest UserSubmission and create a ProgramEntry from it. Stores the ProgramEntry in the ./tmp folder for other stages to use
    *
    * @return The name of the directory in which the ProgramEntry was stored
-   * @throws NothingToDoException if there are no more UserSubmissions in the database */
+   * @throws NothingToDoException     if there are no more UserSubmissions in the database
+   * @throws StageIncompleteException if there was any exception preventing the stage to complete */
   private def programEntryStage(): String = {
     try {
       val entryOpt = processOldestSubmission()
@@ -88,7 +89,9 @@ object ProcessingPipeline {
 
   /** Takes the ProgramEntry stored in ./tmp/[[dirName]], tries to verify it through the given [[verifierFunction]] and stores the Result in ./tmp/[[dirName]]/[[outFileName]]
    *
-   * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]*/
+   * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]
+   *
+   * @throws StageIncompleteException if there was any exception preventing the stage to complete */
   def verifierStage(dirName: String, outFileName: String, verifierFunction: (ProgramEntry, Array[String], Int) => Result): Unit = {
     val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
     try {
@@ -127,7 +130,7 @@ object ProcessingPipeline {
     val peFile = s"$TMP_DIRECTORY/$dirName/$peFileName"
     val srFile = s"$TMP_DIRECTORY/$dirName/$srFileName"
     val crFile = s"$TMP_DIRECTORY/$dirName/$crFileName"
-    val ppeFile= s"$TMP_DIRECTORY/$dirName/$ppeFileName"
+    val ppeFile = s"$TMP_DIRECTORY/$dirName/$ppeFileName"
 
     try {
 

@@ -10,9 +10,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future}
 
+/** Frontend to benchmark Programs using the carbon verifier */
 class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
 
+  /** Verifies the program. If [[timeOutSeconds]] has passed, the verifier is stopped. This is done since neither Boogie
+   * nor Z3 can be passed a timeout flag that reliably works. */
   def main(args: Array[String], timeOutSeconds: Int = 0): Unit = {
     try {
       val execution = Future {
@@ -33,6 +36,7 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutL
     }
   }
 
+  /** Runs the phases and adds the measured times to [[phaseRuntimes]] */
   override def runAllPhases(): Unit = {
     var lastTime: Long = 0
     phases.foreach(ph => {

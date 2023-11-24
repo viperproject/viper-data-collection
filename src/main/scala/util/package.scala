@@ -13,6 +13,9 @@ package object util {
 
   }
 
+  /** Tries to lock the global.lock file and keeps spinning until it gets the lock. To be used when program should eventually be executed
+   *
+   * @throws GlobalLockException if any exception occured */
   def getGlobalLockSpinning(sleepTime: Int = 100): FileLock = {
     val file = new File("src/main/resources/global.lock")
     try {
@@ -29,6 +32,10 @@ package object util {
     }
   }
 
+  /** Tries to lock the global.lock file
+   *
+   * @returns the FileLock, should eventually be released again
+   * @throws GlobalLockException if any exception occured or lock is held by someone else */
   def getGlobalLock(): FileLock = {
     val file = new File("src/main/resources/global.lock")
     try {

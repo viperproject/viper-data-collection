@@ -29,7 +29,7 @@ object Config {
   /** Directory where bash scripts are stored */
   val SCRIPT_DIRECTORY: String = "./bash_scripts"
   /** Bash file that executes the given class / object name */
-  val SCALA_CLASS_BASH_FILE: String = SCRIPT_DIRECTORY +"/run_scala_class.sh"
+  val SCALA_CLASS_BASH_FILE: String = SCRIPT_DIRECTORY + "/run_scala_class.sh"
   /** Bash file that switches Silicon version to given commit */
   val SWITCH_SIL_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/switch_sil_version.sh"
   /** Bash file that switches Silicon version to given HEAD */

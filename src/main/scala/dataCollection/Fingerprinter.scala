@@ -132,7 +132,7 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
   }
 }
 
-/** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes of the first program*/
+/** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes of the first program */
 case class MatchResult(dMatches: (Int, Int) = (1, 1),
                        fMatches: (Int, Int) = (1, 1),
                        funMatches: (Int, Int) = (1, 1),
@@ -233,12 +233,14 @@ object Fingerprinter {
     uwTree
   }
 
+  /** removes all subtrees with <= [[limit]] child nodes */
   private def dropSmallNodes(root: FPNode, limit: Int): FPNode = {
     val newChildren = root.children map (c => dropSmallNodes(c, limit))
     val largeChildren = newChildren.filter(_.fp.weight > limit)
     FPNode(root.fp, largeChildren)
   }
 
+  /** recalculates the weight of a node, should be called after modifying the tree */
   private def updateWeights(root: FPNode): FPNode = {
     val updatedChildren = root.children map updateWeights
     FPNode(Fingerprint(updatedChildren.map(_.fp.weight).sum + 1, root.fp.hashVal), updatedChildren)

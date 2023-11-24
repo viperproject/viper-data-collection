@@ -7,6 +7,7 @@ import upickle.default.{macroRW, ReadWriter => RW}
 
 import java.sql.Timestamp
 
+/** Upickle read writers for serializable objects */
 object JSONReadWriters {
   implicit val peRW: RW[ProgramEntry] = macroRW
   implicit val tsRW: RW[Timestamp] = upickle.default.readwriter[String].bimap[Timestamp](

@@ -8,8 +8,12 @@ import util.Config._
 import java.util.regex.Pattern
 import scala.concurrent.{Await, ExecutionContext, Future}
 
+/** Contains methods to search the database for regex patterns */
 object PatternMatcher {
 
+  /** Tries to match the given regex to all programs in the database
+   *
+   * @return list of [[PatternMatchResult]] containing the programEntryIds and line indices of matches */
   def matchRegexAgainstDatabase(regexStr: String): Seq[PatternMatchResult] = {
     val pattern: Pattern = Pattern.compile(regexStr)
     val programEntryPublisher: DatabasePublisher[ProgramEntry] = DBQueryInterface.getAllProgramEntriesBatched()
@@ -41,6 +45,9 @@ object PatternMatcher {
     results
   }
 
+  /** @param program program to search for the pattern
+   * @param pattern  precompiled regex pattern
+   * @return future list of lines where pattern was matched */
   private def matchRegexOnProgram(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Seq[Int]] = {
     Future {
       val matcher = pattern.matcher(program)
@@ -69,5 +76,9 @@ object PatternMatcher {
   }
 }
 
+/** Result of matching regex to a program
+ *
+ * @param programEntryId the program in which a match occurred
+ * @param matchIndices   the line numbers indicating the start regions of the regex match */
 case class PatternMatchResult(programEntryId: Long, matchIndices: Seq[Int])
 

@@ -84,6 +84,7 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
+/** Trait to represent the result of running some verifier on a program */
 sealed trait Result extends Similarity[Result] with Serializable {
   def errors: Array[VerError]
 
@@ -164,6 +165,11 @@ object ProgramPrintEntry {
   def tupled = (ProgramPrintEntry.apply _).tupled
 }
 
+/** Case class to represent a row in the programs.Features table
+ *
+ * @param featureId       unique identifier
+ * @param name            name of the feature
+ * @param useForFiltering whether to use this feature to filter out new entries */
 case class Feature(featureId: Long,
                    name: String,
                    useForFiltering: Boolean)
@@ -172,6 +178,12 @@ object Feature {
   def tupled = (Feature.apply _).tupled
 }
 
+/** Case class to represent a row in the programs.silFeatureEntry or carbFeatureEntry table
+ *
+ * @param featureEntryId unique identifier
+ * @param featureId      foreign key for [[Feature]] that is referenced
+ * @param resultId       foreign key for [[Result]] in which this feature was created
+ * @param value          value of the feature */
 case class FeatureEntry(featureEntryId: Long,
                         featureId: Long,
                         resultId: Long,

@@ -254,6 +254,7 @@ object ProcessingHelper {
     )
   }
 
+  /** if [[toFilter]] is found in [[args]], drops that and next index in the array */
   def filterArgs(args: Array[String], toFilter: String): Array[String] = {
     val argInd = args.indexOf(toFilter)
     if (argInd == -1) {
