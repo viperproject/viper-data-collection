@@ -20,6 +20,9 @@ import upickle.default.write
 
 class ProcessingTest extends AnyFunSuite {
 
+  val host = "http://localhost:8080"
+
+
   import database.DBQueryInterface._
 
   /*test("Backup and restore") {
@@ -39,6 +42,35 @@ class ProcessingTest extends AnyFunSuite {
   }*/
 
   /**IMPORTANT: This test will clear the database, do not run once actually in use*/
+  test("Global lock test") {
+    val dbProcess = Process("./run.sh").run
+    Thread.sleep(1000)
+
+    try {
+      Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
+      val sampleProg = readProgram(new File("src/test/resources/ProcessingTest/sample.vpr"))
+      val sampleUS = UserSubmission(0,
+        Timestamp.valueOf(LocalDateTime.now()),
+        "sample.vpr",
+        sampleProg,
+        getLOC(sampleProg),
+        "Silicon",
+        Array("--timeout", "10"),
+        "Silicon",
+        true,
+        1500
+      )
+      requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS))
+      val lockingProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline")
+      lockingProcess.run
+      Thread.sleep(100)
+      assertThrows[GlobalLockException](getGlobalLock())
+    } finally {
+      dbProcess.destroy()
+    }
+  }
+
+  /**IMPORTANT: This test will clear the database, do not run once actually in use*/
   test("Pipeline integration test") {
     val dbProcess = Process("./run.sh").run
     Thread.sleep(1000) // let processes startup
@@ -46,8 +78,6 @@ class ProcessingTest extends AnyFunSuite {
     try {
       //clear database
       Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
-
-      val host = "http://localhost:8080"
 
       //two almost identical programs
       val sampleProg = readProgram(new File("src/test/resources/ProcessingTest/sample.vpr"))
