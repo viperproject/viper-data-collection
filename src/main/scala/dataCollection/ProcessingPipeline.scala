@@ -5,6 +5,7 @@ import util._
 import util.Config._
 
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream}
+import java.nio.channels.FileLock
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.reflect.io.Directory
@@ -24,7 +25,11 @@ object ProcessingPipeline {
   /** Combines the different processing stages, meant to be called periodically from some outside source */
   def main(args: Array[String]): Unit = {
     var tmpDirName: String = "default"
+    var globalLock: FileLock = null
     try {
+      globalLock = getGlobalLock()
+      if (globalLock == null) return
+
       tmpDirName = programEntryStage()
 
       val siliconProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconStageRunner $tmpDirName")
@@ -36,6 +41,7 @@ object ProcessingPipeline {
       filterAndInsertStage(tmpDirName)
     } finally {
       removeTempDir(tmpDirName)
+      if(globalLock != null) globalLock.release()
     }
   }
 

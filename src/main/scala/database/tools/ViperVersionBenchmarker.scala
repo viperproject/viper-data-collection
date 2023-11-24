@@ -2,7 +2,9 @@ package database.tools
 
 import database.DBQueryInterface
 import util.Config._
+import util.{GlobalLockException, getGlobalLock, getGlobalLockSpinning}
 
+import java.nio.channels.FileLock
 import scala.concurrent.Await
 import scala.sys.process.Process
 
@@ -16,12 +18,15 @@ trait ViperVersionBenchmarker {
   }
 
   def run(): Unit = {
+    var globalLock: FileLock = null
     try {
+      globalLock = getGlobalLockSpinning()
       if (swapVerifierVersion() != -1) {
         benchmark()
       }
     } finally {
       restoreVerifierVersion()
+      if (globalLock != null) globalLock.release()
     }
   }
 
