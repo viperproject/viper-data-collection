@@ -24,12 +24,12 @@ object Config {
   val FEATURE_FILTER_THRESHOLD: Double = 0.5
   /** Fraction representing how many of a programs features need to be valuable for the program not to be filtered out */
   val FEATURE_AMOUNT_THRESHOLD: Double = 1.0 / 3.0
+  /** Directory to use to for storing temporary files */
+  val TMP_DIRECTORY: String = "./tmp"
   /** Directory where bash scripts are stored */
   val SCRIPT_DIRECTORY: String = "./bash_scripts"
-  /** Bash file that runs [[dataCollection.CarbonStageRunner]] */
-  val CARBON_STAGE_BASH_FILE: String = SCRIPT_DIRECTORY + "/carbonStage.sh"
-  /** Bash file that runs [[dataCollection.SiliconStageRunner]] */
-  val SILICON_STAGE_BASH_FILE: String = SCRIPT_DIRECTORY + "/siliconStage.sh"
+  /** Bash file that executes the given class / object name */
+  val SCALA_CLASS_BASH_FILE: String = SCRIPT_DIRECTORY +"/run_scala_class.sh"
   /** Bash file that switches Silicon version to given commit */
   val SWITCH_SIL_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/switch_sil_version.sh"
   /** Bash file that switches Silicon version to given HEAD */
@@ -38,11 +38,4 @@ object Config {
   val SWITCH_CARB_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/switch_carb_version.sh"
   /** Bash file that switches Carbon version to HEAD */
   val RESTORE_CARB_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/restore_carb_version.sh"
-  /** Bash file that starts the API web server */
-  val WEB_API_BASH_FILE: String = SCRIPT_DIRECTORY + "/webAPI.sh"
-  /** Bash file that runs [[dataCollection.SiliconBenchmarkRunner]] */
-  val SILICON_BENCHMARK_RUNNER_BASH_FILE: String = SCRIPT_DIRECTORY + "/sil_benchmark_entry.sh"
-  /** Bash file that runs [[dataCollection.CarbonBenchmarkRunner]] */
-  val CARBON_BENCHMARK_RUNNER_BASH_FILE: String = SCRIPT_DIRECTORY + "/carb_benchmark_entry.sh"
-
 }

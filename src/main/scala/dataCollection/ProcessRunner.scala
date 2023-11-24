@@ -25,7 +25,7 @@ object CarbonBenchmarkRunner extends ProcessRunner {
   }
 }
 
-/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.siliconStage]] */
+/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.verifierStage]] with [[generateSiliconResults]] */
 object SiliconStageRunner extends ProcessRunner {
 
 
@@ -39,7 +39,7 @@ object SiliconStageRunner extends ProcessRunner {
   }
 }
 
-/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.carbonStage]] */
+/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.verifierStage]] with [[generateSiliconResults]] */
 object CarbonStageRunner extends ProcessRunner {
 
 

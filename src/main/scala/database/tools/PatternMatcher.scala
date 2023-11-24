@@ -1,14 +1,12 @@
-package dataCollection
+package database.tools
 
-import java.util.regex.Matcher
-import java.util.regex.Pattern
-import scala.concurrent.{Await, ExecutionContext, Future}
 import database.DBExecContext._
 import database.{DBQueryInterface, ProgramEntry}
 import slick.basic.DatabasePublisher
 import util.Config._
 
-import scala.concurrent.duration.{Duration, SECONDS}
+import java.util.regex.Pattern
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object PatternMatcher {
 

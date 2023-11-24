@@ -1,5 +1,6 @@
 package dataCollection
 
+import database.tools.PatternMatcher
 import database.{Feature, UserSubmission}
 import webAPI.JSONReadWriters._
 import org.scalatest.funsuite.AnyFunSuite
@@ -108,7 +109,7 @@ class ProcessingTest extends AnyFunSuite {
         case None => assert(false)
       }
 
-      ProcessingPipeline.main(Array())
+      Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline").!
 
       //check that UserSubmission was deleted and an Entry was created for each table
       assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)
@@ -119,7 +120,7 @@ class ProcessingTest extends AnyFunSuite {
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS2))
 
-      ProcessingPipeline.main(Array())
+      Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline").!
 
       //program is similar, make sure no new entries
       assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)
@@ -129,7 +130,7 @@ class ProcessingTest extends AnyFunSuite {
       assert(Await.result(getPPCount(), DEFAULT_DB_TIMEOUT) == 1)
 
       requests.post(host + "/submit-program", data = jsonifySubmission(sampleUS3))
-      ProcessingPipeline.main(Array())
+      Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline").!
 
       //program is different, make sure not filtered out
       assert(Await.result(getUSCount(), DEFAULT_DB_TIMEOUT) == 0)

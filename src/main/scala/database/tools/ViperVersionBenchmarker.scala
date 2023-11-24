@@ -1,7 +1,6 @@
-package dataCollection
+package database.tools
 
 import database.DBQueryInterface
-import util.Config.DEFAULT_DB_TIMEOUT
 import util.Config._
 
 import scala.concurrent.Await
@@ -48,7 +47,7 @@ class SilVersionBenchmarker extends ViperVersionBenchmarker {
   override def benchmark(): Unit = {
     val peIdsWithoutRes = Await.result(DBQueryInterface.getPEIdsWithoutSilVersionRes(versionHash), DEFAULT_DB_TIMEOUT)
     for (id <- peIdsWithoutRes) {
-      Process(s"$SILICON_BENCHMARK_RUNNER_BASH_FILE $id").!
+      Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconBenchmarkRunner $id").!
     }
   }
 }
@@ -68,7 +67,7 @@ class CarbVersionBenchmarker extends ViperVersionBenchmarker {
   override def benchmark(): Unit = {
     val peIdsWithoutRes = Await.result(DBQueryInterface.getPEIdsWithoutCarbVersionRes(versionHash), DEFAULT_DB_TIMEOUT)
     for (id <- peIdsWithoutRes) {
-      Process(s"$CARBON_BENCHMARK_RUNNER_BASH_FILE $id").!
+      Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonBenchmarkRunner $id").!
     }
   }
 }

@@ -16,16 +16,21 @@ object ProcessingPipeline {
   import ProcessingHelper._
   import database.BinarySerializer._
 
+  private val peFileName = "programEntry.bin"
+  private val srFileName = "silRes.bin"
+  private val crFileName = "carbRes.bin"
+  private val ppeFileName = "programPrintEntry.bin"
+
   /** Combines the different processing stages, meant to be called periodically from some outside source */
   def main(args: Array[String]): Unit = {
     var tmpDirName: String = "default"
     try {
       tmpDirName = programEntryStage()
 
-      val siliconProcess = Process(s"$SILICON_STAGE_BASH_FILE $tmpDirName")
+      val siliconProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconStageRunner $tmpDirName")
       if (siliconProcess.! == -1) return
 
-      val carbonProcess = Process(s"$CARBON_STAGE_BASH_FILE $tmpDirName")
+      val carbonProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonStageRunner $tmpDirName")
       if (carbonProcess.! == -1) return
 
       filterAndInsertStage(tmpDirName)
@@ -48,8 +53,8 @@ object ProcessingPipeline {
 
           val programPrintEntry = createProgramPrintEntry(entry.program)
 
-          val entryFileName = s"tmp/$dirName/programEntry.bin"
-          val pprintFileName = s"tmp/$dirName/programPrintEntry.bin"
+          val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
+          val pprintFileName = s"$TMP_DIRECTORY/$dirName/$ppeFileName"
           val entryBin = serialize(entry)
           val pprintBin = serialize(programPrintEntry)
           val entryWriter = new BufferedOutputStream(new FileOutputStream(entryFileName))
@@ -79,9 +84,9 @@ object ProcessingPipeline {
    *
    * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]*/
   def verifierStage(dirName: String, outFileName: String, verifierFunction: (ProgramEntry, Array[String], Int) => Result): Unit = {
-    val peFileName = s"tmp/$dirName/programEntry.bin"
+    val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
     try {
-      val fileReader = new BufferedInputStream(new FileInputStream(peFileName))
+      val fileReader = new BufferedInputStream(new FileInputStream(entryFileName))
       val byteArr = try {
         fileReader.readAllBytes()
       } finally {
@@ -93,7 +98,7 @@ object ProcessingPipeline {
       val maxRuntime = ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
       val verifierResult = verifierFunction(programEntry, Array(), maxRuntime)
 
-      val resFileName = s"tmp/$dirName/$outFileName"
+      val resFileName = s"$TMP_DIRECTORY/$dirName/$outFileName"
       val resultBin = serialize(verifierResult)
       val fileWriter = new BufferedOutputStream(new FileOutputStream(resFileName))
       try {
@@ -113,18 +118,17 @@ object ProcessingPipeline {
    * If filters were passed, the ProgramEntry, SiliconResult and CarbonResult are stored in the database. */
   private def filterAndInsertStage(dirName: String): Unit = {
     // Loading the generated Files
-    val tmpDir = s"tmp/$dirName/"
-    val peFileName = tmpDir + "programEntry.bin"
-    val silResFileName = tmpDir + "silRes.bin"
-    val carbResFileName = tmpDir + "carbRes.bin"
-    val pprintFileName = tmpDir + "programPrintEntry.bin"
+    val peFile = s"$TMP_DIRECTORY/$dirName/$peFileName"
+    val srFile = s"$TMP_DIRECTORY/$dirName/$srFileName"
+    val crFile = s"$TMP_DIRECTORY/$dirName/$crFileName"
+    val ppeFile= s"$TMP_DIRECTORY/$dirName/$ppeFileName"
 
     try {
 
-      val peFileReader = new BufferedInputStream(new FileInputStream(peFileName))
-      val sRFileReader = new BufferedInputStream(new FileInputStream(silResFileName))
-      val cRFileReader = new BufferedInputStream(new FileInputStream(carbResFileName))
-      val ppFileReader = new BufferedInputStream(new FileInputStream(pprintFileName))
+      val peFileReader = new BufferedInputStream(new FileInputStream(peFile))
+      val sRFileReader = new BufferedInputStream(new FileInputStream(srFile))
+      val cRFileReader = new BufferedInputStream(new FileInputStream(crFile))
+      val ppFileReader = new BufferedInputStream(new FileInputStream(ppeFile))
 
       val pEByteArr = try {
         peFileReader.readAllBytes()

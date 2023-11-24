@@ -1,14 +1,14 @@
-package dataCollection
+package dataCollection.customFrontends
 
 import viper.carbon.CarbonFrontend
-import viper.silver.logger.{ViperStdOutLogger}
-import viper.silver.reporter.{NoopReporter}
+import viper.silver.logger.ViperStdOutLogger
+import viper.silver.reporter.NoopReporter
 import viper.silver.verifier.{TimeoutOccurred, Success => CarbSuccess}
 
 import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, MILLISECONDS}
-import scala.concurrent.{Await, Future, TimeoutException}
+import scala.concurrent.{Await, Future}
 
 class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()

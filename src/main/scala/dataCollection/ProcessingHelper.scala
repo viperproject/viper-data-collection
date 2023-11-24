@@ -1,5 +1,6 @@
 package dataCollection
 
+import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend}
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
 import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._

@@ -1,7 +1,7 @@
-package dataCollection
+package dataCollection.customFrontends
 
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
-import viper.silver.logger.{ViperStdOutLogger}
+import viper.silver.logger.ViperStdOutLogger
 import viper.silver.reporter.{BenchmarkingPhase, Message, NoopReporter, Reporter}
 import viper.silver.verifier.{Success => SilSuccess}
 

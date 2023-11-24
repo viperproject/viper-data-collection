@@ -1,9 +1,11 @@
+package util
+
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
-import dataCollection.{ComparableProgramPrint, Fingerprinter, PatternMatcher, ProgramPrint}
-import database.{DBQueryInterface, PGSlickTables, ProgramEntry}
+import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
+import database.tools.PatternMatcher
+import database.{DBQueryInterface, ProgramEntry}
+import upickle.default.{read, write}
 import viper.silver.parser.FastParser
-import upickle.default.{macroRW, read, write, ReadWriter => RW}
-import slick.jdbc.MySQLProfile.api._
 import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -14,8 +16,7 @@ import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
-import scala.io.{BufferedSource, Codec}
-import scala.io.Source
+import scala.io.{BufferedSource, Codec, Source}
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
 

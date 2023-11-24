@@ -1,6 +1,7 @@
 package webAPI
 
-import dataCollection.{FPNode, Fingerprint, PatternMatchResult, ProgramPrint}
+import dataCollection.{FPNode, Fingerprint, ProgramPrint}
+import database.tools.PatternMatchResult
 import database.{CarbonResult, ProgramEntry, SiliconResult}
 import upickle.default.{macroRW, ReadWriter => RW}
 

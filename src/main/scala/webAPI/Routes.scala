@@ -4,7 +4,7 @@ import database.UserSubmission
 import database.DBQueryInterface
 import JSONReadWriters._
 import cask.Response
-import dataCollection.PatternMatcher
+import database.tools.PatternMatcher
 import ujson.Obj
 import util._
 import util.Config._
