@@ -173,8 +173,7 @@ object ProgramPrintEntry {
  * @param featureId       unique identifier
  * @param name            name of the feature
  * @param useForFiltering whether to use this feature to filter out new entries */
-case class Feature(featureId: Long,
-                   name: String,
+case class Feature(name: String,
                    useForFiltering: Boolean)
 
 object Feature {
@@ -188,7 +187,7 @@ object Feature {
  * @param resultId       foreign key for [[VerResult]] in which this feature was created
  * @param value          value of the feature */
 case class FeatureEntry(featureEntryId: Long,
-                        featureId: Long,
+                        featureName: String,
                         resultId: Long,
                         value: String)
 
@@ -412,14 +411,11 @@ class SlickTables(val profile: PostgresProfile) {
   }
 
   class FeatureTable(tag: Tag) extends Table[Feature](tag, Some("programs"), "Features") {
-    def featureId = column[Long]("featureId", O.PrimaryKey, O.AutoInc)
-
-    def name = column[String]("name")
+    def name = column[String]("name", O.PrimaryKey)
 
     def useForFiltering = column[Boolean]("useForFiltering")
 
-    override def * : ProvenShape[Feature] = (featureId,
-      name,
+    override def * : ProvenShape[Feature] = (name,
       useForFiltering
     ) <> (Feature.tupled, Feature.unapply)
 
@@ -428,9 +424,9 @@ class SlickTables(val profile: PostgresProfile) {
   class SilFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "SiliconFeatureEntries") {
     def featureEntryId = column[Long]("silFeatureEntryId", O.PrimaryKey, O.AutoInc)
 
-    def featureId = column[Long]("featureId")
+    def featureName = column[String]("featureName")
 
-    def feature = foreignKey("sfeF_FK", featureId, featureTable)(_.featureId, onDelete = casc, onUpdate = casc)
+    def feature = foreignKey("sfeF_FK", featureName, featureTable)(_.name, onDelete = casc, onUpdate = casc)
 
     def resultId = column[Long]("resultId")
 
@@ -439,7 +435,7 @@ class SlickTables(val profile: PostgresProfile) {
     def value = column[String]("value")
 
     override def * : ProvenShape[FeatureEntry] = (featureEntryId,
-      featureId,
+      featureName,
       resultId,
       value
     ) <> (FeatureEntry.tupled, FeatureEntry.unapply)
@@ -449,9 +445,9 @@ class SlickTables(val profile: PostgresProfile) {
   class CarbFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "CarbonFeatureEntries") {
     def featureEntryId = column[Long]("carbFeatureEntryId", O.PrimaryKey, O.AutoInc)
 
-    def featureId = column[Long]("featureId")
+    def featureName = column[String]("featureName")
 
-    def feature = foreignKey("cfeF_FK", featureId, featureTable)(_.featureId, onDelete = casc, onUpdate = casc)
+    def feature = foreignKey("cfeF_FK", featureName, featureTable)(_.name, onDelete = casc, onUpdate = casc)
 
     def resultId = column[Long]("resultId")
 
@@ -460,7 +456,7 @@ class SlickTables(val profile: PostgresProfile) {
     def value = column[String]("value")
 
     override def * : ProvenShape[FeatureEntry] = (featureEntryId,
-      featureId,
+      featureName,
       resultId,
       value
     ) <> (FeatureEntry.tupled, FeatureEntry.unapply)

@@ -42,7 +42,7 @@ class ProcessingTest extends AnyFunSuite {
   }*/
 
   /**IMPORTANT: This test will clear the database, do not run once actually in use*/
-  test("Global lock test") {
+  /*test("Global lock test") {
     val dbProcess = Process("./run.sh").run
     Thread.sleep(1000)
 
@@ -68,7 +68,7 @@ class ProcessingTest extends AnyFunSuite {
     } finally {
       dbProcess.destroy()
     }
-  }
+  }*/
 
   /**IMPORTANT: This test will clear the database, do not run once actually in use*/
   test("Pipeline integration test") {

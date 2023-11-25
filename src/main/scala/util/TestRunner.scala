@@ -3,7 +3,7 @@ package util
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
-import database.{DBQueryInterface, ProgramEntry}
+import database.{DBQueryInterface, PGSlickTables, ProgramEntry}
 import upickle.default.{read, write}
 import viper.silver.parser.FastParser
 import webAPI.JSONReadWriters._
@@ -29,7 +29,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  //println(PGSlickTables.getDDL)
+  println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -39,7 +39,7 @@ object TestRunner extends App {
   //specificResult(825, 834)
   //specificFingerPrint(2)
   //regexDBPerformance()
-  regexDBPerformance()
+  //regexDBPerformance()
 
 
   def regexDBPerformance() = {

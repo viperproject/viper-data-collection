@@ -1,4 +1,6 @@
-import java.io.{File, FileWriter}
+import database.BinarySerializer.{deserialize, serialize}
+
+import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter}
 import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
 import scala.concurrent.duration.{Duration, MILLISECONDS}
@@ -58,6 +60,25 @@ package object util {
 
   def getLOC(program: String): Int = {
     program.split("\n").length
+  }
+
+  def loadSerializedObject[T <: Serializable](file: String): T = {
+    val fileReader = new BufferedInputStream(new FileInputStream(file))
+    val obj = try {
+      deserialize[T](fileReader.readAllBytes())
+    } finally {
+      fileReader.close()
+    }
+    obj
+  }
+
+  def storeObjectSerialized[T <: Serializable](t: T, file: String): Unit = {
+    val fileWriter = new BufferedOutputStream(new FileOutputStream(file))
+    try {
+      fileWriter.write(serialize[T](t))
+    } finally {
+      fileWriter.close()
+    }
   }
 
   def createTempDir(dirName: String): Unit = {

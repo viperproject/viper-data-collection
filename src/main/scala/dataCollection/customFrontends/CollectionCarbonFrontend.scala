@@ -38,4 +38,6 @@ class CollectionCarbonFrontend(timeOut: Int = 0) extends CarbonFrontend(NoopRepo
   //TODO: Find some way to get carbon git commit hash
   def verifierHash: String = "default"
 
+  /** returns all features generated during verification, only valid running [[main]] */
+  override def getFeatures: Seq[VerifierFeature] = Seq()
 }

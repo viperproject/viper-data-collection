@@ -1,6 +1,7 @@
 package database
 
-import dataCollection.EntryTuple
+import dataCollection.{ProcessingResultTuple, ProgramTuple}
+import dataCollection.customFrontends.VerifierFeature
 import slick.basic.DatabasePublisher
 import util.Config._
 
@@ -38,7 +39,7 @@ object DBQueryInterface {
     entryOpt
   }
 
-  def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[EntryTuple] = {
+  def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[ProgramTuple] = {
     val tupleQuery = for {
       proge <- sTables.programEntryTable
       sr <- sTables.siliconResultTable if sr.programEntryId === proge.programEntryId
@@ -55,7 +56,7 @@ object DBQueryInterface {
     val queryWithParams = filteredQuery.transactionally
       .withStatementParameters(fetchSize = DB_BATCH_SIZE)
     val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(queryWithParams)
-    val entryTuples: DatabasePublisher[EntryTuple] = tuples.mapResult(t => EntryTuple.tupled(t))
+    val entryTuples: DatabasePublisher[ProgramTuple] = tuples.mapResult(t => ProgramTuple.tupled(t))
     entryTuples
   }
 
@@ -116,6 +117,26 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
+  def insertIfNotExistsFeature(name: String, useForFiltering: Boolean): Future[Any] = {
+    val query = (for (f <- sTables.featureTable if f.name === name) yield f).exists.result.flatMap {
+      exists => {
+        if (!exists) sTables.featureTable += Feature(name, useForFiltering)
+        else DBIO.successful(None)
+      }
+    }
+    db.run(query)
+  }
+
+  def insertVerifierFeatures(verifier: String, resultId: Long, vfs: Seq[VerifierFeature]): Future[Any] = {
+    Await.ready(Future.sequence(vfs map (vf => insertIfNotExistsFeature(vf.name, vf.useForFiltering))), DEFAULT_DB_TIMEOUT)
+    val insertQuery = if (verifier == "Silicon") {
+      sTables.silFeatureEntryTable ++= vfs map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
+    } else {
+      sTables.carbFeatureEntryTable ++= vfs map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
+    }
+    db.run(insertQuery)
+  }
+
   def insertProgramEntries(entries: Seq[ProgramEntry]) = {
     val insertQuery = (sTables.programEntryTable) ++= entries
     db.run(insertQuery)
@@ -132,13 +153,13 @@ object DBQueryInterface {
     db.run(query)
   }
 
-  def insertSiliconResult(result: SiliconResult): Future[Int] = {
-    val insertQuery = sTables.siliconResultTable += result
+  def insertSiliconResult(result: SiliconResult): Future[Long] = {
+    val insertQuery = (sTables.siliconResultTable returning sTables.siliconResultTable.map(_.silResId)) += result
     db.run(insertQuery)
   }
 
-  def insertCarbonResult(result: CarbonResult): Future[Int] = {
-    val insertQuery = sTables.carbonResultTable += result
+  def insertCarbonResult(result: CarbonResult): Future[Long] = {
+    val insertQuery = (sTables.carbonResultTable returning sTables.carbonResultTable.map(_.carbResId)) += result
     db.run(insertQuery)
   }
 
@@ -152,14 +173,17 @@ object DBQueryInterface {
     db.run(insertQuery)
   }
 
-  def insertEntry(et: EntryTuple): Future[Unit] = {
-    val peId = Await.result(insertProgramEntry(et.programEntry), DEFAULT_DB_TIMEOUT)
-    val inserts = DBIO.seq(
-      sTables.siliconResultTable += et.siliconResult.copy(programEntryId = peId),
-      sTables.carbonResultTable += et.carbonResult.copy(programEntryId = peId),
-      sTables.programPrintEntryTable += et.programPrintEntry.copy(programEntryId = peId)
-    )
-    Await.ready(db.run(inserts), DEFAULT_DB_TIMEOUT)
+  def insertProcessingResult(prt: ProcessingResultTuple): Future[Any] = {
+    val resInsert = for {
+      peId <- (sTables.programEntryTable returning sTables.programEntryTable.map(_.programEntryId)) += prt.programTuple.programEntry
+      silResId <- (sTables.siliconResultTable returning sTables.siliconResultTable.map(_.silResId)) += prt.programTuple.siliconResult.copy(programEntryId = peId)
+      carbResId <- (sTables.carbonResultTable returning sTables.carbonResultTable.map(_.carbResId)) += prt.programTuple.carbonResult.copy(programEntryId = peId)
+    } yield (peId, silResId, carbResId)
+    val (peId, silResId, carbResId) = Await.result(db.run(resInsert), DEFAULT_DB_TIMEOUT)
+    val ppeInsert = insertProgramPrintEntry(prt.programTuple.programPrintEntry.copy(programEntryId = peId))
+    val silFeatureInserts = insertVerifierFeatures("Silicon", silResId, prt.silVerFeatures)
+    val carbFeatureInserts = insertVerifierFeatures("Carbon", carbResId, prt.carbVerFeatures)
+    Await.ready(Future.sequence(Seq(ppeInsert, silFeatureInserts, carbFeatureInserts)), DEFAULT_DB_TIMEOUT)
   }
 
   def getSiliconResultsForEntry(peId: Long): Future[Seq[SiliconResult]] = {
@@ -242,11 +266,11 @@ object DBQueryInterface {
   def getFeatureCount(feature: String): Future[Int] = {
     val silCount = (for {
       f <- sTables.featureTable if f.name === feature
-      sfe <- sTables.silFeatureEntryTable if sfe.featureId === f.featureId
+      sfe <- sTables.silFeatureEntryTable if sfe.featureName === f.name
     } yield sfe).length.result
     val carbCount = (for {
       f <- sTables.featureTable if f.name === feature
-      sfe <- sTables.carbFeatureEntryTable if sfe.featureId === f.featureId
+      sfe <- sTables.carbFeatureEntryTable if sfe.featureName === f.name
     } yield sfe).length.result
     val sCount = db.run(silCount)
     val cCount = db.run(carbCount)

@@ -1,6 +1,6 @@
 package dataCollection
 
-import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend}
+import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
 import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError, VerResult}
 import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._
@@ -67,7 +67,7 @@ object ProcessingHelper {
 
   /** Searches the database for programs with the same or similar features as the entry. Returns true if at least a third of the entry's
    * features are present in less than half of all entries. */
-  def areFeaturesInteresting(et: EntryTuple): Boolean = {
+  def areFeaturesInteresting(et: ProgramTuple): Boolean = {
     val totalEntries = DBQueryInterface.getPECount()
     val totalSilRes = DBQueryInterface.getUniqueSRCount()
     val totalCarbRes = DBQueryInterface.getUniqueCRCount()
@@ -102,7 +102,7 @@ object ProcessingHelper {
    * to avoid loading all Entries into memory at once.
    *
    * @return true if there is a database entry that is too similar to the argument */
-  def existsSimilarEntry(et: EntryTuple): Boolean = {
+  def existsSimilarEntry(et: ProgramTuple): Boolean = {
     val potMatches = DBQueryInterface.getPotentialMatchingEntryTuples(et.programEntry)
     val matchState = new BooleanCarrier()
     val matchResults = potMatches.mapResult(otherEntry => {
@@ -123,7 +123,7 @@ object ProcessingHelper {
   /** Compares one EntryTuple to another
    *
    * @return true if the entries are too similar */
-  private def doEntriesMatch(et1: EntryTuple, et2: EntryTuple): Boolean = {
+  private def doEntriesMatch(et1: ProgramTuple, et2: ProgramTuple): Boolean = {
     lazy val peMatch = et1.programEntry.isSimilarTo(et2.programEntry)
     lazy val srMatch = et1.siliconResult.isSimilarTo(et2.siliconResult)
     lazy val crMatch = et1.carbonResult.isSimilarTo(et2.carbonResult)
@@ -155,8 +155,9 @@ object ProcessingHelper {
     entryOpt match {
       case Some(entry) =>
         val runtimeLimit = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
-        val silRes = generateSiliconResults(entry, timeOutSeconds = runtimeLimit)
-        Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
+        val (silRes, vfeats) = generateSiliconResults(entry, timeOutSeconds = runtimeLimit)
+        val silResId = Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
+        Await.ready(DBQueryInterface.insertVerifierFeatures("Silicon", silResId, vfeats), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
@@ -167,17 +168,18 @@ object ProcessingHelper {
     entryOpt match {
       case Some(entry) =>
         val runtimeLimit = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
-        val carbRes = generateCarbonResults(entry, timeOutSeconds = runtimeLimit)
-        Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
+        val (carbRes, vfeats) = generateCarbonResults(entry, timeOutSeconds = runtimeLimit)
+        val carbResId = Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
+        Await.ready(DBQueryInterface.insertVerifierFeatures("Carbon", carbResId, vfeats), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
 
   /** function type that takes a ProgramEntry, a list of arguments, and seconds to timeout and returns the results
    * of this program's verification */
-  type verifierResultFunction = (ProgramEntry, Array[String], Int) => VerResult
+  type verifierResultFunction = (ProgramEntry, Array[String], Int) => (VerResult, Seq[VerifierFeature])
 
-  private def generateVerifierResults(runner: CollectionSilFrontend, pe: ProgramEntry, args: Array[String]): VerResult = {
+  private def generateVerifierResults(runner: CollectionSilFrontend, pe: ProgramEntry, args: Array[String]): (VerResult, Seq[VerifierFeature]) = {
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     runner.main(Array(tmpFile) ++ args)
 
@@ -198,13 +200,13 @@ object ProcessingHelper {
     }
 
     removeTempProgramFile(tmpFile)
-    verRes
+    (verRes, runner.getFeatures)
   }
 
   /** @param pe            ProgramEntry for which to get the results of verifying it through Silicon
    * @param extraArgs      arguments that will be passed into Silicon alongside the original ones
    * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
-  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): SiliconResult = {
+  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (SiliconResult, Seq[VerifierFeature]) = {
     val runner = new CollectionSiliconFrontend
 
     var args: Array[String] = extraArgs
@@ -214,8 +216,8 @@ object ProcessingHelper {
     args = filterArgs(args, "--timeout")
     args ++= Array("--timeout", timeOutSeconds.toString)
 
-    val vr = generateVerifierResults(runner, pe, args)
-    SiliconResult(0,
+    val (vr, feats) = generateVerifierResults(runner, pe, args)
+    (SiliconResult(0,
       vr.creationDate,
       vr.verifierHash,
       vr.programEntryId,
@@ -223,13 +225,14 @@ object ProcessingHelper {
       vr.runtime,
       vr.errors,
       vr.phaseRuntimes,
-      runner.getBenchmarkResults.toArray)
+      runner.getBenchmarkResults.toArray),
+      feats)
   }
 
   /** @param pe            ProgramEntry for which to get the results of verifying it through Carbon
    * @param extraArgs      arguments that will be passed into Carbon alongside the original ones
    * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
-  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): CarbonResult = {
+  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (CarbonResult, Seq[VerifierFeature]) = {
     val runner = new CollectionCarbonFrontend(timeOutSeconds)
 
     var args: Array[String] = extraArgs
@@ -237,15 +240,16 @@ object ProcessingHelper {
       args = args ++ pe.args
     }
 
-    val vr = generateVerifierResults(runner, pe, args)
-    CarbonResult(0,
+    val (vr, feats) = generateVerifierResults(runner, pe, args)
+    (CarbonResult(0,
       vr.creationDate,
       vr.verifierHash,
       vr.programEntryId,
       vr.success,
       vr.runtime,
       vr.errors,
-      vr.phaseRuntimes)
+      vr.phaseRuntimes),
+      feats)
   }
 
   /** if [[toFilter]] is found in [[args]], drops that and next index in the array */
@@ -264,8 +268,3 @@ object ProcessingHelper {
 
 
 }
-
-case class EntryTuple(programEntry: ProgramEntry,
-                      programPrintEntry: ProgramPrintEntry,
-                      siliconResult: SiliconResult,
-                      carbonResult: CarbonResult)

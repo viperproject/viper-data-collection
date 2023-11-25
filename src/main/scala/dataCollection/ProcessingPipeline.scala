@@ -1,14 +1,12 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult, SiliconResult}
+import dataCollection.customFrontends.VerifierFeature
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, VerResult}
 import util._
 import util.Config._
 
-import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream}
 import java.nio.channels.FileLock
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-import scala.reflect.io.Directory
+import scala.concurrent.{Await}
 import scala.sys.process._
 
 /** Provides methods to process submissions, create ProgramEntries, benchmark them and insert the results into the database */
@@ -18,8 +16,10 @@ object ProcessingPipeline {
   import database.BinarySerializer._
 
   private val peFileName = "programEntry.bin"
-  private val srFileName = "silRes.bin"
-  private val crFileName = "carbRes.bin"
+  private val srFileName = "siliconRes.bin"
+  private val svfFileName = "siliconFeats.bin"
+  private val crFileName = "carbonRes.bin"
+  private val cvfFileName = "carbonFeats.bin"
   private val ppeFileName = "programPrintEntry.bin"
 
   /** Combines the different processing stages, meant to be called periodically from some outside source */
@@ -60,23 +60,8 @@ object ProcessingPipeline {
 
           val programPrintEntry = createProgramPrintEntry(entry.program)
 
-          val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
-          val pprintFileName = s"$TMP_DIRECTORY/$dirName/$ppeFileName"
-          val entryBin = serialize(entry)
-          val pprintBin = serialize(programPrintEntry)
-          val entryWriter = new BufferedOutputStream(new FileOutputStream(entryFileName))
-          val pprintWriter = new BufferedOutputStream(new FileOutputStream(pprintFileName))
-          try {
-            entryWriter.write(entryBin)
-          } finally {
-            entryWriter.close()
-          }
-
-          try {
-            pprintWriter.write(pprintBin)
-          } finally {
-            pprintWriter.close()
-          }
+          storeObjectSerialized[ProgramEntry](entry, s"$TMP_DIRECTORY/$dirName/$peFileName")
+          storeObjectSerialized[ProgramPrintEntry](programPrintEntry, s"$TMP_DIRECTORY/$dirName/$ppeFileName")
           dirName
         }
         case None => throw NothingToDoException()
@@ -92,29 +77,16 @@ object ProcessingPipeline {
    * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]
    *
    * @throws StageIncompleteException if there was any exception preventing the stage to complete */
-  def verifierStage(dirName: String, outFileName: String, verifierFunction: verifierResultFunction): Unit = {
-    val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
+  def verifierStage(dirName: String, verifierName: String, verifierFunction: verifierResultFunction): Unit = {
     try {
-      val fileReader = new BufferedInputStream(new FileInputStream(entryFileName))
-      val byteArr = try {
-        fileReader.readAllBytes()
-      } finally {
-        fileReader.close()
-      }
-
-      val programEntry = deserialize[ProgramEntry](byteArr)
+      val programEntry = loadSerializedObject[ProgramEntry](s"$TMP_DIRECTORY/$dirName/$peFileName")
 
       val maxRuntime = ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
-      val verifierResult = verifierFunction(programEntry, Array(), maxRuntime)
+      val (verifierResult, vFeats) = verifierFunction(programEntry, Array(), maxRuntime)
 
-      val resFileName = s"$TMP_DIRECTORY/$dirName/$outFileName"
-      val resultBin = serialize(verifierResult)
-      val fileWriter = new BufferedOutputStream(new FileOutputStream(resFileName))
-      try {
-        fileWriter.write(resultBin)
-      } finally {
-        fileWriter.close()
-      }
+      storeObjectSerialized[VerResult](verifierResult, s"$TMP_DIRECTORY/$dirName/${verifierName}Res.bin")
+      storeObjectSerialized[Array[VerifierFeature]](vFeats.toArray, s"$TMP_DIRECTORY/$dirName/${verifierName}Feats.bin")
+
     } catch {
       case e: Exception => e.printStackTrace(); throw StageIncompleteException()
     }
@@ -126,62 +98,32 @@ object ProcessingPipeline {
    * Then checks if entry is unique enough in its features to be added to the database, if no drops entry.
    * If filters were passed, the ProgramEntry, SiliconResult and CarbonResult are stored in the database. */
   private def filterAndInsertStage(dirName: String): Unit = {
-    // Loading the generated Files
-    val peFile = s"$TMP_DIRECTORY/$dirName/$peFileName"
-    val srFile = s"$TMP_DIRECTORY/$dirName/$srFileName"
-    val crFile = s"$TMP_DIRECTORY/$dirName/$crFileName"
-    val ppeFile = s"$TMP_DIRECTORY/$dirName/$ppeFileName"
-
     try {
 
-      val peFileReader = new BufferedInputStream(new FileInputStream(peFile))
-      val sRFileReader = new BufferedInputStream(new FileInputStream(srFile))
-      val cRFileReader = new BufferedInputStream(new FileInputStream(crFile))
-      val ppFileReader = new BufferedInputStream(new FileInputStream(ppeFile))
+      val programEntry = loadSerializedObject[ProgramEntry](s"$TMP_DIRECTORY/$dirName/$peFileName")
+      val siliconResult = loadSerializedObject[SiliconResult](s"$TMP_DIRECTORY/$dirName/$srFileName")
+      val silVerFeats = loadSerializedObject[Array[VerifierFeature]](s"$TMP_DIRECTORY/$dirName/$svfFileName")
+      val carbonResult = loadSerializedObject[CarbonResult](s"$TMP_DIRECTORY/$dirName/$crFileName")
+      val carbVerFeats = loadSerializedObject[Array[VerifierFeature]](s"$TMP_DIRECTORY/$dirName/$cvfFileName")
+      val programPrintEntry = loadSerializedObject[ProgramPrintEntry](s"$TMP_DIRECTORY/$dirName/$ppeFileName")
 
-      val pEByteArr = try {
-        peFileReader.readAllBytes()
-      } finally {
-        peFileReader.close()
-      }
-
-      val sRByteArr = try {
-        sRFileReader.readAllBytes()
-      } finally {
-        sRFileReader.close()
-      }
-
-      val cRByteArr = try {
-        cRFileReader.readAllBytes()
-      } finally {
-        cRFileReader.close()
-      }
-
-      val ppByteArr = try {
-        ppFileReader.readAllBytes()
-      } finally {
-        ppFileReader.close()
-      }
-
-
-      val programEntry = deserialize[ProgramEntry](pEByteArr)
-      val siliconResult = deserialize[SiliconResult](sRByteArr)
-      val carbonResult = deserialize[CarbonResult](cRByteArr)
-      val programPrintEntry = deserialize[ProgramPrintEntry](ppByteArr)
-
-      val entryTuple = EntryTuple(programEntry, programPrintEntry, siliconResult, carbonResult)
+      val procResTuple = ProcessingResultTuple(
+        ProgramTuple(programEntry, programPrintEntry, siliconResult, carbonResult),
+        silVerFeats,
+        carbVerFeats)
 
       // Deciding whether to drop entry based on similarity
-      val similarEntryExists = existsSimilarEntry(entryTuple)
+      val similarEntryExists = existsSimilarEntry(procResTuple.programTuple)
       if (similarEntryExists) {
         println("Entry deemed too similar, will not be stored.")
         return
       }
 
+      //TODO: Use features
       //skip feature check if fewer than 100 entries in database
       val totalEntries = Await.result(DBQueryInterface.getPECount(), DEFAULT_DB_TIMEOUT)
       if (totalEntries > 100) {
-        val isInteresting = areFeaturesInteresting(entryTuple)
+        val isInteresting = areFeaturesInteresting(procResTuple.programTuple)
         if (!isInteresting) {
           println("Too many programs with similar features, will not be stored.")
           return
@@ -189,7 +131,7 @@ object ProcessingPipeline {
       }
 
       // Passed all filters, store in database
-      DBQueryInterface.insertEntry(entryTuple)
+      Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)
     } catch {
       case e: Exception => e.printStackTrace(); throw StageIncompleteException()
     }
@@ -197,6 +139,16 @@ object ProcessingPipeline {
 
 
 }
+
+case class ProgramTuple(programEntry: ProgramEntry,
+                        programPrintEntry: ProgramPrintEntry,
+                        siliconResult: SiliconResult,
+                        carbonResult: CarbonResult)
+
+
+case class ProcessingResultTuple(programTuple: ProgramTuple,
+                                 silVerFeatures: Array[VerifierFeature],
+                                 carbVerFeatures: Array[VerifierFeature])
 
 
 

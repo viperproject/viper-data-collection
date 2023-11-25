@@ -7,6 +7,7 @@ import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, 
 import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
+import upickle.default.write
 
 /** Trait for common functions shared between collection verifier frontends */
 trait CollectionSilFrontend extends SilFrontend {
@@ -33,6 +34,9 @@ trait CollectionSilFrontend extends SilFrontend {
     }
     case _ => false
   }
+
+  /** returns all features generated during verification, only valid running [[main]]. */
+  def getFeatures: Seq[VerifierFeature]
 
   /** Only valid after calling [[main]] */
   def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
@@ -78,7 +82,10 @@ class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter,
 
   override def verifierHash: String = BuildInfo.gitRevision
 
-
+  /** returns all features generated during verification, only valid running [[main]] */
+  override def getFeatures: Seq[VerifierFeature] = {
+    Seq(VerifierFeature("benchmarkResults", write(getBenchmarkResults), false))
+  }
 }
 
 
@@ -100,3 +107,5 @@ case class BenchmarkingResultReporter(name: String = "benchmarking_result_report
 
   def getBenchmarkResults: Seq[(String, Long)] = results
 }
+
+case class VerifierFeature(name: String, value: String, useForFiltering: Boolean) extends Serializable
