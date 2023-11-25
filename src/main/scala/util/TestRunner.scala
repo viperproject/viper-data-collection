@@ -29,7 +29,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  println(PGSlickTables.getDDL)
+  //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -38,15 +38,15 @@ object TestRunner extends App {
   //println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
-  //regexDBPerformance()
+  regexDBPerformance()
   //regexDBPerformance()
 
 
   def regexDBPerformance() = {
     val dbProcess = Process("docker-compose up").run
     Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
-    //val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
-    val file = new File("src/test/resources/ProcessingTest/sample.vpr")
+    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
+    //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
     val buffer = fromFile(file)
     val prog = try buffer.mkString finally buffer.close()
     val programEntry: ProgramEntry = ProgramEntry(0, Timestamp.valueOf(LocalDateTime.now()), "lol.vpr", prog, 1400, "Nagini", "Silicon", Array(), 3000, true, true)
