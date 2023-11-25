@@ -10,24 +10,23 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future}
 
-/** Frontend to benchmark Programs using the carbon verifier */
-class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) {
-  private var phaseRuntimes: Seq[(String, Long)] = Seq()
+/** Frontend to benchmark programs using the Carbon verifier, takes seconds to timeout as an argument, 0 => no timeout */
+class CollectionCarbonFrontend(timeOut: Int = 0) extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) with CollectionSilFrontend {
 
-  /** Verifies the program. If [[timeOutSeconds]] has passed, the verifier is stopped. This is done since neither Boogie
+  /** Verifies the program. If [[timeOut]] seconds have passed, the verifier is stopped. This is done since neither Boogie
    * nor Z3 can be passed a timeout flag that reliably works. */
-  def main(args: Array[String], timeOutSeconds: Int = 0): Unit = {
+  override def main(args: Array[String]): Unit = {
     try {
       val execution = Future {
         execute(args)
       }
-      if (timeOutSeconds != 0) {
+      if (timeOut != 0) {
         try {
-          Await.ready(execution, Duration(timeOutSeconds * 1000, MILLISECONDS))
+          Await.ready(execution, Duration(timeOut * 1000, MILLISECONDS))
         } catch {
           case _: TimeoutException =>
             _ver.stop()
-            this._errors = _errors :+ TimeoutOccurred(timeOutSeconds.toLong, "seconds")
+            this._errors = _errors :+ TimeoutOccurred(timeOut.toLong, "seconds")
         }
       }
       Await.ready(execution, Duration.Inf)
@@ -36,28 +35,7 @@ class CollectionCarbonFrontend extends CarbonFrontend(NoopReporter, ViperStdOutL
     }
   }
 
-  /** Runs the phases and adds the measured times to [[phaseRuntimes]] */
-  override def runAllPhases(): Unit = {
-    var lastTime: Long = 0
-    phases.foreach(ph => {
-      ph.f()
-      val timeInPhase = getTime - lastTime
-      lastTime = getTime
-      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
-    })
-  }
-
-  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
-
-  def hasSucceeded: Boolean = getVerificationResult match {
-    case Some(res) => res match {
-      case CarbSuccess => true
-      case _ => false
-    }
-    case _ => false
-  }
-
   //TODO: Find some way to get carbon git commit hash
-  def carbonHash: String = "default"
+  def verifierHash: String = "default"
 
 }

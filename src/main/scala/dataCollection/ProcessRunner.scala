@@ -39,7 +39,7 @@ object SiliconStageRunner extends ProcessRunner {
   }
 }
 
-/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.verifierStage]] with [[generateSiliconResults]] */
+/** Takes a folder name and runs [[dataCollection.ProcessingPipeline.verifierStage]] with [[generateCarbonResults]] */
 object CarbonStageRunner extends ProcessRunner {
 
 

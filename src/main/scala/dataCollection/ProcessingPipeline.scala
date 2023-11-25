@@ -1,6 +1,6 @@
 package dataCollection
 
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, Result, SiliconResult}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult, SiliconResult}
 import util._
 import util.Config._
 
@@ -92,7 +92,7 @@ object ProcessingPipeline {
    * Has to be run through own JVM Instance to guarantee consistency in measurements, see [[SiliconStageRunner]] and [[CarbonStageRunner]]
    *
    * @throws StageIncompleteException if there was any exception preventing the stage to complete */
-  def verifierStage(dirName: String, outFileName: String, verifierFunction: (ProgramEntry, Array[String], Int) => Result): Unit = {
+  def verifierStage(dirName: String, outFileName: String, verifierFunction: verifierResultFunction): Unit = {
     val entryFileName = s"$TMP_DIRECTORY/$dirName/$peFileName"
     try {
       val fileReader = new BufferedInputStream(new FileInputStream(entryFileName))

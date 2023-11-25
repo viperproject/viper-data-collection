@@ -1,20 +1,53 @@
 package dataCollection.customFrontends
 
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
+import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
-import viper.silver.reporter.{BenchmarkingPhase, Message, NoopReporter, Reporter}
-import viper.silver.verifier.{Success => SilSuccess}
+import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
+import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
 
-/** SiliconFrontend Implementation that measures runtimes in the different stages of the Verifier,
- * results can be called using [[getRuntimes]], only valid after running [[runMain]] */
-class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get) {
+/** Trait for common functions shared between collection verifier frontends */
+trait CollectionSilFrontend extends SilFrontend {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
-  private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
-  private var benchmarkAnaResults: Seq[(String, Long)] = Seq()
 
-  def runMain(args: Array[String]): Unit = {
+  /** Runs the verifier with the given arguments */
+  def main(args: Array[String]): Unit
+
+  /** Stores the runtimes between phases in [[phaseRuntimes]] */
+  override def runAllPhases(): Unit = {
+    var lastTime: Long = 0
+    phases.foreach(ph => {
+      ph.f()
+      val timeInPhase = getTime - lastTime
+      lastTime = getTime
+      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
+    })
+  }
+
+  def hasSucceeded: Boolean = getVerificationResult match {
+    case Some(res) => res match {
+      case Success => true
+      case _ => false
+    }
+    case _ => false
+  }
+
+  /** Only valid after calling [[main]] */
+  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
+
+  /** Current commit hash of the verifier */
+  def verifierHash: String
+
+}
+
+/** SiliconFrontend Implementation that measures runtimes in the different stages of the Verifier,
+ * results can be called using [[getRuntimes]], only valid after running [[main]] */
+class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get) with CollectionSilFrontend {
+  private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
+
+  override def main(args: Array[String]): Unit = {
     try {
       execute(ArraySeq.unsafeWrapArray(args))
     } catch {
@@ -29,16 +62,6 @@ class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, Vip
     }
   }
 
-  /** Stores the runtime between phases in [[phaseRuntimes]] */
-  override def runAllPhases(): Unit = {
-    var lastTime: Long = 0
-    phases.foreach(ph => {
-      ph.f()
-      val timeInPhase = getTime - lastTime
-      lastTime = getTime
-      phaseRuntimes = phaseRuntimes :+ (ph.name, timeInPhase)
-    })
-  }
 
   /** Adds a [[BenchmarkingResultReporter]] field to the Verifier s.t. benchmarking results get stored */
   override def createVerifier(fullCmd: String) = {
@@ -51,19 +74,9 @@ class CollectionSilFrontend extends SiliconFrontend(reporter = NoopReporter, Vip
     siliconInstance
   }
 
-  def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
-
   def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
 
-  def hasSucceeded: Boolean = getVerificationResult match {
-    case Some(res) => res match {
-      case SilSuccess => true
-      case _ => false
-    }
-    case _ => false
-  }
-
-  def siliconHash: String = BuildInfo.gitRevision
+  override def verifierHash: String = BuildInfo.gitRevision
 
 
 }

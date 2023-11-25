@@ -1,10 +1,9 @@
 package dataCollection
 
-import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend}
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError}
+import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend}
+import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, UserSubmission, VerError, VerResult}
 import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._
-import slick.basic.DatabasePublisher
 import util.Config._
 import viper.silver.verifier.{Failure, Success}
 
@@ -13,7 +12,7 @@ import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 /** Provides functions to aid in the processing of submissions and generating database entries */
 object ProcessingHelper {
@@ -174,88 +173,83 @@ object ProcessingHelper {
     }
   }
 
+  /** function type that takes a ProgramEntry, a list of arguments, and seconds to timeout and returns the results
+   * of this program's verification */
+  type verifierResultFunction = (ProgramEntry, Array[String], Int) => VerResult
 
-  /** @param pe       ProgramEntry for which to get the results of verifying it through Silicon
-   * @param extraArgs arguments that will be passed into Silicon alongside the original ones */
-  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): SiliconResult = {
-    val runner = new CollectionSilFrontend
+  private def generateVerifierResults(runner: CollectionSilFrontend, pe: ProgramEntry, args: Array[String]): VerResult = {
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
+    runner.main(Array(tmpFile) ++ args)
 
-    var args: Array[String] = Array(tmpFile) ++ extraArgs
-    // original arguments are only used if the program was also originally run with silicon
+    val verRes = new VerResult {
+      val creationDate = Timestamp.valueOf(LocalDateTime.now())
+      val runtime = runner.getTime
+      val programEntryId = pe.programEntryId
+      val verifierHash = runner.verifierHash
+      val phaseRuntimes = runner.getPhaseRuntimes.toArray
+      val success = runner.hasSucceeded
+      val errors = runner.getVerificationResult match {
+        case Some(value) => value match {
+          case Success => Array[VerError]()
+          case Failure(errors) => errors.toArray map VerError.toError
+        }
+        case None => Array[VerError]()
+      }
+    }
+
+    removeTempProgramFile(tmpFile)
+    verRes
+  }
+
+  /** @param pe            ProgramEntry for which to get the results of verifying it through Silicon
+   * @param extraArgs      arguments that will be passed into Silicon alongside the original ones
+   * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
+  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): SiliconResult = {
+    val runner = new CollectionSiliconFrontend
+
+    var args: Array[String] = extraArgs
     if (pe.originalVerifier == "Silicon") {
       args = args ++ pe.args
     }
     args = filterArgs(args, "--timeout")
     args ++= Array("--timeout", timeOutSeconds.toString)
-    runner.runMain(args)
 
-    val runtime = runner.getTime
-    val siliconHash = runner.siliconHash
-    val phaseRuntimes = runner.getPhaseRuntimes.toArray
-    val benchmarkResults = runner.getBenchmarkResults.toArray
-    val success = runner.hasSucceeded
-    val errors = runner.getVerificationResult match {
-      case Some(value) => value match {
-        case Success => Array[VerError]()
-        case Failure(errors) => errors.toArray map VerError.toError
-      }
-      case None => Array[VerError]()
-    }
-
-    removeTempProgramFile(tmpFile)
-
+    val vr = generateVerifierResults(runner, pe, args)
     SiliconResult(0,
-      Timestamp.valueOf(LocalDateTime.now()),
-      siliconHash,
-      pe.programEntryId,
-      success,
-      runtime,
-      errors,
-      phaseRuntimes,
-      benchmarkResults
-    )
+      vr.creationDate,
+      vr.verifierHash,
+      vr.programEntryId,
+      vr.success,
+      vr.runtime,
+      vr.errors,
+      vr.phaseRuntimes,
+      runner.getBenchmarkResults.toArray)
   }
 
-  /** @param pe       ProgramEntry for which to get the results of verifying it through Carbon
-   * @param extraArgs arguments that will be passed into Carbon alongside the original ones */
+  /** @param pe            ProgramEntry for which to get the results of verifying it through Carbon
+   * @param extraArgs      arguments that will be passed into Carbon alongside the original ones
+   * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
   def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): CarbonResult = {
-    val runner = new CollectionCarbonFrontend
-    val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
+    val runner = new CollectionCarbonFrontend(timeOutSeconds)
 
-    var args: Array[String] = Array(tmpFile) ++ extraArgs
-    // original arguments are only used if the program was also originally run with carbon
+    var args: Array[String] = extraArgs
     if (pe.originalVerifier == "Carbon") {
       args = args ++ pe.args
     }
-    runner.main(args, timeOutSeconds)
-    val runtime = runner.getTime
-    val carbonHash = runner.carbonHash
-    val phaseRuntimes = runner.getPhaseRuntimes.toArray
-    val success = runner.hasSucceeded
-    val errors = runner.getVerificationResult match {
-      case Some(value) => value match {
-        case Success => Array[VerError]()
-        case Failure(errors) => errors.toArray map VerError.toError
-      }
-      case None => Array[VerError]()
-    }
 
-    removeTempProgramFile(tmpFile)
-
+    val vr = generateVerifierResults(runner, pe, args)
     CarbonResult(0,
-      Timestamp.valueOf(LocalDateTime.now()),
-      carbonHash,
-      pe.programEntryId,
-      success,
-      runtime,
-      errors,
-      phaseRuntimes
-    )
+      vr.creationDate,
+      vr.verifierHash,
+      vr.programEntryId,
+      vr.success,
+      vr.runtime,
+      vr.errors,
+      vr.phaseRuntimes)
   }
 
   /** if [[toFilter]] is found in [[args]], drops that and next index in the array */
-  def filterArgs(args: Array[String], toFilter: String): Array[String] = {
+  private def filterArgs(args: Array[String], toFilter: String): Array[String] = {
     val argInd = args.indexOf(toFilter)
     if (argInd == -1) {
       args

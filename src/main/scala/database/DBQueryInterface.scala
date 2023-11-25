@@ -91,7 +91,7 @@ object DBQueryInterface {
   def getPEIdsWithoutSilVersionRes(versionHash: String): Future[Seq[Long]] = {
     val query = for {
       entry <- sTables.programEntryTable if !sTables.siliconResultTable.filter(sr => sr.programEntryId === entry.programEntryId
-        && sr.siliconHash === versionHash).exists
+        && sr.verifierHash === versionHash).exists
     } yield entry.programEntryId
     val ids = db.run(query.result)
     ids
@@ -100,7 +100,7 @@ object DBQueryInterface {
   def getPEIdsWithoutCarbVersionRes(versionHash: String): Future[Seq[Long]] = {
     val query = for {
       entry <- sTables.programEntryTable if !sTables.carbonResultTable.filter(cr => cr.programEntryId === entry.programEntryId
-        && cr.carbonHash === versionHash).exists
+        && cr.verifierHash === versionHash).exists
     } yield entry.programEntryId
     val ids = db.run(query.result)
     ids

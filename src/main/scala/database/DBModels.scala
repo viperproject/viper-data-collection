@@ -84,15 +84,18 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
-/** Trait to represent the result of running some verifier on a program */
-sealed trait Result extends Similarity[Result] with Serializable {
-  def errors: Array[VerError]
+/** Abstract class to represent the result of running some verifier on a program */
+abstract class VerResult() extends Similarity[VerResult] with Serializable {
 
-  def runtime: Long
+  val creationDate: Timestamp
+  val verifierHash: String
+  val programEntryId: Long
+  val success: Boolean
+  val runtime: Long
+  val errors: Array[VerError]
+  val phaseRuntimes: Array[(String, Long)]
 
-  def success: Boolean
-
-  def isSimilarTo(other: Result): Boolean = {
+  def isSimilarTo(other: VerResult): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
       other.success
     } else {
@@ -122,13 +125,13 @@ sealed trait Result extends Similarity[Result] with Serializable {
  * @param benchmarkResults more detailed information by the [[viper.silver.reporter.BenchmarkingReporter]] */
 case class SiliconResult(silResId: Long,
                          creationDate: Timestamp,
-                         siliconHash: String,
+                         verifierHash: String,
                          programEntryId: Long,
                          success: Boolean,
                          runtime: Long,
                          errors: Array[VerError],
                          phaseRuntimes: Array[(String, Long)],
-                         benchmarkResults: Array[(String, Long)]) extends Result with Serializable
+                         benchmarkResults: Array[(String, Long)]) extends VerResult with Serializable
 
 object SiliconResult {
   def tupled = (SiliconResult.apply _).tupled
@@ -146,12 +149,12 @@ object SiliconResult {
  * @param phaseRuntimes  runtimes of the phases of carbon */
 case class CarbonResult(carbResId: Long,
                         creationDate: Timestamp,
-                        carbonHash: String,
+                        verifierHash: String,
                         programEntryId: Long,
                         success: Boolean,
                         runtime: Long,
                         errors: Array[VerError],
-                        phaseRuntimes: Array[(String, Long)]) extends Result with Serializable
+                        phaseRuntimes: Array[(String, Long)]) extends VerResult with Serializable
 
 object CarbonResult {
   def tupled = (CarbonResult.apply _).tupled
@@ -182,7 +185,7 @@ object Feature {
  *
  * @param featureEntryId unique identifier
  * @param featureId      foreign key for [[Feature]] that is referenced
- * @param resultId       foreign key for [[Result]] in which this feature was created
+ * @param resultId       foreign key for [[VerResult]] in which this feature was created
  * @param value          value of the feature */
 case class FeatureEntry(featureEntryId: Long,
                         featureId: Long,
@@ -329,7 +332,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def creationDate = column[Timestamp]("creationDate")
 
-    def siliconHash = column[String]("siliconHash")
+    def verifierHash = column[String]("verifierHash")
 
     def programEntryId = column[Long]("programEntryId")
 
@@ -347,7 +350,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     override def * : ProvenShape[SiliconResult] = (silResId,
       creationDate,
-      siliconHash,
+      verifierHash,
       programEntryId,
       success,
       runtime,
@@ -364,7 +367,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def creationDate = column[Timestamp]("creationDate")
 
-    def carbonHash = column[String]("carbonHash")
+    def verifierHash = column[String]("verifierHash")
 
     def programEntryId = column[Long]("programEntryId")
 
@@ -380,7 +383,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     override def * : ProvenShape[CarbonResult] = (carbResId,
       creationDate,
-      carbonHash,
+      verifierHash,
       programEntryId,
       success,
       runtime,
