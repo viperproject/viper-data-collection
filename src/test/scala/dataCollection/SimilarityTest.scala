@@ -1,6 +1,6 @@
 package dataCollection
 
-import dataCollection.ProcessingHelper.{createTempProgramFile, doProgramPrintsMatch, removeTempProgramFile}
+import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import database.{SiliconResult, UserSubmission}
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.funsuite.AnyFunSuite
