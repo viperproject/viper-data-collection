@@ -1,9 +1,10 @@
-import java.io.File
+import java.io.{File, FileWriter}
 import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
 import scala.concurrent.duration.{Duration, MILLISECONDS}
+import scala.reflect.io.Directory
 
-/** Classes and Traits that don't need their own file */
+/** Traits, classes and functions that don't necessitate their own file */
 package object util {
 
 
@@ -57,6 +58,35 @@ package object util {
 
   def getLOC(program: String): Int = {
     program.split("\n").length
+  }
+
+  def createTempDir(dirName: String): Unit = {
+    val dir = new File(s"tmp/$dirName")
+    if (!dir.exists()) {
+      dir.mkdir()
+    }
+  }
+
+  def removeTempDir(dirName: String): Unit = {
+    val dir = new Directory(new File(s"tmp/$dirName"))
+    if (dir.exists) {
+      dir.deleteRecursively()
+    }
+  }
+
+  /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
+  def createTempProgramFile(id: Long, program: String): String = {
+    val fName = s"./tmp/$id.vpr"
+    val fw: FileWriter = new FileWriter(new File(fName))
+    fw.write(program)
+    fw.close()
+    fName
+  }
+
+  /** Removes the temporary program file */
+  def removeTempProgramFile(fName: String): Unit = {
+    val f = new File(fName)
+    f.delete()
   }
 
 }

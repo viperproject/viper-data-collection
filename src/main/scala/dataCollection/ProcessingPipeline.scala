@@ -196,20 +196,6 @@ object ProcessingPipeline {
   }
 
 
-  private def createTempDir(dirName: String): Unit = {
-    val dir = new File(s"tmp/$dirName")
-    if (!dir.exists()) {
-      dir.mkdir()
-    }
-  }
-
-  private def removeTempDir(dirName: String): Unit = {
-    val dir = new Directory(new File(s"tmp/$dirName"))
-    if (dir.exists) {
-      dir.deleteRecursively()
-    }
-  }
-
 }
 
 

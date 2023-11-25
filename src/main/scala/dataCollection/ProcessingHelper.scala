@@ -5,9 +5,9 @@ import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry
 import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._
 import util.Config._
+import util._
 import viper.silver.verifier.{Failure, Success}
 
-import java.io.{File, FileWriter}
 import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
@@ -263,20 +263,6 @@ object ProcessingHelper {
   }
 
 
-  /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
-  def createTempProgramFile(id: Long, program: String): String = {
-    val fName = s"./tmp/$id.vpr"
-    val fw: FileWriter = new FileWriter(new File(fName))
-    fw.write(program)
-    fw.close()
-    fName
-  }
-
-  /** Removes the temporary program file */
-  def removeTempProgramFile(fName: String): Unit = {
-    val f = new File(fName)
-    f.delete()
-  }
 }
 
 case class EntryTuple(programEntry: ProgramEntry,
