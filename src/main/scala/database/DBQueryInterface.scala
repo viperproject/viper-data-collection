@@ -39,6 +39,18 @@ object DBQueryInterface {
     entryOpt
   }
 
+  def getPEIdsWithFeatureValue(feature: String, value: String): Future[Seq[Long]] = {
+    val query = for {
+      feat <- sTables.featureTable if (feat.name === feature)
+      silFeatEntry <- sTables.silFeatureEntryTable if (silFeatEntry.featureName === feat.name && silFeatEntry.value === value)
+      silRes <- sTables.siliconResultTable if (silRes.silResId === silFeatEntry.resultId)
+      carbFeatEntry <- sTables.carbFeatureEntryTable if (carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value)
+      carbRes <- sTables.carbonResultTable if (carbRes.carbResId === carbFeatEntry.resultId)
+      pe <- sTables.programEntryTable if (pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId)
+    } yield (pe.programEntryId)
+    db.run(query.result)
+  }
+
   def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[ProgramTuple] = {
     val tupleQuery = for {
       proge <- sTables.programEntryTable
@@ -55,7 +67,7 @@ object DBQueryInterface {
       .result
     val queryWithParams = filteredQuery.transactionally
       .withStatementParameters(fetchSize = DB_BATCH_SIZE)
-    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, SiliconResult, CarbonResult)] = db.stream(queryWithParams)
+    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry, VerResult, VerResult)] = db.stream(queryWithParams)
     val entryTuples: DatabasePublisher[ProgramTuple] = tuples.mapResult(t => ProgramTuple.tupled(t))
     entryTuples
   }
@@ -153,12 +165,12 @@ object DBQueryInterface {
     db.run(query)
   }
 
-  def insertSiliconResult(result: SiliconResult): Future[Long] = {
+  def insertSiliconResult(result: VerResult): Future[Long] = {
     val insertQuery = (sTables.siliconResultTable returning sTables.siliconResultTable.map(_.silResId)) += result
     db.run(insertQuery)
   }
 
-  def insertCarbonResult(result: CarbonResult): Future[Long] = {
+  def insertCarbonResult(result: VerResult): Future[Long] = {
     val insertQuery = (sTables.carbonResultTable returning sTables.carbonResultTable.map(_.carbResId)) += result
     db.run(insertQuery)
   }
@@ -186,33 +198,33 @@ object DBQueryInterface {
     Await.ready(Future.sequence(Seq(ppeInsert, silFeatureInserts, carbFeatureInserts)), DEFAULT_DB_TIMEOUT)
   }
 
-  def getSiliconResultsForEntry(peId: Long): Future[Seq[SiliconResult]] = {
+  def getSiliconResultsForEntry(peId: Long): Future[Seq[VerResult]] = {
     val siliconResults = db.run(sTables.siliconResultTable.filter(_.programEntryId === peId).result)
     siliconResults
   }
 
-  def getSiliconResultsForEntries(peIds: Seq[Long]): Future[Seq[SiliconResult]] = {
+  def getSiliconResultsForEntries(peIds: Seq[Long]): Future[Seq[VerResult]] = {
     val idSet = peIds.toSet
     val siliconResults = db.run(sTables.siliconResultTable.filter(s => s.programEntryId.inSet(idSet)).result)
     siliconResults
   }
 
-  def getLatestSilResForEntry(peId: Long): Future[Option[SiliconResult]] = {
+  def getLatestSilResForEntry(peId: Long): Future[Option[VerResult]] = {
     val silResOpt = db.run(sTables.siliconResultTable.filter(_.programEntryId === peId).sortBy(_.creationDate.desc).result.headOption)
     silResOpt
   }
 
-  def getLatestCarbResForEntry(peId: Long): Future[Option[CarbonResult]] = {
+  def getLatestCarbResForEntry(peId: Long): Future[Option[VerResult]] = {
     val carbResOpt = db.run(sTables.carbonResultTable.filter(_.programEntryId === peId).sortBy(_.creationDate.desc).result.headOption)
     carbResOpt
   }
 
-  def getCarbonResultsForEntry(peId: Long): Future[Seq[CarbonResult]] = {
+  def getCarbonResultsForEntry(peId: Long): Future[Seq[VerResult]] = {
     val carbonResults = db.run(sTables.carbonResultTable.filter(_.programEntryId === peId).result)
     carbonResults
   }
 
-  def getCarbonResultsForEntries(peIds: Seq[Long]): Future[Seq[CarbonResult]] = {
+  def getCarbonResultsForEntries(peIds: Seq[Long]): Future[Seq[VerResult]] = {
     val idSet = peIds.toSet
     val carbonResults = db.run(sTables.carbonResultTable.filter(c => c.programEntryId.inSet(idSet)).result)
     carbonResults

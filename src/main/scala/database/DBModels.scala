@@ -85,15 +85,15 @@ object UserSubmission {
 }
 
 /** Abstract class to represent the result of running some verifier on a program */
-abstract class VerResult() extends Similarity[VerResult] with Serializable {
-
-  val creationDate: Timestamp
-  val verifierHash: String
-  val programEntryId: Long
-  val success: Boolean
-  val runtime: Long
-  val errors: Array[VerError]
-  val phaseRuntimes: Array[(String, Long)]
+case class VerResult(resId: Long,
+                     creationDate: Timestamp,
+                     verifierHash: String,
+                     programEntryId: Long,
+                     success: Boolean,
+                     runtime: Long,
+                     errors: Array[VerError],
+                     phaseRuntimes: Array[(String, Long)]
+                    ) extends Similarity[VerResult] with Serializable {
 
   def isSimilarTo(other: VerResult): Boolean = {
     lazy val sameRes: Boolean = if (this.success) {
@@ -110,6 +110,10 @@ abstract class VerResult() extends Similarity[VerResult] with Serializable {
   private def similarTime(t1: Long, t2: Long): Boolean = {
     ((t1 <= t2 * 1.5 && t1 >= t2 / 1.5) || (t1 - t2).abs <= 2000)
   }
+}
+
+object VerResult {
+  def tupled = (VerResult.apply _).tupled
 }
 
 /** Case class to represent a row in the programs.SiliconResults table of the database
@@ -131,7 +135,7 @@ case class SiliconResult(silResId: Long,
                          runtime: Long,
                          errors: Array[VerError],
                          phaseRuntimes: Array[(String, Long)],
-                         benchmarkResults: Array[(String, Long)]) extends VerResult with Serializable
+                         benchmarkResults: Array[(String, Long)]) //extends VerResult with Serializable
 
 object SiliconResult {
   def tupled = (SiliconResult.apply _).tupled
@@ -154,7 +158,7 @@ case class CarbonResult(carbResId: Long,
                         success: Boolean,
                         runtime: Long,
                         errors: Array[VerError],
-                        phaseRuntimes: Array[(String, Long)]) extends VerResult with Serializable
+                        phaseRuntimes: Array[(String, Long)]) //extends VerResult with Serializable
 
 object CarbonResult {
   def tupled = (CarbonResult.apply _).tupled
@@ -326,7 +330,7 @@ class SlickTables(val profile: PostgresProfile) {
   }
 
 
-  class SiliconResultTable(tag: Tag) extends Table[SiliconResult](tag, Some("programs"), "SiliconResults") {
+  class SiliconResultTable(tag: Tag) extends Table[VerResult](tag, Some("programs"), "SiliconResults") {
     def silResId = column[Long]("silResId", O.PrimaryKey, O.AutoInc)
 
     def creationDate = column[Timestamp]("creationDate")
@@ -345,23 +349,21 @@ class SlickTables(val profile: PostgresProfile) {
 
     def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
-    def benchmarkResults = column[Array[(String, Long)]]("benchmarkResults")
 
-    override def * : ProvenShape[SiliconResult] = (silResId,
+    override def * : ProvenShape[VerResult] = (silResId,
       creationDate,
       verifierHash,
       programEntryId,
       success,
       runtime,
       errors,
-      phaseRuntimes,
-      benchmarkResults
-    ) <> (SiliconResult.tupled, SiliconResult.unapply)
+      phaseRuntimes
+    ) <> (VerResult.tupled, VerResult.unapply)
 
   }
 
 
-  class CarbonResultTable(tag: Tag) extends Table[CarbonResult](tag, Some("programs"), "CarbonResults") {
+  class CarbonResultTable(tag: Tag) extends Table[VerResult](tag, Some("programs"), "CarbonResults") {
     def carbResId = column[Long]("carbResId", O.PrimaryKey, O.AutoInc)
 
     def creationDate = column[Timestamp]("creationDate")
@@ -380,7 +382,7 @@ class SlickTables(val profile: PostgresProfile) {
 
     def phaseRuntimes = column[Array[(String, Long)]]("phaseRuntimes")
 
-    override def * : ProvenShape[CarbonResult] = (carbResId,
+    override def * : ProvenShape[VerResult] = (carbResId,
       creationDate,
       verifierHash,
       programEntryId,
@@ -388,7 +390,7 @@ class SlickTables(val profile: PostgresProfile) {
       runtime,
       errors,
       phaseRuntimes
-    ) <> (CarbonResult.tupled, CarbonResult.unapply)
+    ) <> (VerResult.tupled, VerResult.unapply)
 
   }
 

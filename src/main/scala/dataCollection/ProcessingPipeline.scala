@@ -101,9 +101,9 @@ object ProcessingPipeline {
     try {
 
       val programEntry = loadSerializedObject[ProgramEntry](s"$TMP_DIRECTORY/$dirName/$peFileName")
-      val siliconResult = loadSerializedObject[SiliconResult](s"$TMP_DIRECTORY/$dirName/$srFileName")
+      val siliconResult = loadSerializedObject[VerResult](s"$TMP_DIRECTORY/$dirName/$srFileName")
       val silVerFeats = loadSerializedObject[Array[VerifierFeature]](s"$TMP_DIRECTORY/$dirName/$svfFileName")
-      val carbonResult = loadSerializedObject[CarbonResult](s"$TMP_DIRECTORY/$dirName/$crFileName")
+      val carbonResult = loadSerializedObject[VerResult](s"$TMP_DIRECTORY/$dirName/$crFileName")
       val carbVerFeats = loadSerializedObject[Array[VerifierFeature]](s"$TMP_DIRECTORY/$dirName/$cvfFileName")
       val programPrintEntry = loadSerializedObject[ProgramPrintEntry](s"$TMP_DIRECTORY/$dirName/$ppeFileName")
 
@@ -142,8 +142,8 @@ object ProcessingPipeline {
 
 case class ProgramTuple(programEntry: ProgramEntry,
                         programPrintEntry: ProgramPrintEntry,
-                        siliconResult: SiliconResult,
-                        carbonResult: CarbonResult)
+                        siliconResult: VerResult,
+                        carbonResult: VerResult)
 
 
 case class ProcessingResultTuple(programTuple: ProgramTuple,

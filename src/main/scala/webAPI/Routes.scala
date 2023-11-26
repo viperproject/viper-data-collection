@@ -39,14 +39,14 @@ object Routes extends cask.MainRoutes {
     "This is an API for the viper-data-collection database"
   }
 
-  @cask.postJson("/program-entry-by-feature")
-  def programEntryByFeature(earliestDate: Timestamp,
-                            latestDate: Timestamp,
-                            minLOC: Int,
-                            maxLOC: Int,
-                            frontend: Option[String],
-                            verifier: Option[String],
-                            parseSuccess: Option[Boolean]): Response[String] = {
+  @cask.postJson("/program-entry-by-meta-feature")
+  def programEntryByMetaFeature(earliestDate: Timestamp,
+                                latestDate: Timestamp,
+                                minLOC: Int,
+                                maxLOC: Int,
+                                frontend: Option[String],
+                                verifier: Option[String],
+                                parseSuccess: Option[Boolean]): Response[String] = {
     try {
       val entries = Await.result(DBQueryInterface.getEntriesByFeatures(earliestDate, latestDate, minLOC, maxLOC, frontend, verifier, parseSuccess), DEFAULT_DB_TIMEOUT)
       val eJSON = write(entries)
@@ -55,6 +55,18 @@ object Routes extends cask.MainRoutes {
       case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }
   }
+
+  @cask.get("/program-ids-by-feature-value")
+  def programIdsByFeatureValue(feature: String, value: String): Response[String] = {
+    try {
+      val peIds = Await.result(DBQueryInterface.getPEIdsWithFeatureValue(feature, value), DEFAULT_DB_TIMEOUT)
+      val idJSON = write(peIds)
+      cask.Response(data = idJSON, statusCode = 200)
+    } catch {
+      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+    }
+  }
+
 
   @cask.postJson("/silicon-results-by-ids")
   def siliconResultsByIds(entryIds: Seq[Long]): Response[String] = {
@@ -89,7 +101,7 @@ object Routes extends cask.MainRoutes {
     }
   }
 
-  @cask.postJson("/match-regex-detailed")
+  @cask.get("/match-regex-detailed")
   def matchRegexDetailed(regex: String): Response[String] = {
     try {
       val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)

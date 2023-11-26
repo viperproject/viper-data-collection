@@ -29,7 +29,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  //println(PGSlickTables.getDDL)
+  println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -38,7 +38,7 @@ object TestRunner extends App {
   //println("Took: " + ((System.currentTimeMillis() - startTime) / 1000))
   //specificResult(825, 834)
   //specificFingerPrint(2)
-  regexDBPerformance()
+  //regexDBPerformance()
   //regexDBPerformance()
 
 

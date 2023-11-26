@@ -183,21 +183,21 @@ object ProcessingHelper {
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     runner.main(Array(tmpFile) ++ args)
 
-    val verRes = new VerResult {
-      val creationDate = Timestamp.valueOf(LocalDateTime.now())
-      val runtime = runner.getTime
-      val programEntryId = pe.programEntryId
-      val verifierHash = runner.verifierHash
-      val phaseRuntimes = runner.getPhaseRuntimes.toArray
-      val success = runner.hasSucceeded
-      val errors = runner.getVerificationResult match {
+    val verRes = VerResult(0,
+      Timestamp.valueOf(LocalDateTime.now()),
+      runner.verifierHash,
+      pe.programEntryId,
+      runner.hasSucceeded,
+      runner.getTime,
+      runner.getVerificationResult match {
         case Some(value) => value match {
           case Success => Array[VerError]()
           case Failure(errors) => errors.toArray map VerError.toError
         }
         case None => Array[VerError]()
-      }
-    }
+      },
+      runner.getPhaseRuntimes.toArray
+    )
 
     removeTempProgramFile(tmpFile)
     (verRes, runner.getFeatures)
@@ -206,7 +206,7 @@ object ProcessingHelper {
   /** @param pe            ProgramEntry for which to get the results of verifying it through Silicon
    * @param extraArgs      arguments that will be passed into Silicon alongside the original ones
    * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
-  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (SiliconResult, Seq[VerifierFeature]) = {
+  def generateSiliconResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (VerResult, Seq[VerifierFeature]) = {
     val runner = new CollectionSiliconFrontend
 
     var args: Array[String] = extraArgs
@@ -216,23 +216,13 @@ object ProcessingHelper {
     args = filterArgs(args, "--timeout")
     args ++= Array("--timeout", timeOutSeconds.toString)
 
-    val (vr, feats) = generateVerifierResults(runner, pe, args)
-    (SiliconResult(0,
-      vr.creationDate,
-      vr.verifierHash,
-      vr.programEntryId,
-      vr.success,
-      vr.runtime,
-      vr.errors,
-      vr.phaseRuntimes,
-      runner.getBenchmarkResults.toArray),
-      feats)
+    generateVerifierResults(runner, pe, args)
   }
 
   /** @param pe            ProgramEntry for which to get the results of verifying it through Carbon
    * @param extraArgs      arguments that will be passed into Carbon alongside the original ones
    * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout */
-  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (CarbonResult, Seq[VerifierFeature]) = {
+  def generateCarbonResults(pe: ProgramEntry, extraArgs: Array[String] = Array(), timeOutSeconds: Int = 0): (VerResult, Seq[VerifierFeature]) = {
     val runner = new CollectionCarbonFrontend(timeOutSeconds)
 
     var args: Array[String] = extraArgs
@@ -240,16 +230,7 @@ object ProcessingHelper {
       args = args ++ pe.args
     }
 
-    val (vr, feats) = generateVerifierResults(runner, pe, args)
-    (CarbonResult(0,
-      vr.creationDate,
-      vr.verifierHash,
-      vr.programEntryId,
-      vr.success,
-      vr.runtime,
-      vr.errors,
-      vr.phaseRuntimes),
-      feats)
+    generateVerifierResults(runner, pe, args)
   }
 
   /** if [[toFilter]] is found in [[args]], drops that and next index in the array */
