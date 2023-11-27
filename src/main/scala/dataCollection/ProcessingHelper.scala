@@ -65,9 +65,9 @@ object ProcessingHelper {
     )
   }
 
-  /** Searches the database for programs with the same or similar features as the entry. Returns true if at least a third of the entry's
+  /** Searches the database for programs with the same or similar metadata as the entry. Returns true if at least a third of the entry's
    * features are present in less than half of all entries. */
-  def areFeaturesInteresting(et: ProgramTuple): Boolean = {
+  def shouldDropByMetadata(et: ProgramTuple): Boolean = {
     val totalEntries = DBQueryInterface.getPECount()
     val totalSilRes = DBQueryInterface.getUniqueSRCount()
     val totalCarbRes = DBQueryInterface.getUniqueCRCount()
@@ -89,8 +89,22 @@ object ProcessingHelper {
       (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
 
     val allPercentages = Await.result(Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages), DEFAULT_DB_TIMEOUT)
-    val isInteresting = allPercentages.count(p => p <= FEATURE_FILTER_THRESHOLD) >= (allPercentages.length * FEATURE_AMOUNT_THRESHOLD).toInt
-    isInteresting
+    val shouldDrop = !(allPercentages.count(p => p <= METADATA_FILTER_THRESHOLD) >= (allPercentages.length * METADATA_AMOUNT_THRESHOLD).toInt)
+    shouldDrop
+  }
+
+  def shouldDropByFeatures(feats: Seq[VerifierFeature]): Boolean = {
+    val totalEntries = Await.result(DBQueryInterface.getPECount(), DEFAULT_DB_TIMEOUT)
+
+    val relevantFeats = feats.filter(_.useForFiltering)
+    val featOccurrences = relevantFeats map {
+      f => DBQueryInterface.getProgramWithFeatureValueCount(f.name, f.value)
+    }
+    val featOccurrenceFraction = featOccurrences map {
+      fc => fc map (c => c.toDouble / totalEntries)
+    }
+    val fractions = Await.result(Future.sequence(featOccurrenceFraction), DEFAULT_DB_TIMEOUT)
+    (fractions.sum / fractions.length) <= FEATURE_FILTER_THRESHOLD
   }
 
   /** Class that stores a boolean to indicate whether an event occurred. Usage example: Passed into a closure in [[existsSimilarEntry]]

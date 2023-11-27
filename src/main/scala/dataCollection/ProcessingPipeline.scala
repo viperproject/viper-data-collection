@@ -123,8 +123,13 @@ object ProcessingPipeline {
       //skip feature check if fewer than 100 entries in database
       val totalEntries = Await.result(DBQueryInterface.getPECount(), DEFAULT_DB_TIMEOUT)
       if (totalEntries > 100) {
-        val isInteresting = areFeaturesInteresting(procResTuple.programTuple)
-        if (!isInteresting) {
+        val shouldDropByMeta = shouldDropByMetadata(procResTuple.programTuple)
+        if (shouldDropByMeta) {
+          println("Too many programs with similar metadata, will not be stored.")
+          return
+        }
+        val shouldDropByFeat = shouldDropByFeatures(procResTuple.silVerFeatures ++ procResTuple.carbVerFeatures)
+        if (shouldDropByFeat) {
           println("Too many programs with similar features, will not be stored.")
           return
         }

@@ -185,6 +185,19 @@ object DBQueryInterface {
 
   /*------ Metadata Queries ------*/
 
+  def getProgramWithFeatureValueCount(feature: String, value: String): Future[Int] = {
+    val query = for {
+      feat <- sTables.featureTable if (feat.name === feature)
+      silFeatEntry <- sTables.silFeatureEntryTable if (silFeatEntry.featureName === feat.name && silFeatEntry.value === value)
+      silRes <- sTables.siliconResultTable if (silRes.silResId === silFeatEntry.resultId)
+      carbFeatEntry <- sTables.carbFeatureEntryTable if (carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value)
+      carbRes <- sTables.carbonResultTable if (carbRes.carbResId === carbFeatEntry.resultId)
+      pe <- sTables.programEntryTable if (pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId)
+    } yield (pe)
+    val count = query.groupBy(_.programEntryId).length
+    db.run(count.result)
+  }
+
   def getUSCount(): Future[Int] = {
     val usCount = db.run(sTables.userSubmissionTable.length.result)
     usCount

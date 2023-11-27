@@ -1,5 +1,7 @@
 # Setup
 
+- Clone this repository recursively: `git clone --recursive https://github.com/Simon-Hostettler/viper-data-collection`
+
 ### Prerequisites:
 - JDK 11
 - [SBT](https://www.scala-sbt.org)
