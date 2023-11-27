@@ -2,12 +2,30 @@ package dataCollection.customFrontends
 
 import viper.silver.reporter.{BenchmarkingPhase, Message, Reporter}
 
-object FeatureGenerator {
-  def benchmarkResToVF(res: Seq[(String, Long)]): Seq[VerifierFeature] = {
+
+trait FeatureGenerator {
+
+  /** Any VerifierFeatures returned by this function will be inserted into the database*/
+  def getFeatures: Seq[VerifierFeature]
+}
+
+/** Trait to extend CollectionSiliconFrontend with to generate features while verifying*/
+trait SilFeatureGenerator extends FeatureGenerator {
+
+  def getBenchmarkResults: Seq[(String, Long)]
+
+  private def benchmarkResToVF(res: Seq[(String, Long)]): Seq[VerifierFeature] = {
     res map {
       case (phase, time) => VerifierFeature(s"BenchmarkingPhase $phase", time.toString, false)
     }
   }
+  override def getFeatures: Seq[VerifierFeature] = {
+    benchmarkResToVF(getBenchmarkResults)
+  }
+}
+
+/** Trait to extend CollectionCarbonFrontend with to generate features while verifying*/
+trait CarbFeatureGenerator extends FeatureGenerator {
 
 }
 

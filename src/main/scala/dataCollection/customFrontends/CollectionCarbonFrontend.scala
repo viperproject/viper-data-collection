@@ -11,7 +11,8 @@ import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future}
 
 /** Frontend to benchmark programs using the Carbon verifier, takes seconds to timeout as an argument, 0 => no timeout */
-class CollectionCarbonFrontend(timeOut: Int = 0) extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get) with CollectionSilFrontend {
+class CollectionCarbonFrontend(timeOut: Int = 0) extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get)
+  with CollectionSilFrontend with CarbFeatureGenerator {
 
   /** Verifies the program. If [[timeOut]] seconds have passed, the verifier is stopped. This is done since neither Boogie
    * nor Z3 can be passed a timeout flag that reliably works. */

@@ -1,7 +1,5 @@
 package dataCollection.customFrontends
 
-import FeatureGenerator._
-
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
@@ -36,9 +34,6 @@ trait CollectionSilFrontend extends SilFrontend {
     case _ => false
   }
 
-  /** returns all features generated during verification, only valid running [[main]]. */
-  def getFeatures: Seq[VerifierFeature]
-
   /** Only valid after calling [[main]] */
   def getPhaseRuntimes: Seq[(String, Long)] = phaseRuntimes
 
@@ -49,7 +44,8 @@ trait CollectionSilFrontend extends SilFrontend {
 
 /** SiliconFrontend Implementation that measures runtimes in the different stages of the Verifier,
  * results can be called using [[getRuntimes]], only valid after running [[main]] */
-class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get) with CollectionSilFrontend {
+class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
+  with CollectionSilFrontend with SilFeatureGenerator {
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
 
   override def main(args: Array[String]): Unit = {
@@ -67,7 +63,6 @@ class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter,
     }
   }
 
-
   /** Adds a [[BenchmarkingResultReporter]] field to the Verifier s.t. benchmarking results get stored */
   override def createVerifier(fullCmd: String) = {
     siliconInstance = new Silicon(reporter, Seq("args" -> fullCmd)) {
@@ -79,12 +74,8 @@ class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter,
     siliconInstance
   }
 
-  def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
+  override def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
 
   override def verifierHash: String = BuildInfo.gitRevision
 
-  /** returns all features generated during verification, only valid running [[main]] */
-  override def getFeatures: Seq[VerifierFeature] = {
-    benchmarkResToVF(getBenchmarkResults)
-  }
 }
