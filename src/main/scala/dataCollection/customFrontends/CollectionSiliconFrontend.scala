@@ -9,7 +9,7 @@ import viper.silver.verifier.Success
 import scala.collection.immutable.ArraySeq
 
 /** Trait for common functions shared between collection verifier frontends */
-trait CollectionSilFrontend extends SilFrontend {
+trait CollectionSilFrontend extends SilFrontend with FeatureGenerator {
   private var phaseRuntimes: Seq[(String, Long)] = Seq()
 
   /** Runs the verifier with the given arguments */
