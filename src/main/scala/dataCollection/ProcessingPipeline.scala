@@ -1,7 +1,7 @@
 package dataCollection
 
 import dataCollection.customFrontends.VerifierFeature
-import database.{CarbonResult, DBQueryInterface, ProgramEntry, ProgramPrintEntry, SiliconResult, VerResult}
+import database.{DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult}
 import util._
 import util.Config._
 

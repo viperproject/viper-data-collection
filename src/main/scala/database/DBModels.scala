@@ -84,7 +84,17 @@ object UserSubmission {
   def tupled = (UserSubmission.apply _).tupled
 }
 
-/** Abstract class to represent the result of running some verifier on a program */
+/** Case class to represent the result of verifying a program through a Viper verifier, used for entries in
+ * programs.SiliconResultTable and programs.CarbonResultTable
+ *
+ * @param resId          unique identifier for the entry
+ * @param creationDate   time when this entry was created
+ * @param verifierHash   commit hash of the verifier version used to get this result
+ * @param programEntryId id referring to the ProgramEntry that was verified
+ * @param success        whether program verified successfully
+ * @param runtime        total time for verification
+ * @param errors         errors encountered during verification - should be empty if [[success]]
+ * @param phaseRuntimes  runtimes of the phases of the verifier */
 case class VerResult(resId: Long,
                      creationDate: Timestamp,
                      verifierHash: String,
@@ -114,54 +124,6 @@ case class VerResult(resId: Long,
 
 object VerResult {
   def tupled = (VerResult.apply _).tupled
-}
-
-/** Case class to represent a row in the programs.SiliconResults table of the database
- *
- * @param silResId         unique identifier for the entry
- * @param creationDate     time when this entry was created
- * @param siliconHash      commit hash of the silicon version used to get this result
- * @param programEntryId   id referring to the ProgramEntry that was profiled
- * @param success          whether program verified successfully
- * @param runtime          total time for verification
- * @param errors           errors encountered during verification - should be empty if [[success]]
- * @param phaseRuntimes    runtimes of the phases of silicon
- * @param benchmarkResults more detailed information by the [[viper.silver.reporter.BenchmarkingReporter]] */
-case class SiliconResult(silResId: Long,
-                         creationDate: Timestamp,
-                         verifierHash: String,
-                         programEntryId: Long,
-                         success: Boolean,
-                         runtime: Long,
-                         errors: Array[VerError],
-                         phaseRuntimes: Array[(String, Long)],
-                         benchmarkResults: Array[(String, Long)]) //extends VerResult with Serializable
-
-object SiliconResult {
-  def tupled = (SiliconResult.apply _).tupled
-}
-
-/** Case class to represent a row in the programs.CarbonResults table of the database
- *
- * @param carbResId      unique identifier for the entry
- * @param creationDate   time when this entry was created
- * @param carbonHash     commit hash of the carbon version used to get this result
- * @param programEntryId id referring to the ProgramEntry that was profiled
- * @param success        whether program verified successfully
- * @param runtime        total time for verification
- * @param errors         errors encountered during verification - should be empty if [[success]]
- * @param phaseRuntimes  runtimes of the phases of carbon */
-case class CarbonResult(carbResId: Long,
-                        creationDate: Timestamp,
-                        verifierHash: String,
-                        programEntryId: Long,
-                        success: Boolean,
-                        runtime: Long,
-                        errors: Array[VerError],
-                        phaseRuntimes: Array[(String, Long)]) //extends VerResult with Serializable
-
-object CarbonResult {
-  def tupled = (CarbonResult.apply _).tupled
 }
 
 case class ProgramPrintEntry(pprintId: Long,

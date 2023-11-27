@@ -1,16 +1,11 @@
 package dataCollection
 
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
-import database.{SiliconResult, UserSubmission}
-import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.funsuite.AnyFunSuite
 import viper.silver.parser.FastParser
-import util._
 
 import java.io.File
 import java.nio.file.Paths
-import java.sql.Timestamp
-import java.time.LocalDateTime
 import scala.io.BufferedSource
 import scala.io.Source.fromFile
 import scala.reflect.io.Directory
