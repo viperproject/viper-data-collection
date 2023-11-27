@@ -50,7 +50,7 @@ object TestRunner extends App {
     //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
     val buffer = fromFile(file)
     val prog = try buffer.mkString finally buffer.close()
-    val programEntry: ProgramEntry = ProgramEntry(0, Timestamp.valueOf(LocalDateTime.now()), "lol.vpr", prog, 1400, "Nagini", "Silicon", Array(), 3000, true, true)
+    val programEntry: ProgramEntry = ProgramEntry(0, Timestamp.valueOf(LocalDateTime.now()), "prog.vpr", prog, 1400, "Nagini", "Silicon", Array(), 3000, true, true)
     val progs = (for (i <- 1 to 5000) yield programEntry).toList
     val insertQ = DBQueryInterface.insertProgramEntries(progs)
     Await.ready(insertQ, Duration.Inf)
