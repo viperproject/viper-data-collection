@@ -1,5 +1,7 @@
 package dataCollection.customFrontends
 
+import FeatureGenerator._
+
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
@@ -7,7 +9,6 @@ import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, 
 import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
-import upickle.default.write
 
 /** Trait for common functions shared between collection verifier frontends */
 trait CollectionSilFrontend extends SilFrontend {
@@ -84,28 +85,6 @@ class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter,
 
   /** returns all features generated during verification, only valid running [[main]] */
   override def getFeatures: Seq[VerifierFeature] = {
-    Seq(VerifierFeature("benchmarkResults", write(getBenchmarkResults), false))
+    benchmarkResToVF(getBenchmarkResults)
   }
 }
-
-
-/** Reporter that stores the runtimes of received [[BenchmarkingPhase]]s */
-case class BenchmarkingResultReporter(name: String = "benchmarking_result_reporter") extends Reporter {
-  private val _initial_time = System.currentTimeMillis()
-  private var _previous_phase: Long = _initial_time
-  private var results: Seq[(String, Long)] = Seq()
-
-  def report(msg: Message): Unit = {
-    msg match {
-      case BenchmarkingPhase(phase) =>
-        val t = System.currentTimeMillis()
-        results = results :+ (phase, t - _previous_phase)
-        _previous_phase = t
-      case _ =>
-    }
-  }
-
-  def getBenchmarkResults: Seq[(String, Long)] = results
-}
-
-case class VerifierFeature(name: String, value: String, useForFiltering: Boolean) extends Serializable
