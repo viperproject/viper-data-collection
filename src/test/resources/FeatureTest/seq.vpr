@@ -1,0 +1,6 @@
+method QSort(xs: Seq[Ref]) returns (ys: Seq[Ref])
+  requires false
+  ensures false
+{
+
+}

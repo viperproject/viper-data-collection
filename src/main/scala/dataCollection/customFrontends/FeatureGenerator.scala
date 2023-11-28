@@ -1,7 +1,19 @@
 package dataCollection.customFrontends
 
 import database.tools.PatternMatcher
-import viper.silver.parser.{ Nodes, PAccPred, PCall, PNode, PProgram, PQuantifier }
+import viper.silver.parser.{
+  Nodes,
+  PAccPred,
+  PCall,
+  PCurPerm,
+  PEpsilon,
+  PFullPerm,
+  PNoPerm,
+  PNode,
+  PProgram,
+  PQuantifier,
+  PWildcard
+}
 import viper.silver.reporter.{ BenchmarkingPhase, Message, Reporter }
 
 import java.nio.file.Paths
@@ -73,22 +85,27 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   def hasTermination: Boolean = PatternMatcher.doesMatch(program, "^.*decreases.*$", Pattern.MULTILINE)
 
   def mightHaveQP: Boolean = {
-    val res = (pp.functions ++ pp.methods) map { f =>
+    val res = (pp.domains ++ pp.functions ++ pp.methods) map { f =>
       {
-        findNode(n => n.isInstanceOf[PQuantifier], f) && findNode(n => n.isInstanceOf[PAccPred], f)
+        findNode(n => n.isInstanceOf[PQuantifier], f) && findNode(mightBePerm, f)
       }
     }
     res.exists(identity)
   }
+
+  private def mightBePerm(pn: PNode): Boolean = pn match {
+    case _: PNoPerm | _: PWildcard | _: PFullPerm | _: PEpsilon | _: PCurPerm | _: PCall | _: PAccPred => true
+    case _                                                                                             => false
+  }
   def hasRecursivePred: Boolean = {
-    lazy val res = pp.functions map { f =>
-      findNode(isCallWithName(f.idndef.name), f)
+    lazy val res = pp.predicates map { pred =>
+      findNode(isCallWithName(pred.idndef.name), pred)
     }
     res.exists(identity)
   }
   def hasRecursiveFunc: Boolean = {
-    lazy val res = pp.predicates map { pred =>
-      findNode(isCallWithName(pred.idndef.name), pred)
+    lazy val res = pp.functions map { f =>
+      findNode(isCallWithName(f.idndef.name), f)
     }
     res.exists(identity)
   }

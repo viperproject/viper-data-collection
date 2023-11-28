@@ -50,6 +50,7 @@ class CollectionSiliconFrontend
     extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
     with CollectionSilFrontend
     with SilFeatureGenerator {
+  override val syntaxProps: ProgramSyntaxProperties = ???
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
 
   override def main(args: Array[String]): Unit = {

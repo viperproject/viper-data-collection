@@ -1,0 +1,271 @@
+// REMINDER: ONLY use the carbon backend for this task!
+
+field x : Int
+field y : Int
+field val : Int
+field next : Ref
+
+predicate SparseMatrix(this: Ref, n : Int) {
+  acc(this.x) && acc(this.y) && acc(this.val) && acc(this.next) &&
+    this.x >= 0 && this.x < n &&
+    this.y >= 0 && this.y < n &&
+    (this.next != null ==> SparseMatrix(this.next, n) && unfolding SparseMatrix(this.next, n) in (
+      this.x == this.next.x ==> this.y < this.next.y &&
+      this.x <= this.next.x
+    ))
+}
+
+function lookup(m: Ref, n: Int, _x: Int, _y: Int) : Int
+  requires 0 <= _x && _x < n
+  requires 0 <= _y && _y < n
+  requires m != null ==> acc(SparseMatrix(m, n), wildcard)
+{
+  m == null ? 0 :
+    unfolding acc(SparseMatrix(m, n), wildcard) in
+      m.x == _x && m.y == _y ? m.val : lookup(m.next, n, _x, _y)
+}
+
+field matrix_val : Int
+
+domain Matrix {
+  function loc(m: Matrix, i: Int, j: Int) : Ref
+  function len(m: Matrix) : Int
+  function first(r: Ref): Matrix
+  function second(r: Ref): Int
+  function third(r: Ref): Int
+
+  axiom injectivity {
+    forall m: Matrix, i: Int, j: Int :: {loc(m, i, j)}
+      first(loc(m, i, j)) == m &&
+      second(loc(m,i,j)) == i &&
+      third(loc(m,i,j)) == j
+  }
+
+  axiom length_nonneg {
+    forall m: Matrix :: len(m) >= 0
+  }
+}
+
+define MATRIX(m, p) (
+  forall i:Int, j:Int :: (0 <= i && i < len(m) && 0 <= j && j < len(m)) ==> acc(loc(m,i,j).matrix_val, p)
+)
+
+define ROW(m, x, p) (
+  forall j:Int :: 0 <= j && j < len(m) ==> acc(loc(m,x,j), p)
+)
+
+define COL(m, y, p) (
+  forall i:Int :: 0 <= i && i < len(m) ==> acc(loc(m,i,y), p)
+)
+
+define LOC(m,x,y) (
+  loc(m,x,y).matrix_val
+)
+
+// NOTE: Had to rewrite the spec of this method slightly:
+// 1. Include bounds check for i and j
+// 2. Assert len(res) == n before QP otherwise this fact is missing when checking well-formedness of QP.
+method createMatrix(n: Int) returns (res: Matrix)
+  ensures MATRIX(res, write)
+  ensures len(res) == n
+  ensures forall i: Int, j: Int :: (0 <= i && i < n && 0 <= j && j < n) ==> LOC(res, i, j) == 0
+
+method expand(r: Ref, n: Int) returns (m: Matrix)
+  requires acc(SparseMatrix(r, n), wildcard)
+  ensures acc(SparseMatrix(r, n), wildcard)
+  ensures MATRIX(m, write) && len(m) == n
+  ensures forall i:Int, j:Int :: 0 <= i && i < len(m) && 0 <= j && j < len(m)
+    ==> lookup(r, n, i, j) == LOC(m, i, j)
+{
+  m := createMatrix(n)
+
+  var i1 : Int := 0
+  var j1 : Int := 0
+
+  while (i1 < n)
+    invariant MATRIX(m, write)
+  {
+    while(j1 < n)
+      invariant MATRIX(m, write)
+    {
+      LOC(m, i1, j1) := 0
+    }
+  }
+
+  var tmp: Ref
+  tmp := r
+  while (tmp != null)
+    invariant acc(SparseMatrix(r, n), wildcard)
+    invariant MATRIX(m, write)
+    invariant len(m) == n
+  {
+    unfold acc(SparseMatrix(tmp, n), wildcard)
+    LOC(m, tmp.x, tmp.y) := tmp.val
+    fold acc(SparseMatrix(tmp, n), wildcard)
+  }
+}
+
+function get_row(m:Matrix, i:Int, start: Int, end: Int) : Seq[Int]
+  requires MATRIX(m, wildcard)
+  requires 0 <= i && i < len(m)
+  requires 0 <= start && start < len(m)
+  requires 0 <= end && end <= len(m)
+  requires start <= end
+  ensures |result| == end - start
+{
+  start == end ? Seq() :
+    Seq(LOC(m,i,start)) ++ (start < end - 1 ? get_row(m,i,start+1, end) : Seq())
+}
+
+function get_col(m:Matrix, j:Int, start: Int, end: Int) : Seq[Int]
+  requires MATRIX(m, wildcard)
+  requires 0 <= j && j < len(m)
+  requires 0 <= start && start < len(m)
+  requires 0 <= end && end <= len(m)
+  requires start <= end
+  ensures |result| == end - start
+{
+  start == end ? Seq() :
+    Seq(LOC(m,start,j)) ++ (start < end - 1 ? get_col(m,j,start+1, end) : Seq())
+}
+
+function dotProduct(s1: Seq[Int], s2: Seq[Int]) : Int
+  requires |s1| == |s2|
+{
+  |s1| == 0 ? 0 : (s1[0] * s2[0] + dotProduct(s1[1..], s2[1..]))
+}
+
+method lemma(a:Matrix, b:Matrix, i:Int, j:Int,start:Int, k:Int)
+  requires MATRIX(a, wildcard)
+  requires MATRIX(b, wildcard)
+  requires len(a) == len(b)
+  requires 0 <= i && i < len(a)
+  requires 0 <= j && j < len(a)
+  requires 0 <= start && start <= k && k < len(a)
+  ensures MATRIX(a, wildcard)
+  ensures MATRIX(b, wildcard)
+  ensures dotProduct(get_row(a,i,start,k+1), get_col(b,j,start,k+1)) == dotProduct(get_row(a,i,start,k), get_col(b,j,start,k)) + LOC(a, i, k) * LOC(b, k, j)
+{
+  assert dotProduct(get_row(a,i,start,k+1), get_col(b,j,start,k+1)) ==
+    get_row(a,i,start,k+1)[0] * get_col(b,j,start,k+1)[0] +
+      dotProduct(get_row(a,i,start,k+1)[1..], get_col(b,j,start,k+1)[1..])
+
+  assert get_row(a,i,start,k+1)[0] == LOC(a,i,start)
+  assert get_col(b,j,start,k+1)[0] == LOC(b,start,j)
+
+  if (start < k) {
+    assert dotProduct(get_row(a,i,start,k+1)[1..], get_col(b,j,start,k+1)[1..])
+      == dotProduct(get_row(a,i,start+1,k+1), get_col(b,j,start+1,k+1))
+
+    // induction hypothesis
+    // termination variant: k - start
+    lemma(a,b,i,j,start+1,k)
+  } else {
+    // automatic
+  }
+}
+
+
+method matrixMultiply(a: Matrix, b: Matrix, n: Int) returns (c: Matrix)
+  requires MATRIX(a, wildcard)
+  requires MATRIX(b, wildcard)
+  requires len(a) == n
+  requires len(b) == n
+
+  ensures MATRIX(a, wildcard)
+  ensures MATRIX(b, wildcard)
+  ensures MATRIX(c, write) && len(c) == n
+
+  ensures forall i:Int, j:Int :: 0 <= i && i < n && 0 <= j && j < n
+    ==> LOC(c,i,j) == dotProduct(get_row(a, i, 0, n), get_col(b, j, 0, n))
+{
+  c := createMatrix(n)
+
+  var i: Int
+  var k: Int
+  var j: Int
+
+  i := 0
+  while (i < n)
+    invariant MATRIX(c, write)
+    invariant MATRIX(a, wildcard)
+    invariant MATRIX(b, wildcard)
+    invariant i >= 0
+    invariant i <= n
+
+    invariant forall i1:Int, j1:Int :: 0 <= i1 && i1 < i && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == dotProduct(get_row(a,i1,0,n), get_col(b,j1,0,n))
+    invariant forall i1:Int, j1:Int :: i <= i1 && i1 < n && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == 0
+  {
+    k := 0
+
+    while (k < n)
+      invariant MATRIX(c, write)
+      invariant MATRIX(a, wildcard)
+      invariant MATRIX(b, wildcard)
+      invariant k >= 0
+      invariant k <= n
+
+      invariant forall i1:Int, j1:Int :: 0 <= i1 && i1 < i && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == dotProduct(get_row(a,i1,0,n), get_col(b,j1,0,n))
+      invariant forall j1:Int :: 0 <= j1 && j1 < n ==> LOC(c,i,j1) == dotProduct(get_row(a,i,0,k), get_col(b,j1,0,k))
+      invariant forall i1:Int, j1:Int :: i < i1 && i1 < n && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == 0
+    {
+      j := 0
+      while (j < n)
+        invariant MATRIX(c, write)
+        invariant MATRIX(a, wildcard)
+        invariant MATRIX(b, wildcard)
+        invariant j >= 0
+        invariant j <= n
+
+        invariant forall i1:Int, j1:Int :: 0 <= i1 && i1 < i && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == dotProduct(get_row(a,i1,0,n), get_col(b,j1,0,n))
+        invariant forall j1:Int :: 0 <= j1 && j1 < j ==> LOC(c,i,j1) == dotProduct(get_row(a,i,0,k+1), get_col(b,j1,0,k+1))
+        invariant forall j1:Int :: j <= j1 && j1 < n ==> LOC(c,i,j1) == dotProduct(get_row(a,i,0,k), get_col(b,j1,0,k))
+        invariant forall i1:Int, j1:Int :: i < i1 && i1 < n && 0 <= j1 && j1 < n ==> LOC(c,i1,j1) == 0
+      {
+        LOC(c, i, j) := LOC(c, i, j) + LOC(a, i, k) * LOC(b, k, j)
+
+        lemma(a,b,i,j,0,k)
+
+        j := j + 1
+      }
+
+      k := k + 1
+    }
+
+    i := i + 1
+  }
+}
+
+method non_commutativity_proof()
+{
+  var a: Matrix
+  var b: Matrix
+
+  // Create two zero matrices of dimension 2x2
+  a := createMatrix(2)
+  b := createMatrix(2)
+
+  // Set a to:
+  //   1 0
+  //   0 0
+  // and b to:
+  //   0 1
+  //   0 0
+  LOC(a,0,0) := 1
+  LOC(b,0,1) := 1
+
+  var ab : Matrix
+  ab := matrixMultiply(a,b,2)
+
+  var ba : Matrix
+  ba := matrixMultiply(b,a,2)
+
+  assert LOC(ab, 0, 1)
+    == dotProduct(get_row(a, 0, 0, 2), get_col(b, 1, 0, 2))
+  assert dotProduct(get_row(a,0,0,2), get_col(b,1,0,2))
+    == dotProduct(Seq(1) ++ get_row(a,0,1,2), Seq(1) ++ get_col(b,1,1,2))
+  assert dotProduct(Seq(1) ++ get_row(a,0,1,2), Seq(1) ++ get_col(b,1,1,2))
+    == 1*1 + dotProduct(Seq(0), Seq(0))
+
+  assert LOC(ba, 0, 0) == 0
+}

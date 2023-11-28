@@ -1,0 +1,44 @@
+field r: Ref
+field f: Int
+
+method foo()
+{
+    // let mut v = ?;
+    var v: Ref
+    inhale acc(v.f)
+    v.f := 10
+
+    // let x = &mut 10;
+    var x: Ref
+    inhale acc(x.r)
+    x.r := v
+    label l
+    package acc(old[l](x.r).f) --*
+            acc(v.f) //&& v.f == old[lhs](old[l](x.r).f)
+
+    // let y = &mut *x;
+    var y: Ref
+    inhale acc(y.r)
+    y.r := x.r
+    label l2
+
+    // (block x)
+    package acc(old[l2](y.r).f) --*
+            acc(old[l2](x.r).f)// && old[l2](x.r).f == old[lhs](old[l2](y.r).f)
+
+    // Can use "x.r" but can't use "x.r.f" here
+    // let mut v = ?;
+    var v2: Ref
+    inhale acc(v2.f)
+    x.r := v2;
+
+    // *y = 11;
+    y.r.f := 11
+
+    // (expire y)
+    // apply acc(old[l2](y.r).f) --*
+    //         acc(old[l2](x.r).f) //&& old[l2](x.r).f == old[lhs](old[l2](y.r).f)
+
+    // assert!(*x == 11);
+    assert v.f == 11
+}

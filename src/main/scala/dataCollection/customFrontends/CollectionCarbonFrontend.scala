@@ -15,6 +15,7 @@ class CollectionCarbonFrontend(timeOut: Int = 0)
     extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get)
     with CollectionSilFrontend
     with CarbFeatureGenerator {
+  override val syntaxProps: ProgramSyntaxProperties = ???
 
   /** Verifies the program. If [[timeOut]] seconds have passed, the verifier is stopped. This is done since neither Boogie
     * nor Z3 can be passed a timeout flag that reliably works.

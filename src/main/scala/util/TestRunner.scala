@@ -24,7 +24,7 @@ import scala.util.{Failure, Success}
 //number of methods, maybe store larger one
 
 object TestRunner extends App {
-  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/dataCollection/"
+  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/others/"
   private val fastParser = new FastParser()
   private val decoder    = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
@@ -42,8 +42,9 @@ object TestRunner extends App {
   //regexDBPerformance()
   //regexPerformance()
   //regexDBPerformance()
-  nodeTypeTest()
+  //nodeTypeTest()
   //showAST()
+  findTerm("wildcard")
 
   def nodeTypeTest() = {
     val file   = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
@@ -238,6 +239,16 @@ object TestRunner extends App {
       w.close()
     }
     println(s"Time: ${System.currentTimeMillis() - starttime}")
+  }
+
+  def findTerm(term: String): Unit = {
+    for (num <- Seq.range(0, 901)) {
+      val sourcefile: BufferedSource = fromFile(testFolder + s"prog${num}.vpr")(decoder)
+      val sourcestring: String =
+        try sourcefile.mkString
+        finally sourcefile.close()
+      if (sourcestring.contains(term)) println(num)
+    }
   }
 
   private def basicFingerprints(): Unit = {

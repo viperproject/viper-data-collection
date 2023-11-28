@@ -1,0 +1,14 @@
+import <decreases/int.vpr>
+import <decreases/bool.vpr>
+
+function fun1(y: Int, b: Bool): Int
+{
+    (b     ? fun1(y, false) : 1)
+  + (y > 0 ? fun2(y-1)      : 2)
+}
+
+function fun2(x: Int): Int
+{
+  x > 0 ? fun1(x-1, true) : 3
+}
+
