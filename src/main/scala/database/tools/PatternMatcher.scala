@@ -1,27 +1,28 @@
 package database.tools
 
 import database.DBExecContext._
-import database.{DBQueryInterface, ProgramEntry}
+import database.{ DBQueryInterface, ProgramEntry }
 import slick.basic.DatabasePublisher
 import util.Config._
 
-import java.util.regex.Pattern
-import scala.concurrent.{Await, ExecutionContext, Future}
+import java.util.regex.{ Matcher, Pattern }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 /** Contains methods to search the database for regex patterns */
 object PatternMatcher {
 
   /** Tries to match the given regex to all programs in the database
-   *
-   * @return list of [[PatternMatchResult]] containing the programEntryIds and line indices of matches */
-  def matchRegexAgainstDatabase(regexStr: String): Seq[PatternMatchResult] = {
-    val pattern: Pattern = Pattern.compile(regexStr)
+    *
+    * @return list of [[PatternMatchResult]] containing the programEntryIds and line indices of matches
+    */
+  def matchRegexAgainstDatabase(regexStr: String, flags: Int = 0): Seq[PatternMatchResult] = {
+    val pattern: Pattern                                       = Pattern.compile(regexStr, flags)
     val programEntryPublisher: DatabasePublisher[ProgramEntry] = DBQueryInterface.getAllProgramEntriesBatched()
-    val matchResultPublisher = programEntryPublisher mapResult {
-      pe => {
+    val matchResultPublisher = programEntryPublisher mapResult { pe =>
+      {
         val matchIndices = matchRegexOnProgram(pe.program, pattern)
         matchIndices map {
-          case Seq() => None
+          case Seq()         => None
           case res: Seq[Int] => Some(PatternMatchResult(pe.programEntryId, res))
         }
       }
@@ -33,24 +34,42 @@ object PatternMatcher {
   }
 
   /** Only for testing purposes */
-  def matchRegexOnPrograms(programs: Seq[String], regexStr: String): Seq[PatternMatchResult] = {
-    val pattern: Pattern = Pattern.compile(regexStr, Pattern.CASE_INSENSITIVE)
-    var futureResults = Seq[Future[PatternMatchResult]]()
+  def matchRegexOnPrograms(programs: Seq[String], regexStr: String, flags: Int = 0): Seq[PatternMatchResult] = {
+    val pattern: Pattern = Pattern.compile(regexStr, flags)
+    var futureResults    = Seq[Future[PatternMatchResult]]()
 
-    programs foreach {
-      program => futureResults = futureResults :+ (matchRegexOnProgram(program, pattern) map (r => PatternMatchResult(0, r)))
+    programs foreach { program =>
+      futureResults = futureResults :+ (matchRegexOnProgram(program, pattern) map (r => PatternMatchResult(0, r)))
     }
 
     val results = Await.result(Future.sequence(futureResults), LONG_TIMEOUT)
     results
   }
 
+  def doesMatch(program: String, regexStr: String, flags: Int = 0): Boolean = {
+    val matcher: Matcher = Pattern.compile(regexStr, flags).matcher(program)
+    matcher.find()
+  }
+
+  def matchesAtLeastOne(program: String, regexStrs: Seq[String], flags: Int = 0): Boolean = {
+    val matchers = regexStrs map (s => {
+      Pattern.compile(s, flags).matcher(program)
+    })
+    for (m <- matchers) {
+      if (m.find()) return true
+    }
+    false
+  }
+
   /** @param program program to search for the pattern
-   * @param pattern  precompiled regex pattern
-   * @return future list of lines where pattern was matched */
-  private def matchRegexOnProgram(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Seq[Int]] = {
+    * @param pattern  precompiled regex pattern
+    * @return future list of lines where pattern was matched
+    */
+  private def matchRegexOnProgram(program: String, pattern: Pattern)(implicit
+      ec: ExecutionContext
+  ): Future[Seq[Int]] = {
     Future {
-      val matcher = pattern.matcher(program)
+      val matcher      = pattern.matcher(program)
       var matchIndices = Seq[Int]()
       while (matcher.find()) {
         matchIndices = matchIndices :+ matcher.start()
@@ -62,10 +81,10 @@ object PatternMatcher {
 
   private def matchRegexByLine(program: String, pattern: Pattern)(implicit ec: ExecutionContext): Future[Seq[Int]] = {
     Future {
-      val matcher = pattern.matcher("")
+      val matcher      = pattern.matcher("")
       var matchIndices = Seq[Int]()
-      program.split("\n").zipWithIndex foreach {
-        case (line, ind) => if (matcher.reset(line).find()) matchIndices = matchIndices :+ ind
+      program.split("\n").zipWithIndex foreach { case (line, ind) =>
+        if (matcher.reset(line).find()) matchIndices = matchIndices :+ ind
       }
       matchIndices
     }
@@ -74,11 +93,12 @@ object PatternMatcher {
   private def charIndexToLine(str: String, index: Int) = {
     str.substring(0, index).count(_ == '\n') + 1
   }
+
 }
 
 /** Result of matching regex to a program
- *
- * @param programEntryId the program in which a match occurred
- * @param matchIndices   the line numbers indicating the start regions of the regex match */
+  *
+  * @param programEntryId the program in which a match occurred
+  * @param matchIndices   the line numbers indicating the start regions of the regex match
+  */
 case class PatternMatchResult(programEntryId: Long, matchIndices: Seq[Int])
-

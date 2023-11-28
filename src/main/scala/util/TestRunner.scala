@@ -2,24 +2,24 @@ package util
 
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.customFrontends.ProgramSyntaxProperties
-import dataCollection.{ ComparableProgramPrint, Fingerprinter, ProgramPrint }
+import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
-import database.{ DBQueryInterface, PGSlickTables, ProgramEntry }
-import upickle.default.{ read, write }
-import viper.silver.parser.{ FastParser, PBinExp, PCall }
+import database.{DBQueryInterface, PGSlickTables, ProgramEntry}
+import upickle.default.{read, write}
+import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode}
 import webAPI.JSONReadWriters._
 
-import java.io.{ BufferedWriter, File, FileWriter }
+import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.charset.CodingErrorAction
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{Files, Paths}
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
-import scala.io.{ BufferedSource, Codec, Source }
+import scala.io.{BufferedSource, Codec, Source}
 import scala.sys.process.Process
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 //number of methods, maybe store larger one
 
@@ -43,16 +43,31 @@ object TestRunner extends App {
   //regexPerformance()
   //regexDBPerformance()
   nodeTypeTest()
+  //showAST()
 
   def nodeTypeTest() = {
-    val file   = new File("src/test/resources/ProcessingTest/sample.vpr")
+    val file   = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
     val buffer = fromFile(file)
     val prog =
       try buffer.mkString
       finally buffer.close()
-    val pprog = fastParser.parse(prog, Paths.get("src/test/resources/ProcessingTest/sample.vpr"))
-    val psp   = new ProgramSyntaxProperties(pprog)
-    println(psp.nodeTypeExists(classOf[PBinExp], pprog.methods.head))
+    val pprog = fastParser.parse(prog, Paths.get("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr"))
+    val startTime = System.currentTimeMillis()
+    for (i <- 1 to 100) {
+      val psp   = new ProgramSyntaxProperties(prog, pprog)
+      psp.hasSet
+      psp.hasSeq
+      psp.hasMagicWand
+      psp.hasWildcardPerm
+      psp.hasPerm
+      psp.hasForPerm
+      psp.hasTermination
+      psp.hasRecursiveFunc
+      psp.hasRecursivePred
+      psp.hasMissingTrigger
+      psp.mightHaveQP
+    }
+    println("Took: " + (((System.currentTimeMillis() - startTime).toDouble / 100) + " ms per iter"))
   }
 
   def regexDBPerformance() = {
@@ -114,13 +129,18 @@ object TestRunner extends App {
   }
 
   def showAST(): Unit = {
-    val file   = new File("src/test/resources/SimilarityTest/Matching/Viper/AndPredicates/prog1.vpr")
+    val file   = new File("src/test/resources/ProcessingTest/sample4.vpr")
     val buffer = fromFile(file)
     val prog =
       try buffer.mkString
       finally buffer.close()
     val progAST = fastParser.parse(prog, file.toPath)
-    println(progAST)
+    printRec(progAST)
+  }
+
+  def printRec(pn: PNode): Unit = {
+    println(pn)
+    Nodes.subnodes(pn) foreach (printRec(_))
   }
 
   def naginiDups(): Unit = {
