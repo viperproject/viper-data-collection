@@ -9,8 +9,10 @@ import scala.concurrent.Await
 import scala.sys.process.Process
 
 /** Trait used to benchmark a specific version of a Viper verifier, runs benchmarks on all programs in the database and
- * adds the results to the specific VerifierResultTable */
+  * adds the results to the specific VerifierResultTable
+  */
 trait ViperVersionBenchmarker {
+
   /** The version of the verifier to benchmark */
   var versionHash: String
 
@@ -22,10 +24,11 @@ trait ViperVersionBenchmarker {
   }
 
   /** Tries to change the verifier version to the specific versionHash commit, then benchmarks all programs on that
-   * version, and finally restores the verifier to HEAD.
-   *
-   * Since this changes the local verifier version and runs benchmarks, a global lock is acquired to guarantee consistency.
-   * While this lock is held, [[dataCollection.ProcessingPipeline]] will not run. */
+    * version, and finally restores the verifier to HEAD.
+    *
+    * Since this changes the local verifier version and runs benchmarks, a global lock is acquired to guarantee consistency.
+    * While this lock is held, [[dataCollection.ProcessingPipeline]] will not run.
+    */
   def run(): Unit = {
     var globalLock: FileLock = null
     try {
@@ -52,7 +55,6 @@ trait ViperVersionBenchmarker {
 class SilVersionBenchmarker extends ViperVersionBenchmarker {
   override var versionHash: String = ""
 
-
   override def swapVerifierVersion(): Int = {
     Process(s"$SWITCH_SIL_VERSION_BASH_FILE $versionHash").!
   }
@@ -71,7 +73,6 @@ class SilVersionBenchmarker extends ViperVersionBenchmarker {
 
 class CarbVersionBenchmarker extends ViperVersionBenchmarker {
   override var versionHash: String = ""
-
 
   override def swapVerifierVersion(): Int = {
     Process(s"$SWITCH_CARB_VERSION_BASH_FILE $versionHash").!

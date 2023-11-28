@@ -1,12 +1,12 @@
 package database.tools
 
 import database.DBExecContext._
-import database.{ DBQueryInterface, ProgramEntry }
+import database.{DBQueryInterface, ProgramEntry}
 import slick.basic.DatabasePublisher
 import util.Config._
 
-import java.util.regex.{ Matcher, Pattern }
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import java.util.regex.{Matcher, Pattern}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** Contains methods to search the database for regex patterns */
 object PatternMatcher {
@@ -66,7 +66,7 @@ object PatternMatcher {
     * @return future list of lines where pattern was matched
     */
   private def matchRegexOnProgram(program: String, pattern: Pattern)(implicit
-      ec: ExecutionContext
+    ec: ExecutionContext
   ): Future[Seq[Int]] = {
     Future {
       val matcher      = pattern.matcher(program)

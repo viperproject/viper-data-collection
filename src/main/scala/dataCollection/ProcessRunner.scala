@@ -1,6 +1,6 @@
 package dataCollection
 
-import dataCollection.ProcessingHelper.{ generateCarbonResults, generateSiliconResults }
+import dataCollection.ProcessingHelper.{generateCarbonResults, generateSiliconResults}
 import dataCollection.ProcessingPipeline.verifierStage
 import database.tools.SilVersionBenchmarker
 import util.StageIncompleteException

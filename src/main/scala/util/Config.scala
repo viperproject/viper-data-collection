@@ -1,6 +1,6 @@
 package util
 
-import scala.concurrent.duration.{ Duration, SECONDS }
+import scala.concurrent.duration.{Duration, SECONDS}
 
 /** Contains constant parameters used in viper-data-collection */
 object Config {

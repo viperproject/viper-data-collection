@@ -52,10 +52,11 @@ object TestRunner extends App {
     val prog =
       try buffer.mkString
       finally buffer.close()
-    val pprog = fastParser.parse(prog, Paths.get("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr"))
+    val pprog =
+      fastParser.parse(prog, Paths.get("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr"))
     val startTime = System.currentTimeMillis()
     for (i <- 1 to 100) {
-      val psp   = new ProgramSyntaxProperties(prog, pprog)
+      val psp = new ProgramSyntaxProperties(prog, pprog)
       psp.hasSet
       psp.hasSeq
       psp.hasMagicWand

@@ -1,9 +1,9 @@
 package dataCollection.customFrontends
 
-import viper.silicon.{ BuildInfo, Silicon, SiliconFrontend }
+import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
-import viper.silver.reporter.{ BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter }
+import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
 import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
@@ -50,7 +50,8 @@ class CollectionSiliconFrontend
     extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
     with CollectionSilFrontend
     with SilFeatureGenerator {
-  override val syntaxProps: ProgramSyntaxProperties = ???
+  // TODO
+  override val syntaxProps: ProgramSyntaxProperties  = ???
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
 
   override def main(args: Array[String]): Unit = {

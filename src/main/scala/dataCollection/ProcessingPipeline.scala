@@ -1,12 +1,12 @@
 package dataCollection
 
 import dataCollection.customFrontends.VerifierFeature
-import database.{ DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult }
+import database.{DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult}
 import util._
 import util.Config._
 
 import java.nio.channels.FileLock
-import scala.concurrent.{ Await }
+import scala.concurrent.{Await}
 import scala.sys.process._
 
 /** Provides methods to process submissions, create ProgramEntries, benchmark them and insert the results into the database */
@@ -149,14 +149,14 @@ object ProcessingPipeline {
 }
 
 case class ProgramTuple(
-    programEntry: ProgramEntry,
-    programPrintEntry: ProgramPrintEntry,
-    siliconResult: VerResult,
-    carbonResult: VerResult
+  programEntry: ProgramEntry,
+  programPrintEntry: ProgramPrintEntry,
+  siliconResult: VerResult,
+  carbonResult: VerResult
 )
 
 case class ProcessingResultTuple(
-    programTuple: ProgramTuple,
-    silVerFeatures: Array[VerifierFeature],
-    carbVerFeatures: Array[VerifierFeature]
+  programTuple: ProgramTuple,
+  silVerFeatures: Array[VerifierFeature],
+  carbVerFeatures: Array[VerifierFeature]
 )

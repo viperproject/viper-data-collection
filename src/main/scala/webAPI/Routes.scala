@@ -13,7 +13,7 @@ import upickle.default._
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.Await
-import scala.concurrent.duration.{ Duration, SECONDS }
+import scala.concurrent.duration.{Duration, SECONDS}
 
 /** This object defines HTTP endpoints to retrieve information from the Database.
   *
@@ -42,13 +42,13 @@ object Routes extends cask.MainRoutes {
 
   @cask.postJson("/program-entry-by-meta-feature")
   def programEntryByMetaFeature(
-      earliestDate: Timestamp,
-      latestDate: Timestamp,
-      minLOC: Int,
-      maxLOC: Int,
-      frontend: Option[String],
-      verifier: Option[String],
-      parseSuccess: Option[Boolean]
+    earliestDate: Timestamp,
+    latestDate: Timestamp,
+    minLOC: Int,
+    maxLOC: Int,
+    frontend: Option[String],
+    verifier: Option[String],
+    parseSuccess: Option[Boolean]
   ): Response[String] = {
     try {
       val entries = Await.result(
@@ -132,13 +132,13 @@ object Routes extends cask.MainRoutes {
 
   @cask.postJson("/submit-program")
   def submitProgram(
-      originalName: String,
-      program: String,
-      frontend: String,
-      args: Array[String],
-      originalVerifier: String,
-      success: Boolean,
-      runtime: Long
+    originalName: String,
+    program: String,
+    frontend: String,
+    args: Array[String],
+    originalVerifier: String,
+    success: Boolean,
+    runtime: Long
   ): Response[String] = {
     try {
       val userSubmission = UserSubmission(

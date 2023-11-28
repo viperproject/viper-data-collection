@@ -1,9 +1,9 @@
-import database.BinarySerializer.{ deserialize, serialize }
+import database.BinarySerializer.{deserialize, serialize}
 
-import java.io.{ BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter }
-import java.nio.channels.{ FileChannel, FileLock }
+import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter}
+import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
-import scala.concurrent.duration.{ Duration, MILLISECONDS }
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.reflect.io.Directory
 
 /** Traits, classes and functions that don't necessitate their own file */

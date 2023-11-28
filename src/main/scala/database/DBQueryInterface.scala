@@ -1,13 +1,13 @@
 package database
 
-import dataCollection.{ ProcessingResultTuple, ProgramTuple }
+import dataCollection.{ProcessingResultTuple, ProgramTuple}
 import dataCollection.customFrontends.VerifierFeature
 import slick.basic.DatabasePublisher
 import util.Config._
 
 import java.sql.Timestamp
 import java.util.concurrent.Executors
-import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** ExecutionContext in which queries are run */
 object DBExecContext {
@@ -40,13 +40,13 @@ object DBQueryInterface {
   }
 
   def getEntriesByFeatures(
-      earliestDate: Timestamp,
-      latestDate: Timestamp,
-      minLOC: Int,
-      maxLOC: Int,
-      frontend: Option[String],
-      verifier: Option[String],
-      parseSuccess: Option[Boolean]
+    earliestDate: Timestamp,
+    latestDate: Timestamp,
+    minLOC: Int,
+    maxLOC: Int,
+    frontend: Option[String],
+    verifier: Option[String],
+    parseSuccess: Option[Boolean]
   ): Future[Seq[ProgramEntry]] = {
     val baseQuery = sTables.programEntryTable
     val rangeFilter = baseQuery
@@ -84,15 +84,15 @@ object DBQueryInterface {
 
   def getPEIdsWithFeatureValue(feature: String, value: String): Future[Seq[Long]] = {
     val query = for {
-      feat         <- sTables.featureTable if (feat.name === feature)
+      feat         <- sTables.featureTable if feat.name === feature
       silFeatEntry <- sTables.silFeatureEntryTable
-      if (silFeatEntry.featureName === feat.name && silFeatEntry.value === value)
-      silRes        <- sTables.siliconResultTable if (silRes.silResId === silFeatEntry.resultId)
+      if silFeatEntry.featureName === feat.name && silFeatEntry.value === value
+      silRes        <- sTables.siliconResultTable if silRes.silResId === silFeatEntry.resultId
       carbFeatEntry <- sTables.carbFeatureEntryTable
-      if (carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value)
-      carbRes <- sTables.carbonResultTable if (carbRes.carbResId === carbFeatEntry.resultId)
+      if carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value
+      carbRes <- sTables.carbonResultTable if carbRes.carbResId === carbFeatEntry.resultId
       pe      <- sTables.programEntryTable
-      if (pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId)
+      if pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId
     } yield (pe.programEntryId)
     db.run(query.result)
   }
@@ -203,16 +203,16 @@ object DBQueryInterface {
 
   def getProgramWithFeatureValueCount(feature: String, value: String): Future[Int] = {
     val query = for {
-      feat         <- sTables.featureTable if (feat.name === feature)
+      feat         <- sTables.featureTable if feat.name === feature
       silFeatEntry <- sTables.silFeatureEntryTable
-      if (silFeatEntry.featureName === feat.name && silFeatEntry.value === value)
-      silRes        <- sTables.siliconResultTable if (silRes.silResId === silFeatEntry.resultId)
+      if silFeatEntry.featureName === feat.name && silFeatEntry.value === value
+      silRes        <- sTables.siliconResultTable if silRes.silResId === silFeatEntry.resultId
       carbFeatEntry <- sTables.carbFeatureEntryTable
-      if (carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value)
-      carbRes <- sTables.carbonResultTable if (carbRes.carbResId === carbFeatEntry.resultId)
+      if carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value
+      carbRes <- sTables.carbonResultTable if carbRes.carbResId === carbFeatEntry.resultId
       pe      <- sTables.programEntryTable
-      if (pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId)
-    } yield (pe)
+      if pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId
+    } yield pe
     val count = query.groupBy(_.programEntryId).length
     db.run(count.result)
   }

@@ -1,9 +1,9 @@
 package webAPI
 
-import dataCollection.{ FPNode, Fingerprint, ProgramPrint }
+import dataCollection.{FPNode, Fingerprint, ProgramPrint}
 import database.tools.PatternMatchResult
-import database.{ ProgramEntry, VerResult }
-import upickle.default.{ macroRW, ReadWriter => RW }
+import database.{ProgramEntry, VerResult}
+import upickle.default.{macroRW, ReadWriter => RW}
 
 import java.sql.Timestamp
 

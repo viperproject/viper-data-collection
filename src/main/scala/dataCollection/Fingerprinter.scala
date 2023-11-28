@@ -54,14 +54,14 @@ object FPNodeOrdering extends Ordering[FPNode] {
   * This case class is used to serialize and store the Fingerprint information. For comparison purposes, [[ComparableProgramPrint]] is used.
   */
 case class ProgramPrint(
-    domainTree: FPNode,
-    fieldTree: FPNode,
-    functionTree: FPNode,
-    predicateTree: FPNode,
-    methodTree: FPNode,
-    extensionTree: FPNode,
-    numMethods: Int,
-    numFunctions: Int
+  domainTree: FPNode,
+  fieldTree: FPNode,
+  functionTree: FPNode,
+  predicateTree: FPNode,
+  methodTree: FPNode,
+  extensionTree: FPNode,
+  numMethods: Int,
+  numFunctions: Int
 ) extends ProgramFingerprint[FPNode]
     with Serializable
 
@@ -142,12 +142,12 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
 
 /** Represents results of the matching of two Programs, each tuple contains the amount of nodes that were matched and then the total amount of nodes of the first program */
 case class MatchResult(
-    dMatches: (Int, Int) = (1, 1),
-    fMatches: (Int, Int) = (1, 1),
-    funMatches: (Int, Int) = (1, 1),
-    pMatches: (Int, Int) = (1, 1),
-    mMatches: (Int, Int) = (1, 1),
-    extMatches: (Int, Int) = (1, 1)
+  dMatches: (Int, Int) = (1, 1),
+  fMatches: (Int, Int) = (1, 1),
+  funMatches: (Int, Int) = (1, 1),
+  pMatches: (Int, Int) = (1, 1),
+  mMatches: (Int, Int) = (1, 1),
+  extMatches: (Int, Int) = (1, 1)
 ) {
 
   def tuples: Seq[(Int, Int)] = Seq(dMatches, fMatches, funMatches, pMatches, mMatches, extMatches)

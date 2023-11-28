@@ -1,20 +1,8 @@
 package dataCollection.customFrontends
 
 import database.tools.PatternMatcher
-import viper.silver.parser.{
-  Nodes,
-  PAccPred,
-  PCall,
-  PCurPerm,
-  PEpsilon,
-  PFullPerm,
-  PNoPerm,
-  PNode,
-  PProgram,
-  PQuantifier,
-  PWildcard
-}
-import viper.silver.reporter.{ BenchmarkingPhase, Message, Reporter }
+import viper.silver.parser.{Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
+import viper.silver.reporter.{BenchmarkingPhase, Message, Reporter}
 
 import java.nio.file.Paths
 import java.util.regex.Pattern

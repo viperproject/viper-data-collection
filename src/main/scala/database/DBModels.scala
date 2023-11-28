@@ -4,12 +4,12 @@ import dataCollection.ProgramPrint
 import util._
 import org.apache.commons.io.output.ByteArrayOutputStream
 import slick.ast.BaseTypedType
-import slick.jdbc.{ JdbcType, PostgresProfile }
+import slick.jdbc.{JdbcType, PostgresProfile}
 import slick.lifted.ProvenShape
-import upickle.default.{ macroRW, ReadWriter => RW }
+import upickle.default.{macroRW, ReadWriter => RW}
 import viper.silver.verifier.AbstractError
 
-import java.io.{ ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream }
+import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
 import scala.reflect.ClassTag
 
@@ -30,17 +30,17 @@ import scala.reflect.ClassTag
 //TODO: typechecking flag
 //TODO: Common types to own project, querying
 case class ProgramEntry(
-    programEntryId: Long,
-    submissionDate: Timestamp,
-    originalName: String,
-    program: String,
-    loc: Int,
-    frontend: String,
-    originalVerifier: String,
-    args: Array[String],
-    originalRuntime: Long,
-    parseSuccess: Boolean,
-    hasPreamble: Boolean
+  programEntryId: Long,
+  submissionDate: Timestamp,
+  originalName: String,
+  program: String,
+  loc: Int,
+  frontend: String,
+  originalVerifier: String,
+  args: Array[String],
+  originalRuntime: Long,
+  parseSuccess: Boolean,
+  hasPreamble: Boolean
 ) extends Similarity[ProgramEntry]
     with Serializable {
 
@@ -77,16 +77,16 @@ object ProgramEntry {
   * @param runtime          how long it took the user's verifier to finish
   */
 case class UserSubmission(
-    submissionId: Long,
-    submissionDate: Timestamp,
-    originalName: String,
-    program: String,
-    loc: Int,
-    frontend: String,
-    args: Array[String],
-    originalVerifier: String,
-    success: Boolean,
-    runtime: Long
+  submissionId: Long,
+  submissionDate: Timestamp,
+  originalName: String,
+  program: String,
+  loc: Int,
+  frontend: String,
+  args: Array[String],
+  originalVerifier: String,
+  success: Boolean,
+  runtime: Long
 ) extends Serializable
 
 object UserSubmission {
@@ -107,14 +107,14 @@ object UserSubmission {
   * @param phaseRuntimes  runtimes of the phases of the verifier
   */
 case class VerResult(
-    resId: Long,
-    creationDate: Timestamp,
-    verifierHash: String,
-    programEntryId: Long,
-    success: Boolean,
-    runtime: Long,
-    errors: Array[VerError],
-    phaseRuntimes: Array[(String, Long)]
+  resId: Long,
+  creationDate: Timestamp,
+  verifierHash: String,
+  programEntryId: Long,
+  success: Boolean,
+  runtime: Long,
+  errors: Array[VerError],
+  phaseRuntimes: Array[(String, Long)]
 ) extends Similarity[VerResult]
     with Serializable {
 

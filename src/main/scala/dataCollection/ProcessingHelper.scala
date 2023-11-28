@@ -1,23 +1,18 @@
 package dataCollection
 
-import dataCollection.customFrontends.{
-  CollectionCarbonFrontend,
-  CollectionSilFrontend,
-  CollectionSiliconFrontend,
-  VerifierFeature
-}
-import database.{ DBQueryInterface, ProgramEntry, ProgramPrintEntry, UserSubmission, VerError, VerResult }
-import viper.silver.parser.{ FastParser, PProgram }
+import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
+import database.{DBQueryInterface, ProgramEntry, ProgramPrintEntry, UserSubmission, VerError, VerResult}
+import viper.silver.parser.{FastParser, PProgram}
 import database.DBExecContext._
 import util.Config._
 import util._
-import viper.silver.verifier.{ Failure, Success }
+import viper.silver.verifier.{Failure, Success}
 
 import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import scala.concurrent.duration.{ Duration, SECONDS }
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, Future}
 
 /** Provides functions to aid in the processing of submissions and generating database entries */
 object ProcessingHelper {
@@ -216,9 +211,9 @@ object ProcessingHelper {
   type verifierResultFunction = (ProgramEntry, Array[String], Int) => (VerResult, Seq[VerifierFeature])
 
   private def generateVerifierResults(
-      runner: CollectionSilFrontend,
-      pe: ProgramEntry,
-      args: Array[String]
+    runner: CollectionSilFrontend,
+    pe: ProgramEntry,
+    args: Array[String]
   ): (VerResult, Seq[VerifierFeature]) = {
     val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
     runner.main(Array(tmpFile) ++ args)
@@ -250,9 +245,9 @@ object ProcessingHelper {
     * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout
     */
   def generateSiliconResults(
-      pe: ProgramEntry,
-      extraArgs: Array[String] = Array(),
-      timeOutSeconds: Int = 0
+    pe: ProgramEntry,
+    extraArgs: Array[String] = Array(),
+    timeOutSeconds: Int = 0
   ): (VerResult, Seq[VerifierFeature]) = {
     val runner = new CollectionSiliconFrontend
 
@@ -271,9 +266,9 @@ object ProcessingHelper {
     * @param timeOutSeconds how many seconds until Silicon should terminate, 0 => no timeout
     */
   def generateCarbonResults(
-      pe: ProgramEntry,
-      extraArgs: Array[String] = Array(),
-      timeOutSeconds: Int = 0
+    pe: ProgramEntry,
+    extraArgs: Array[String] = Array(),
+    timeOutSeconds: Int = 0
   ): (VerResult, Seq[VerifierFeature]) = {
     val runner = new CollectionCarbonFrontend(timeOutSeconds)
 
