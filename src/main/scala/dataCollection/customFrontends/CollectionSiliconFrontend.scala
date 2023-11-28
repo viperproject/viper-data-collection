@@ -1,9 +1,9 @@
 package dataCollection.customFrontends
 
-import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
+import viper.silicon.{ BuildInfo, Silicon, SiliconFrontend }
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
-import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
+import viper.silver.reporter.{ BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter }
 import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
@@ -27,10 +27,11 @@ trait CollectionSilFrontend extends SilFrontend with FeatureGenerator {
   }
 
   def hasSucceeded: Boolean = getVerificationResult match {
-    case Some(res) => res match {
-      case Success => true
-      case _ => false
-    }
+    case Some(res) =>
+      res match {
+        case Success => true
+        case _       => false
+      }
     case _ => false
   }
 
@@ -43,9 +44,12 @@ trait CollectionSilFrontend extends SilFrontend with FeatureGenerator {
 }
 
 /** SiliconFrontend Implementation that measures runtimes in the different stages of the Verifier,
- * results can be called using [[getRuntimes]], only valid after running [[main]] */
-class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
-  with CollectionSilFrontend with SilFeatureGenerator {
+  * results can be called using [[getRuntimes]], only valid after running [[main]]
+  */
+class CollectionSiliconFrontend
+    extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
+    with CollectionSilFrontend
+    with SilFeatureGenerator {
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
 
   override def main(args: Array[String]): Unit = {
@@ -53,11 +57,10 @@ class CollectionSiliconFrontend extends SiliconFrontend(reporter = NoopReporter,
       execute(ArraySeq.unsafeWrapArray(args))
     } catch {
       case e: Exception => println(s"encountered: ${e}")
-    }
-    finally {
+    } finally {
       siliconInstance.reporter match {
         case bmrReporter: BenchmarkingResultReporter => benchmarkRuntimes = bmrReporter.getBenchmarkResults
-        case _ => benchmarkRuntimes = Seq()
+        case _                                       => benchmarkRuntimes = Seq()
       }
       siliconInstance.stop()
     }
