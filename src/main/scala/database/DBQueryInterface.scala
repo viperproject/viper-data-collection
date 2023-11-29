@@ -308,10 +308,10 @@ object DBQueryInterface {
 
   /*------ Feature Queries ------*/
 
-  def insertIfNotExistsFeature(name: String, useForFiltering: Boolean): Future[Any] = {
+  def insertIfNotExistsFeature(name: String): Future[Any] = {
     val query = (for (f <- sTables.featureTable if f.name === name) yield f).exists.result.flatMap { exists =>
       {
-        if (!exists) sTables.featureTable += Feature(name, useForFiltering)
+        if (!exists) sTables.featureTable += Feature(name)
         else DBIO.successful(None)
       }
     }
@@ -320,7 +320,7 @@ object DBQueryInterface {
 
   def insertVerifierFeatures(verifier: String, resultId: Long, vfs: Seq[VerifierFeature]): Future[Any] = {
     Await.ready(
-      Future.sequence(vfs map (vf => insertIfNotExistsFeature(vf.name, vf.useForFiltering))),
+      Future.sequence(vfs map (vf => insertIfNotExistsFeature(vf.name))),
       DEFAULT_DB_TIMEOUT
     )
     val insertQuery = if (verifier == "Silicon") {

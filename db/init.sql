@@ -4,7 +4,7 @@ create table if not exists "programs"."ProgramEntries" ("programEntryId" BIGSERI
 create table if not exists "programs"."SiliconResults" ("silResId" BIGSERIAL NOT NULL PRIMARY KEY,"creationDate" TIMESTAMP NOT NULL,"verifierHash" VARCHAR NOT NULL,"programEntryId" BIGINT NOT NULL,"success" BOOLEAN NOT NULL,"runtime" BIGINT NOT NULL,"errors" BYTEA NOT NULL,"phaseRuntimes" BYTEA NOT NULL);
 create table if not exists "programs"."CarbonResults" ("carbResId" BIGSERIAL NOT NULL PRIMARY KEY,"creationDate" TIMESTAMP NOT NULL,"verifierHash" VARCHAR NOT NULL,"programEntryId" BIGINT NOT NULL,"success" BOOLEAN NOT NULL,"runtime" BIGINT NOT NULL,"errors" BYTEA NOT NULL,"phaseRuntimes" BYTEA NOT NULL);
 create table if not exists "programs"."ProgramPrintEntry" ("pprintID" BIGSERIAL NOT NULL PRIMARY KEY,"programEntryId" BIGINT NOT NULL,"programPrint" BYTEA NOT NULL);
-create table if not exists "programs"."Features" ("name" VARCHAR NOT NULL PRIMARY KEY,"useForFiltering" BOOLEAN NOT NULL);
+create table if not exists "programs"."Features" ("name" VARCHAR NOT NULL PRIMARY KEY);
 create table if not exists "programs"."SiliconFeatureEntries" ("silFeatureEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"featureName" VARCHAR NOT NULL,"resultId" BIGINT NOT NULL,"value" VARCHAR NOT NULL);
 create table if not exists "programs"."CarbonFeatureEntries" ("carbFeatureEntryId" BIGSERIAL NOT NULL PRIMARY KEY,"featureName" VARCHAR NOT NULL,"resultId" BIGINT NOT NULL,"value" VARCHAR NOT NULL);
 

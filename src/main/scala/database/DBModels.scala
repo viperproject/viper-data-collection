@@ -220,9 +220,7 @@ class SlickTables(val profile: PostgresProfile) {
   class FeatureTable(tag: Tag) extends Table[Feature](tag, Some("programs"), "Features") {
     def name = column[String]("name", O.PrimaryKey)
 
-    def useForFiltering = column[Boolean]("useForFiltering")
-
-    override def * : ProvenShape[Feature] = (name, useForFiltering) <> (Feature.tupled, Feature.unapply)
+    override def * : ProvenShape[Feature] = name <> (Feature, Feature.unapply)
 
   }
 
