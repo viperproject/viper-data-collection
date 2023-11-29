@@ -16,8 +16,8 @@ trait FeatureGenerator {
 
   def instantiateSyntaxProps(programPath: String): Unit = {
     val fastParser = new FastParser
-    val file = new File(programPath)
-    val buffer = fromFile(file)
+    val file       = new File(programPath)
+    val buffer     = fromFile(file)
     val program =
       try buffer.mkString
       finally buffer.close()

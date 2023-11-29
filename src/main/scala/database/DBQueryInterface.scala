@@ -4,6 +4,7 @@ import dataCollection.{ProcessingResultTuple, ProgramTuple}
 import dataCollection.customFrontends.VerifierFeature
 import slick.basic.DatabasePublisher
 import util.Config._
+import queryFrontend._
 
 import java.sql.Timestamp
 import java.util.concurrent.Executors

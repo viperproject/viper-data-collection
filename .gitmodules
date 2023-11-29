@@ -4,3 +4,6 @@
 [submodule "carbon"]
 	path = carbon
 	url = https://github.com/viperproject/carbon
+[submodule "vdc-query-frontend"]
+	path = vdc-query-frontend
+	url = git@github.com:Simon-Hostettler/vdc-query-frontend.git

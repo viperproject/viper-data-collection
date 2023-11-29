@@ -50,7 +50,7 @@ class CollectionSiliconFrontend
     extends SiliconFrontend(reporter = NoopReporter, ViperStdOutLogger("Silicon", "OFF").get)
     with CollectionSilFrontend
     with SilFeatureGenerator {
-  override var hasRun: Boolean = false
+  override var hasRun: Boolean                       = false
   override var syntaxProps: ProgramSyntaxProperties  = null
   private var benchmarkRuntimes: Seq[(String, Long)] = Seq()
 
@@ -80,8 +80,6 @@ class CollectionSiliconFrontend
 
     siliconInstance
   }
-
-
 
   override def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
 

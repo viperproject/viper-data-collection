@@ -4,7 +4,8 @@ import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.customFrontends.ProgramSyntaxProperties
 import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
-import database.{DBQueryInterface, PGSlickTables, ProgramEntry}
+import database.{DBQueryInterface, PGSlickTables}
+import queryFrontend._
 import upickle.default.{read, write}
 import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode}
 import webAPI.JSONReadWriters._
@@ -91,7 +92,6 @@ object TestRunner extends App {
       "Silicon",
       Array(),
       3000,
-      true,
       true
     )
     val progs   = (for (i <- 1 to 5000) yield programEntry).toList

@@ -1,12 +1,13 @@
 package dataCollection
 
 import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
-import database.{DBQueryInterface, ProgramEntry, ProgramPrintEntry, UserSubmission, VerError, VerResult}
-import viper.silver.parser.{FastParser, PProgram}
+import database.{DBQueryInterface, ProgramPrintEntry}
+import queryFrontend._
+import viper.silver.parser.{FastParser}
 import database.DBExecContext._
 import util.Config._
 import util._
-import viper.silver.verifier.{Failure, Success}
+import viper.silver.verifier.{AbstractError, Failure, Success}
 
 import java.nio.file.Paths
 import java.sql.Timestamp
@@ -213,7 +214,7 @@ object ProcessingHelper {
         case Some(value) =>
           value match {
             case Success         => Array[VerError]()
-            case Failure(errors) => errors.toArray map VerError.toError
+            case Failure(errors) => errors.toArray map abstractToVerError
           }
         case None => Array[VerError]()
       },
@@ -272,6 +273,10 @@ object ProcessingHelper {
     } else {
       args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
     }
+  }
+
+  def abstractToVerError(ae: AbstractError): VerError = {
+    VerError(ae.fullId, ae.readableMessage)
   }
 
 }

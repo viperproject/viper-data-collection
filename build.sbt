@@ -3,10 +3,12 @@ import Dependencies._
 
 lazy val carbon = project in file("carbon")
 lazy val silicon = (project in file("silicon"))
+lazy val vdc_query_frontend = project in file("vdc-query-frontend")
 
 lazy val root = (project in file("."))
   .dependsOn(carbon)
   .dependsOn(silicon)
+  .dependsOn(vdc_query_frontend)
   .settings(
     name := "viper-data-collection",
     organization := "viper",

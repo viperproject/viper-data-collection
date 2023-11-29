@@ -15,7 +15,7 @@ class CollectionCarbonFrontend(timeOut: Int = 0)
     extends CarbonFrontend(NoopReporter, ViperStdOutLogger("Carbon", "OFF").get)
     with CollectionSilFrontend
     with CarbFeatureGenerator {
-  override var hasRun: Boolean = false
+  override var hasRun: Boolean                      = false
   override var syntaxProps: ProgramSyntaxProperties = null
 
   /** Verifies the program. If [[timeOut]] seconds have passed, the verifier is stopped. This is done since neither Boogie

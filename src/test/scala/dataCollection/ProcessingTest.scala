@@ -1,8 +1,7 @@
 package dataCollection
 
 import database.tools.PatternMatcher
-import database.{Feature, UserSubmission}
-import webAPI.JSONReadWriters._
+import queryFrontend._
 import org.scalatest.funsuite.AnyFunSuite
 import ujson.{Arr, Obj}
 import util._
@@ -12,16 +11,12 @@ import java.io.File
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.sys.process.Process
-import upickle.default.write
-
 
 class ProcessingTest extends AnyFunSuite {
 
   val host = "http://localhost:8080"
-
 
   import database.DBQueryInterface._
 
@@ -41,7 +36,7 @@ class ProcessingTest extends AnyFunSuite {
 
   }*/
 
-  /**IMPORTANT: This test will clear the database, do not run once actually in use*/
+  /** IMPORTANT: This test will clear the database, do not run once actually in use */
   /*test("Global lock test") {
     val dbProcess = Process("./run.sh").run
     Thread.sleep(1000)
@@ -70,7 +65,7 @@ class ProcessingTest extends AnyFunSuite {
     }
   }*/
 
-  /**IMPORTANT: This test will clear the database, do not run once actually in use*/
+  /** IMPORTANT: This test will clear the database, do not run once actually in use */
   test("Pipeline integration test") {
     val dbProcess = Process("./run.sh").run
     Thread.sleep(1000) // let processes startup
@@ -80,11 +75,12 @@ class ProcessingTest extends AnyFunSuite {
       Await.ready(clearDB(), DEFAULT_DB_TIMEOUT)
 
       //two almost identical programs
-      val sampleProg = readProgram(new File("src/test/resources/ProcessingTest/sample.vpr"))
+      val sampleProg  = readProgram(new File("src/test/resources/ProcessingTest/sample.vpr"))
       val sampleProg2 = readProgram(new File("src/test/resources/ProcessingTest/sample2.vpr"))
       //very different program
       val sampleProg3 = readProgram(new File("src/test/resources/ProcessingTest/sample3.vpr"))
-      val sampleUS = UserSubmission(0,
+      val sampleUS = UserSubmission(
+        0,
         Timestamp.valueOf(LocalDateTime.now()),
         "sample.vpr",
         sampleProg,
@@ -95,7 +91,8 @@ class ProcessingTest extends AnyFunSuite {
         true,
         1500
       )
-      val sampleUS2 = UserSubmission(0,
+      val sampleUS2 = UserSubmission(
+        0,
         Timestamp.valueOf(LocalDateTime.now()),
         "sample2.vpr",
         sampleProg2,
@@ -106,7 +103,8 @@ class ProcessingTest extends AnyFunSuite {
         true,
         1500
       )
-      val sampleUS3 = UserSubmission(0,
+      val sampleUS3 = UserSubmission(
+        0,
         Timestamp.valueOf(LocalDateTime.now()),
         "sample3.vpr",
         sampleProg3,
@@ -179,19 +177,21 @@ class ProcessingTest extends AnyFunSuite {
 
   def readProgram(file: File): String = {
     val fBuffer = fromFile(file)
-    val prog = try fBuffer.mkString finally fBuffer.close()
+    val prog =
+      try fBuffer.mkString
+      finally fBuffer.close()
     prog
   }
 
   def jsonifySubmission(us: UserSubmission): Obj = {
     Obj(
-      "originalName" -> us.originalName,
-      "program" -> us.program,
-      "frontend" -> us.frontend,
-      "args" -> Arr.from[String](us.args),
+      "originalName"     -> us.originalName,
+      "program"          -> us.program,
+      "frontend"         -> us.frontend,
+      "args"             -> Arr.from[String](us.args),
       "originalVerifier" -> us.originalVerifier,
-      "success" -> us.success,
-      "runtime" -> us.runtime
+      "success"          -> us.success,
+      "runtime"          -> us.runtime
     )
   }
 }

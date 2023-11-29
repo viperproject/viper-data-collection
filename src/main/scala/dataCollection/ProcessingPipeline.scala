@@ -1,7 +1,8 @@
 package dataCollection
 
 import dataCollection.customFrontends.VerifierFeature
-import database.{DBQueryInterface, ProgramEntry, ProgramPrintEntry, VerResult}
+import database.{DBQueryInterface, ProgramPrintEntry}
+import queryFrontend._
 import util._
 import util.Config._
 

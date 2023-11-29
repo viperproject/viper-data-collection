@@ -9,12 +9,6 @@ import scala.reflect.io.Directory
 /** Traits, classes and functions that don't necessitate their own file */
 package object util {
 
-  trait Similarity[T] {
-
-    def isSimilarTo(other: T): Boolean
-
-  }
-
   /** Tries to lock the global.lock file and keeps spinning until it gets the lock. To be used when program should eventually be executed
     *
     * @throws GlobalLockException if any exception occured

@@ -2,7 +2,7 @@ package webAPI
 
 import dataCollection.{FPNode, Fingerprint, ProgramPrint}
 import database.tools.PatternMatchResult
-import database.{ProgramEntry, VerResult}
+import queryFrontend._
 import upickle.default.{macroRW, ReadWriter => RW}
 
 import java.sql.Timestamp
@@ -20,5 +20,6 @@ object JSONReadWriters {
   implicit val fpnRW: RW[FPNode]             = macroRW
   implicit val fpRW: RW[Fingerprint]         = macroRW
   implicit val pmrRW: RW[PatternMatchResult] = macroRW
+  implicit val veRW: RW[VerError]            = macroRW
   implicit val vrRW: RW[VerResult]           = macroRW
 }

@@ -1,11 +1,10 @@
 package webAPI
 
-import database.UserSubmission
+import queryFrontend._
 import database.DBQueryInterface
 import JSONReadWriters._
 import cask.Response
 import database.tools.PatternMatcher
-import ujson.Obj
 import util._
 import util.Config._
 import upickle.default._
@@ -13,7 +12,6 @@ import upickle.default._
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.Await
-import scala.concurrent.duration.{Duration, SECONDS}
 
 /** This object defines HTTP endpoints to retrieve information from the Database.
   *

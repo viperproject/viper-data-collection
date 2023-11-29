@@ -1,7 +1,8 @@
 package database.tools
 
 import database.DBExecContext._
-import database.{DBQueryInterface, ProgramEntry}
+import database.{DBQueryInterface}
+import queryFrontend._
 import slick.basic.DatabasePublisher
 import util.Config._
 
