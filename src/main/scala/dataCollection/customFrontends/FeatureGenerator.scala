@@ -1,23 +1,38 @@
 package dataCollection.customFrontends
 
 import database.tools.PatternMatcher
-import viper.silver.parser.{Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
+import viper.silver.parser.{FastParser, Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
 import viper.silver.reporter.{BenchmarkingPhase, Message, Reporter}
 import viper.silver.verifier.{AbstractError, TypecheckerError}
 
+import java.io.File
 import java.nio.file.Paths
 import java.util.regex.Pattern
+import scala.io.Source.fromFile
 
 trait FeatureGenerator {
-  val syntaxProps: ProgramSyntaxProperties
+  var syntaxProps: ProgramSyntaxProperties
+  var hasRun: Boolean
+
+  def instantiateSyntaxProps(programPath: String): Unit = {
+    val fastParser = new FastParser
+    val file = new File(programPath)
+    val buffer = fromFile(file)
+    val program =
+      try buffer.mkString
+      finally buffer.close()
+    val pProgram = fastParser.parse(program, Paths.get(programPath))
+    syntaxProps = new ProgramSyntaxProperties(program, pProgram)
+  }
 
   def errors: Seq[AbstractError]
 
   def doesTypeCheck: Boolean = errors.exists(e => e.isInstanceOf[TypecheckerError])
 
   /** Any VerifierFeatures returned by this function will be inserted into the database */
-  def getFeatures: Seq[VerifierFeature] =
+  def getFeatures: Seq[VerifierFeature] = if (hasRun)
     syntaxProps.getFeatures :+ VerifierFeature("typeCheckSuccess", doesTypeCheck.toString, false)
+  else Seq()
 }
 
 /** Trait to extend CollectionSiliconFrontend with to generate features while verifying */
@@ -30,7 +45,8 @@ trait SilFeatureGenerator extends FeatureGenerator {
       VerifierFeature(s"BenchmarkingPhase $phase", time.toString, false)
     }
   override def getFeatures: Seq[VerifierFeature] = {
-    super.getFeatures ++ benchmarkResToVF(getBenchmarkResults)
+    if (hasRun) super.getFeatures ++ benchmarkResToVF(getBenchmarkResults)
+    else Seq()
   }
 }
 
