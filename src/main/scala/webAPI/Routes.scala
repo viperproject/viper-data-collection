@@ -1,8 +1,9 @@
 package webAPI
 
-import queryFrontend._
 import database.DBQueryInterface
 import JSONReadWriters._
+import queryFrontend.UserSubmission
+import queryFrontend.JSONReadWriters._
 import cask.Response
 import database.tools.PatternMatcher
 import util._
@@ -38,8 +39,8 @@ object Routes extends cask.MainRoutes {
     "This is an API for the viper-data-collection database"
   }
 
-  @cask.postJson("/program-entry-by-meta-feature")
-  def programEntryByMetaFeature(
+  @cask.postJson("/program-entries-by-meta-data")
+  def programEntriesByMetadata(
     earliestDate: Timestamp,
     latestDate: Timestamp,
     minLOC: Int,
@@ -95,9 +96,9 @@ object Routes extends cask.MainRoutes {
   }
 
   @cask.postJson("/frontend-count-by-ids")
-  def frontendCountByIds(ids: Seq[Long]): Response[String] = {
+  def frontendCountByIds(entryIds: Seq[Long]): Response[String] = {
     try {
-      val frontendCounts = Await.result(DBQueryInterface.getFrontendCountByIds(ids), DEFAULT_DB_TIMEOUT)
+      val frontendCounts = Await.result(DBQueryInterface.getFrontendCountByIds(entryIds), DEFAULT_DB_TIMEOUT)
       val fcJSON         = write(frontendCounts)
       cask.Response(data = fcJSON, statusCode = 200)
     } catch {

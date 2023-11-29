@@ -97,9 +97,3 @@ object PatternMatcher {
 
 }
 
-/** Result of matching regex to a program
-  *
-  * @param programEntryId the program in which a match occurred
-  * @param matchIndices   the line numbers indicating the start regions of the regex match
-  */
-case class PatternMatchResult(programEntryId: Long, matchIndices: Seq[Int])

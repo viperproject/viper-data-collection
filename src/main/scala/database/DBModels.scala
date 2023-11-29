@@ -1,33 +1,15 @@
 package database
 
 import dataCollection.ProgramPrint
-import util._
 import org.apache.commons.io.output.ByteArrayOutputStream
 import slick.ast.BaseTypedType
 import slick.jdbc.{JdbcType, PostgresProfile}
 import slick.lifted.ProvenShape
-import upickle.default.{macroRW, ReadWriter => RW}
-import viper.silver.verifier.AbstractError
 import queryFrontend._
 
-import java.io.{ByteArrayInputStream, IOException, ObjectInputStream, ObjectOutputStream}
+import java.io.{ByteArrayInputStream, ObjectInputStream, ObjectOutputStream}
 import java.sql.Timestamp
 import scala.reflect.ClassTag
-
-/** Case class to represent a row in the programs.ProgramEntries table of the database
-  *
-  * @param programEntryId   unique identifier for the entry
-  * @param submissionDate   time when this entry was created
-  * @param originalName     the file name of the original viper program
-  * @param program          the viper program in plaintext
-  * @param loc              number of lines of code
-  * @param frontend         Viper frontend that produced this program
-  * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
-  * @param args             the arguments originally passed to the verifier
-  * @param parseSuccess     whether program was able to be parsed
-  */
-
-//TODO: Common types to own project, querying
 
 case class ProgramPrintEntry(pprintId: Long, programEntryId: Long, programPrint: ProgramPrint) extends Serializable
 

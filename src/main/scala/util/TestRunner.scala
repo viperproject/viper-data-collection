@@ -31,7 +31,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  //println(PGSlickTables.getDDL)
+  println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -45,7 +45,7 @@ object TestRunner extends App {
   //regexDBPerformance()
   //nodeTypeTest()
   //showAST()
-  findTerm("wildcard")
+  //findTerm("wildcard")
 
   def nodeTypeTest() = {
     val file   = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
