@@ -95,11 +95,11 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   def hasTermination: Boolean = PatternMatcher.doesMatch(program, "^.*decreases.*$", Pattern.MULTILINE)
 
   def mightHaveQP: Boolean = {
-    val res = ((pp.domains flatMap (d => d.axioms)) ++
-      (pp.functions flatMap (f => f.pres ++ f.posts)) ++
-      (pp.methods flatMap (m => m.pres ++ m.posts))) map { f =>
-      {
-        findNode(n => n.isInstanceOf[PQuantifier] && findNode(sn => mightBePerm(sn), n), f)
+    val res = programTrees flatMap { pSeq =>
+      pSeq map { f =>
+        {
+          findNode(n => n.isInstanceOf[PQuantifier] && findNode(sn => mightBePerm(sn), n), f)
+        }
       }
     }
     res.exists(identity)

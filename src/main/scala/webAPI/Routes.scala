@@ -107,9 +107,9 @@ object Routes extends cask.MainRoutes {
   }
 
   @cask.get("/match-regex-detailed")
-  def matchRegexDetailed(regex: String): Response[String] = {
+  def matchRegexDetailed(regex: String, flags: Int): Response[String] = {
     try {
-      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)
+      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex, flags)
       val mrJSON       = write(matchResults)
       cask.Response(data = mrJSON, statusCode = 200)
     } catch {
@@ -118,9 +118,9 @@ object Routes extends cask.MainRoutes {
   }
 
   @cask.postJson("/match-regex")
-  def matchRegex(regex: String): Response[String] = {
+  def matchRegex(regex: String, flags: Int): Response[String] = {
     try {
-      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex)
+      val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex, flags)
       val matchIds     = matchResults.map(_.programEntryId)
       val miJSON       = write(matchIds)
       cask.Response(data = miJSON, statusCode = 200)

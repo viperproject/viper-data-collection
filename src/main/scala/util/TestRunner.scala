@@ -43,8 +43,8 @@ object TestRunner extends App {
   //regexDBPerformance()
   //regexPerformance()
   //regexDBPerformance()
-  //nodeTypeTest()
-  showAST()
+  nodeTypeTest()
+  //showAST()
   //findTerm("wildcard")
 
   def nodeTypeTest() = {
