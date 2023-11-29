@@ -31,7 +31,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  println(PGSlickTables.getDDL)
+  //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -44,7 +44,7 @@ object TestRunner extends App {
   //regexPerformance()
   //regexDBPerformance()
   //nodeTypeTest()
-  //showAST()
+  showAST()
   //findTerm("wildcard")
 
   def nodeTypeTest() = {
@@ -131,7 +131,7 @@ object TestRunner extends App {
   }
 
   def showAST(): Unit = {
-    val file   = new File("src/test/resources/ProcessingTest/sample4.vpr")
+    val file   = new File("src/test/resources/FeatureTest/qp.vpr")
     val buffer = fromFile(file)
     val prog =
       try buffer.mkString
