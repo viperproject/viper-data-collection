@@ -24,10 +24,8 @@ import scala.reflect.ClassTag
   * @param originalVerifier Verifier through which program was originally verified - Silicon or Carbon
   * @param args             the arguments originally passed to the verifier
   * @param parseSuccess     whether program was able to be parsed
-  * @param hasPreamble      whether programs contains global predicates, domains, fields or extensions
   */
 
-//TODO: typechecking flag
 //TODO: Common types to own project, querying
 case class ProgramEntry(
   programEntryId: Long,
@@ -40,7 +38,6 @@ case class ProgramEntry(
   args: Array[String],
   originalRuntime: Long,
   parseSuccess: Boolean,
-  hasPreamble: Boolean
 ) extends Similarity[ProgramEntry]
     with Serializable {
 
@@ -264,7 +261,6 @@ class SlickTables(val profile: PostgresProfile) {
 
     def parseSuccess = column[Boolean]("parseSuccess")
 
-    def hasPreamble = column[Boolean]("hasPreamble")
 
     override def * : ProvenShape[ProgramEntry] = (
       programEntryId,
@@ -276,8 +272,7 @@ class SlickTables(val profile: PostgresProfile) {
       originalVerifier,
       args,
       originalRuntime,
-      parseSuccess,
-      hasPreamble
+      parseSuccess
     ) <> (ProgramEntry.tupled, ProgramEntry.unapply)
 
   }

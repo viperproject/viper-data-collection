@@ -3,6 +3,7 @@ package dataCollection.customFrontends
 import database.tools.PatternMatcher
 import viper.silver.parser.{Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
 import viper.silver.reporter.{BenchmarkingPhase, Message, Reporter}
+import viper.silver.verifier.{AbstractError, TypecheckerError}
 
 import java.nio.file.Paths
 import java.util.regex.Pattern
@@ -10,8 +11,13 @@ import java.util.regex.Pattern
 trait FeatureGenerator {
   val syntaxProps: ProgramSyntaxProperties
 
+  def errors: Seq[AbstractError]
+
+  def doesTypeCheck: Boolean = errors.exists(e => e.isInstanceOf[TypecheckerError])
+
   /** Any VerifierFeatures returned by this function will be inserted into the database */
-  def getFeatures: Seq[VerifierFeature] = syntaxProps.getFeatures
+  def getFeatures: Seq[VerifierFeature] =
+    syntaxProps.getFeatures :+ VerifierFeature("typeCheckSuccess", doesTypeCheck.toString, false)
 }
 
 /** Trait to extend CollectionSiliconFrontend with to generate features while verifying */

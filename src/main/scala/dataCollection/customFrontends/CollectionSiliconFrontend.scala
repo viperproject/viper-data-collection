@@ -4,7 +4,7 @@ import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
 import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
-import viper.silver.verifier.Success
+import viper.silver.verifier.{Success, TypecheckerError}
 
 import scala.collection.immutable.ArraySeq
 
@@ -78,6 +78,8 @@ class CollectionSiliconFrontend
 
     siliconInstance
   }
+
+
 
   override def getBenchmarkResults: Seq[(String, Long)] = benchmarkRuntimes
 

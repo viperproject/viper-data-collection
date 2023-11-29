@@ -47,7 +47,6 @@ object ProcessingHelper {
 
     val parsedProgram = fastParser.parse(us.program, Paths.get(tmpFile))
     val parseSuccess  = parsedProgram.errors.isEmpty
-    val hasPre        = hasPreamble(parsedProgram)
 
     removeTempProgramFile(tmpFile)
 
@@ -61,8 +60,7 @@ object ProcessingHelper {
       us.originalVerifier,
       us.args,
       us.runtime,
-      parseSuccess,
-      hasPre
+      parseSuccess
     )
   }
 
@@ -288,10 +286,6 @@ object ProcessingHelper {
     } else {
       args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
     }
-  }
-
-  def hasPreamble(pp: PProgram): Boolean = {
-    pp.predicates.nonEmpty || pp.domains.nonEmpty || pp.fields.nonEmpty || pp.extensions.nonEmpty
   }
 
 }
