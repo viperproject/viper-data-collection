@@ -2,10 +2,11 @@ package webAPI
 
 import database.DBQueryInterface
 import JSONReadWriters._
-import queryFrontend.UserSubmission
+import queryFrontend.{PatternMatchResult, ProgramEntry, UserSubmission, VerResult}
 import queryFrontend.JSONReadWriters._
 import cask.Response
 import database.tools.PatternMatcher
+import ujson.{Arr, Obj}
 import util._
 import util.Config._
 import upickle.default._
@@ -41,91 +42,107 @@ object Routes extends cask.MainRoutes {
 
   @cask.postJson("/program-entries-by-meta-data")
   def programEntriesByMetadata(
-    earliestDate: Timestamp,
-    latestDate: Timestamp,
+    earliestDate: Long,
+    latestDate: Long,
     minLOC: Int,
     maxLOC: Int,
     frontend: Option[String],
     verifier: Option[String],
     parseSuccess: Option[Boolean]
-  ): Response[String] = {
+  ): Response[Obj] = {
     try {
       val entries = Await.result(
         DBQueryInterface
-          .getEntriesByFeatures(earliestDate, latestDate, minLOC, maxLOC, frontend, verifier, parseSuccess),
+          .getEntriesByFeatures(
+            new Timestamp(earliestDate),
+            new Timestamp(latestDate),
+            minLOC,
+            maxLOC,
+            frontend,
+            verifier,
+            parseSuccess
+          ),
         DEFAULT_DB_TIMEOUT
       )
-      val eJSON = write(entries)
-      cask.Response(data = eJSON, statusCode = 200)
+      val eJSON       = write(entries)
+      val responseObj = Obj("programEntries" -> Arr.from[ProgramEntry](entries)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
   @cask.get("/program-ids-by-feature-value")
-  def programIdsByFeatureValue(feature: String, value: String): Response[String] = {
+  def programIdsByFeatureValue(feature: String, value: String): Response[Obj] = {
     try {
-      val peIds  = Await.result(DBQueryInterface.getPEIdsWithFeatureValue(feature, value), DEFAULT_DB_TIMEOUT)
-      val idJSON = write(peIds)
-      cask.Response(data = idJSON, statusCode = 200)
+      val peIds       = Await.result(DBQueryInterface.getPEIdsWithFeatureValue(feature, value), DEFAULT_DB_TIMEOUT)
+      val responseObj = Obj("programIds" -> Arr.from[Long](peIds))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
   @cask.postJson("/silicon-results-by-ids")
-  def siliconResultsByIds(entryIds: Seq[Long]): Response[String] = {
+  def siliconResultsByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
-      val results = Await.result(DBQueryInterface.getSiliconResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
-      val rJSON   = write(results)
-      cask.Response(data = rJSON, statusCode = 200)
+      val results     = Await.result(DBQueryInterface.getSiliconResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
+      val responseObj = Obj("siliconResults" -> Arr.from[VerResult](results)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
   @cask.postJson("/carbon-results-by-ids")
-  def carbonResultsByIds(entryIds: Seq[Long]): Response[String] = {
+  def carbonResultsByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
-      val results = Await.result(DBQueryInterface.getCarbonResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
-      val rJSON   = write(results)
-      cask.Response(data = rJSON, statusCode = 200)
+      val results     = Await.result(DBQueryInterface.getCarbonResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
+      val responseObj = Obj("carbonResults" -> Arr.from[VerResult](results)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
   @cask.postJson("/frontend-count-by-ids")
-  def frontendCountByIds(entryIds: Seq[Long]): Response[String] = {
+  def frontendCountByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
       val frontendCounts = Await.result(DBQueryInterface.getFrontendCountByIds(entryIds), DEFAULT_DB_TIMEOUT)
-      val fcJSON         = write(frontendCounts)
-      cask.Response(data = fcJSON, statusCode = 200)
+      val responseObj    = Obj("frontendCounts" -> Arr.from[(String, Int)](frontendCounts)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
-  @cask.get("/match-regex-detailed")
-  def matchRegexDetailed(regex: String, flags: Int): Response[String] = {
+  @cask.postJson("/match-regex-detailed")
+  def matchRegexDetailed(regex: String, flags: Int): Response[Obj] = {
     try {
       val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex, flags)
-      val mrJSON       = write(matchResults)
-      cask.Response(data = mrJSON, statusCode = 200)
+      val responseObj  = Obj("matchResults" -> Arr.from[PatternMatchResult](matchResults)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
   @cask.postJson("/match-regex")
-  def matchRegex(regex: String, flags: Int): Response[String] = {
+  def matchRegex(regex: String, flags: Int): Response[Obj] = {
     try {
       val matchResults = PatternMatcher.matchRegexAgainstDatabase(regex, flags)
       val matchIds     = matchResults.map(_.programEntryId)
-      val miJSON       = write(matchIds)
-      cask.Response(data = miJSON, statusCode = 200)
+      val responseObj  = Obj("matchIds" -> Arr.from[Long](matchIds))
+      cask.Response(data = responseObj, statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
     }
   }
 
@@ -157,7 +174,8 @@ object Routes extends cask.MainRoutes {
 
       cask.Response("Program submitted!", statusCode = 200)
     } catch {
-      case _ => cask.Response(data = "Error occurred during submission", statusCode = 500)
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }
   }
 
