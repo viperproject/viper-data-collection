@@ -47,11 +47,13 @@ object PatternMatcher {
     results
   }
 
+  /** @return whether the given [[regexStr]] was matched at least once in the given [[program]] */
   def doesMatch(program: String, regexStr: String, flags: Int = 0): Boolean = {
     val matcher: Matcher = Pattern.compile(regexStr, flags).matcher(program)
     matcher.find()
   }
 
+  /** @return whether one of the given [[regexStrs]] was matched at least once in the given [[program]] */
   def matchesAtLeastOne(program: String, regexStrs: Seq[String], flags: Int = 0): Boolean = {
     val matchers = regexStrs map (s => {
       Pattern.compile(s, flags).matcher(program)
@@ -91,9 +93,9 @@ object PatternMatcher {
     }
   }
 
+  /** @return number of newlines + 1 before the [[index]] in [[str]] */
   private def charIndexToLine(str: String, index: Int) = {
     str.substring(0, index).count(_ == '\n') + 1
   }
 
 }
-

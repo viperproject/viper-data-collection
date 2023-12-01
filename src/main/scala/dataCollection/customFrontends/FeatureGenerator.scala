@@ -27,7 +27,7 @@ trait FeatureGenerator {
 
   def errors: Seq[AbstractError]
 
-  def doesTypeCheck: Boolean = errors.exists(e => e.isInstanceOf[TypecheckerError])
+  def doesTypeCheck: Boolean = !errors.exists(e => e.isInstanceOf[TypecheckerError])
 
   /** Any VerifierFeatures returned by this function will be inserted into the database */
   def getFeatures: Seq[VerifierFeature] = if (hasRun)
@@ -53,6 +53,7 @@ trait SilFeatureGenerator extends FeatureGenerator {
 /** Trait to extend CollectionCarbonFrontend with to generate features while verifying */
 trait CarbFeatureGenerator extends FeatureGenerator {}
 
+/** Contains methods to generate [[VerifierFeature]]s about a programs syntactic properties */
 class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
 
   def getFeatures: Seq[VerifierFeature] = Seq(
@@ -71,6 +72,7 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   private def programTrees: Seq[Seq[PNode]] =
     Seq(pp.extensions, pp.predicates, pp.methods, pp.fields, pp.domains, pp.functions)
 
+  /** Returns whether a [[PNode]] matching [[pred]] is present in the subtree of [[root]] */
   private def findNode(pred: PNode => Boolean, root: PNode): Boolean = {
     if (pred(root)) true
     else {

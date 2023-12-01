@@ -13,6 +13,7 @@ trait FingerprintNode {
   def children: Seq[FingerprintNode]
 }
 
+/** Trait for a collection of structural fingerprint trees of a program */
 trait ProgramFingerprint[T <: FingerprintNode] {
   def domainTree: T
 
@@ -172,6 +173,7 @@ case class MatchResult(
     tupleMatchP(tuples)
   }
 
+  /** Given a sequence of [[(Int, Int)]] tuples, sums the first elements, then the second and returns the fraction between both */
   def tupleMatchP(tups: Seq[(Int, Int)]): Double = {
     val numMatches = (tups map (_._1)).sum.toDouble
     val numNodes   = (tups map (_._2)).sum
@@ -222,6 +224,9 @@ object Fingerprinter {
     }
   }
 
+  /** @return A [[FPNode]] containing the children's [[FPNode]]s and a Fingerprint with the the children's weight,
+    *          and a hash value dependent on the nodes children
+    */
   private def fingerprintPNode(pn: PNode): FPNode = {
     val flatPN      = flatten(pn)
     val children    = subnodes(flatPN)
@@ -288,7 +293,7 @@ object Fingerprinter {
 
   private def flattenBinExpAnd(pn: PExp): Seq[PExp] = {
     pn match {
-      case bn: PBinExp => if (bn.opName == "&&") Seq(bn.left, bn.right) else Seq(bn)
+      case bn: PBinExp => if (bn.opName == "&&") (flattenBinExpAnd(bn.left) ++ flattenBinExpAnd(bn.right)) else Seq(bn)
       case _           => Seq(pn)
     }
   }

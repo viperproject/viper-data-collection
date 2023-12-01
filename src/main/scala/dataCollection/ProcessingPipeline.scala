@@ -96,10 +96,11 @@ object ProcessingPipeline {
 
   }
 
-  /** Loads the generated ProgramEntry, SiliconResult and CarbonResult from ./tmp/[[dirName]]. Then checks if entry should be filtered out or inserted.
+  /** Loads the generated [[ProgramEntry]], [[VerResult]]s and [[VerifierFeature]]s from ./tmp/[[dirName]]. Then checks if entry should be filtered out or inserted.
     * First checks if an entry that is too similar already exists in the database, if yes drops entry.
-    * Then checks if entry is unique enough in its features to be added to the database, if no drops entry.
-    * If filters were passed, the ProgramEntry, SiliconResult and CarbonResult are stored in the database.
+    * Then checks if entry is unique enough in its metadata to be added to the database, if no drops entry.
+    * If filters were passed, generated data are stored in the database.
+    * @throws StageIncompleteException if there was any exception preventing the stage from completing
     */
   private def filterAndInsertStage(dirName: String): Unit = {
     try {
@@ -143,6 +144,7 @@ object ProcessingPipeline {
 
 }
 
+/** Case class to bundle together a [[ProgramEntry]], [[ProgramPrintEntry]] and [[VerResult]]s */
 case class ProgramTuple(
   programEntry: ProgramEntry,
   programPrintEntry: ProgramPrintEntry,
@@ -150,6 +152,7 @@ case class ProgramTuple(
   carbonResult: VerResult
 )
 
+/** Case class to bundle together a [[programTuple]], and [[VerifierFeature]]s */
 case class ProcessingResultTuple(
   programTuple: ProgramTuple,
   silVerFeatures: Array[VerifierFeature],
