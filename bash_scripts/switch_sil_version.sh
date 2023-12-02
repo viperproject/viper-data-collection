@@ -4,7 +4,7 @@ set -e
 
 BASEDIR="$(dirname --  "$(dirname -- "$(realpath -- "$0")")")"
 
-cd BASEDIR/silicon
+cd $BASEDIR/silicon
 git checkout -B silVersionBenchmarkingBranch $1
-cd BASEDIR
+cd $BASEDIR
 sbt compile

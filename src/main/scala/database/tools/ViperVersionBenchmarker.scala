@@ -52,7 +52,7 @@ trait ViperVersionBenchmarker {
   def benchmark(): Unit
 }
 
-class SilVersionBenchmarker extends ViperVersionBenchmarker {
+object SilVersionBenchmarker extends ViperVersionBenchmarker {
   override var versionHash: String = ""
 
   override def swapVerifierVersion(): Int = {
@@ -71,7 +71,7 @@ class SilVersionBenchmarker extends ViperVersionBenchmarker {
   }
 }
 
-class CarbVersionBenchmarker extends ViperVersionBenchmarker {
+object CarbVersionBenchmarker extends ViperVersionBenchmarker {
   override var versionHash: String = ""
 
   override def swapVerifierVersion(): Int = {
