@@ -4,7 +4,5 @@ set -e
 
 BASEDIR="$(dirname --  "$(dirname -- "$(realpath -- "$0")")")"
 
-cd $BASEDIR/silicon
-git checkout master
-cd $BASEDIR
-sbt compile
+cd $BASEDIR/carbon
+git rev-parse --short HEAD

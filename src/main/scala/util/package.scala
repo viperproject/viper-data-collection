@@ -5,6 +5,7 @@ import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.reflect.io.Directory
+import scala.sys.process.{ProcessLogger, Process, ProcessBuilder}
 
 /** Traits, classes and functions that don't necessitate their own file */
 package object util {
@@ -104,6 +105,14 @@ package object util {
   def removeTempProgramFile(fName: String): Unit = {
     val f = new File(fName)
     f.delete()
+  }
+
+  /** @returns The standard output and errors written by the [[process]] */
+  def getProcessOutput(process: ProcessBuilder): (String, String) = {
+    val out = new StringBuilder()
+    val err = new StringBuilder()
+    process ! ProcessLogger(out append _, err append _)
+    (out.toString(), err.toString())
   }
 
 }

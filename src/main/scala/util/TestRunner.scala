@@ -43,9 +43,22 @@ object TestRunner extends App {
   //regexDBPerformance()
   //regexPerformance()
   //regexDBPerformance()
-  nodeTypeTest()
+  //nodeTypeTest()
   //showAST()
   //findTerm("wildcard")
+  syntaxProps()
+
+  def syntaxProps(): Unit = {
+    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
+    val buffer = fromFile(file)
+    val prog =
+      try buffer.mkString
+      finally buffer.close()
+    val pprog =
+      fastParser.parse(prog, Paths.get("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr"))
+    val psp = new ProgramSyntaxProperties(prog, pprog)
+    println(psp.getFeatures)
+  }
 
   def nodeTypeTest() = {
     val file   = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")

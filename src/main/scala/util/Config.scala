@@ -58,4 +58,6 @@ object Config {
 
   /** Bash file that switches Carbon version to HEAD */
   val RESTORE_CARB_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/restore_carb_version.sh"
+  /** Bash file that outputs current Carbon commit hash */
+  val GET_CARBON_HASH_BASH_FILE: String = SCRIPT_DIRECTORY + "/get_carbon_hash.sh"
 }

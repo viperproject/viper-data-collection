@@ -40,7 +40,7 @@ object DBQueryInterface {
     entryOpt
   }
 
-  def getEntriesByFeatures(
+  def getEntriesByMetadata(
     earliestDate: Timestamp,
     latestDate: Timestamp,
     minLOC: Int,

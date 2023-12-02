@@ -1,5 +1,7 @@
 package dataCollection.customFrontends
 
+import util.Config.GET_CARBON_HASH_BASH_FILE
+import util.getProcessOutput
 import viper.carbon.CarbonFrontend
 import viper.silver.logger.ViperStdOutLogger
 import viper.silver.reporter.NoopReporter
@@ -9,6 +11,7 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future}
+import scala.sys.process.Process
 
 /** Frontend to benchmark programs using the Carbon verifier, takes seconds to timeout as an argument, 0 => no timeout */
 class CollectionCarbonFrontend(timeOut: Int = 0)
@@ -42,7 +45,9 @@ class CollectionCarbonFrontend(timeOut: Int = 0)
       case e: Exception => println(s"encountered: ${e}")
     }
   }
-
-  //TODO: Find some way to get carbon git commit hash
-  def verifierHash: String = "default"
+  
+  def verifierHash: String = {
+    val (hash, err) = getProcessOutput(Process(GET_CARBON_HASH_BASH_FILE))
+    if (err != "") "default" else hash
+  }
 }

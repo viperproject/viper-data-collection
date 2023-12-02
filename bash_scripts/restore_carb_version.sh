@@ -4,7 +4,7 @@ set -e
 
 BASEDIR="$(dirname --  "$(dirname -- "$(realpath -- "$0")")")"
 
-cd BASEDIR/carbon
+cd $BASEDIR/carbon
 git checkout master
-cd BASEDIR
+cd $BASEDIR
 sbt compile

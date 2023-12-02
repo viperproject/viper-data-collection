@@ -40,6 +40,7 @@ object Routes extends cask.MainRoutes {
     "This is an API for the viper-data-collection database"
   }
 
+  /** Returns all programEntries from the database that match the given metadata. */
   @cask.postJson("/program-entries-by-meta-data")
   def programEntriesByMetadata(
     earliestDate: Long,
@@ -53,7 +54,7 @@ object Routes extends cask.MainRoutes {
     try {
       val entries = Await.result(
         DBQueryInterface
-          .getEntriesByFeatures(
+          .getEntriesByMetadata(
             new Timestamp(earliestDate),
             new Timestamp(latestDate),
             minLOC,
@@ -73,6 +74,7 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** Returns a list of ids for all programEntries that have a [[VerifierResult]] which produced [[feature]] with the value of [[value]] */
   @cask.get("/program-ids-by-feature-value")
   def programIdsByFeatureValue(feature: String, value: String): Response[Obj] = {
     try {
@@ -85,6 +87,7 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** Returns all Silicon [[VerifierResult]]s for the given programEntryIds. This is a 1:many relationship */
   @cask.postJson("/silicon-results-by-ids")
   def siliconResultsByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
@@ -97,6 +100,7 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** Returns all Carbon [[VerifierResult]]s for the given programEntryIds. This is a 1:many relationship */
   @cask.postJson("/carbon-results-by-ids")
   def carbonResultsByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
@@ -109,6 +113,7 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** Returns a list of (Frontend, Count) tuples for the given programEntryIds */
   @cask.postJson("/frontend-count-by-ids")
   def frontendCountByIds(entryIds: Seq[Long]): Response[Obj] = {
     try {
@@ -121,6 +126,27 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** @param regex regex string to match database programs against, should not include flags, i.e. "regex", not "/regex/gmi"
+    * @param flags  flags from [[java.util.regex.Pattern]] or-ed together
+    *
+    *               UNIX_LINES = 0x01
+    *
+    *               CASE_INSENSITIVE = 0x02
+    *
+    *               COMMENTS = 0x04
+    *
+    *               MULTILINE = 0x08
+    *
+    *               LITERAL = 0x10
+    *
+    *               DOTALL = 0x20
+    *
+    *               UNICODE_CASE = 0x40
+    *
+    *               CANON_EQ = 0x80
+    *
+    *               UNICODE_CHARACTER_CLASS = 0x100
+    */
   @cask.postJson("/match-regex-detailed")
   def matchRegexDetailed(regex: String, flags: Int): Response[Obj] = {
     try {
@@ -133,6 +159,9 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** @param regex see [[matchRegexDetailed]]
+    * @param flags  see [[matchRegexDetailed]]
+    */
   @cask.postJson("/match-regex")
   def matchRegex(regex: String, flags: Int): Response[Obj] = {
     try {
