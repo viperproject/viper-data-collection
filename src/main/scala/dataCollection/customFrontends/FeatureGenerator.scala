@@ -73,13 +73,8 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
     Seq(pp.extensions, pp.predicates, pp.methods, pp.fields, pp.domains, pp.functions)
 
   /** Returns whether a [[PNode]] matching [[pred]] is present in the subtree of [[root]] */
-  private def findNode(pred: PNode => Boolean, root: PNode): Boolean = {
-    if (pred(root)) true
-    else {
-      lazy val childRes = Nodes.subnodes(root) map (c => findNode(pred, c))
-      childRes.exists(identity)
-    }
-  }
+  private def findNode(pred: PNode => Boolean, root: PNode): Boolean =
+    pred(root) || Nodes.subnodes(root).exists(findNode(pred, _))
 
   def hasSet: Boolean =
     PatternMatcher.matchesAtLeastOne(program, Seq("^.*Set\\[.*\\].*$", "^.*Multiset\\[.*\\].*$"), Pattern.MULTILINE)
@@ -97,14 +92,13 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   def hasTermination: Boolean = PatternMatcher.doesMatch(program, "^.*decreases.*$", Pattern.MULTILINE)
 
   def mightHaveQP: Boolean = {
-    val res = programTrees flatMap { pSeq =>
-      pSeq map { f =>
+    programTrees exists { pSeq =>
+      pSeq exists { f =>
         {
           findNode(n => n.isInstanceOf[PQuantifier] && findNode(sn => mightBePerm(sn), n), f)
         }
       }
     }
-    res.exists(identity)
   }
 
   private def mightBePerm(pn: PNode): Boolean = pn match {
@@ -112,16 +106,14 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
     case _                                                                                             => false
   }
   def hasRecursivePred: Boolean = {
-    lazy val res = pp.predicates map { pred =>
+    pp.predicates exists { pred =>
       findNode(isCallWithName(pred.idndef.name), pred)
     }
-    res.exists(identity)
   }
   def hasRecursiveFunc: Boolean = {
-    lazy val res = pp.functions map { f =>
+    pp.functions exists { f =>
       findNode(isCallWithName(f.idndef.name), f)
     }
-    res.exists(identity)
   }
 
   private def isCallWithName(name: String)(pn: PNode): Boolean =
