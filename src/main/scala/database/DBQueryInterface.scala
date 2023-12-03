@@ -193,6 +193,16 @@ object DBQueryInterface {
     carbonResults
   }
 
+  def getSilResForVersion(versionHash: String): Future[Seq[VerResult]] = {
+    val silRes = db.run(sTables.siliconResultTable.filter(_.verifierHash === versionHash).result)
+    silRes
+  }
+
+  def getCarbResForVersion(versionHash: String): Future[Seq[VerResult]] = {
+    val carbRes = db.run(sTables.carbonResultTable.filter(_.verifierHash === versionHash).result)
+    carbRes
+  }
+
   /*------ ProgramPrintEntry Queries ------*/
 
   def insertProgramPrintEntry(ppe: ProgramPrintEntry): Future[Int] = {

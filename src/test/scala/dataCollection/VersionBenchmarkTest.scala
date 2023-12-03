@@ -3,13 +3,10 @@ package dataCollection
 import database.DBQueryInterface
 import database.DBQueryInterface.clearDB
 import org.scalatest.funsuite.AnyFunSuite
-import queryFrontend.UserSubmission
 import util.Config.{DEFAULT_DB_TIMEOUT, GET_CARBON_HASH_BASH_FILE, SCALA_CLASS_BASH_FILE}
-import util.{getLOC, getProcessOutput}
+import util.{getProcessOutput}
 
 import java.io.File
-import java.sql.Timestamp
-import java.time.LocalDateTime
 import scala.concurrent.Await
 import scala.io.Source.fromFile
 import scala.sys.process.Process
@@ -38,8 +35,8 @@ class VersionBenchmarkTest extends AnyFunSuite {
       assert(newhash == hash)
       val progsWithoutNewHash = Await.result(DBQueryInterface.getPEIdsWithoutCarbVersionRes(newhash), DEFAULT_DB_TIMEOUT)
       val progsWithoutBMHash = Await.result(DBQueryInterface.getPEIdsWithoutCarbVersionRes("4a695fff"), DEFAULT_DB_TIMEOUT)
-      assert(progsWithoutNewHash.length == 0)
-      assert(progsWithoutBMHash.length == 0)
+      assert(progsWithoutNewHash.isEmpty)
+      assert(progsWithoutBMHash.isEmpty)
 
     } finally {
       dbProcess.destroy()

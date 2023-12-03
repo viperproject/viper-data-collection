@@ -1,6 +1,7 @@
 package database.tools
 
 import database.DBQueryInterface
+import queryFrontend.{VerResult, VerVersionDifferenceSummary}
 import util.Config._
 import util.{GlobalLockException, getGlobalLock, getGlobalLockSpinning}
 
@@ -87,5 +88,72 @@ object CarbVersionBenchmarker extends ViperVersionBenchmarker {
     for (id <- peIdsWithoutRes) {
       Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonBenchmarkRunner $id").!
     }
+  }
+}
+
+object VersionBenchmarkHelper {
+  private def generateVerVersionDiffSummary(
+    vHash1: String,
+    vHash2: String,
+    verRes1: Seq[VerResult],
+    verRes2: Seq[VerResult]
+  ): VerVersionDifferenceSummary = {
+    val programs1           = verRes1 map (_.programEntryId)
+    val programs2           = verRes2 map (_.programEntryId)
+    val programIntersection = programs1.intersect(programs2)
+    val intVerRes1          = verRes1 filter (r => programIntersection.contains(r.programEntryId))
+    val intVerRes2          = verRes2 filter (r => programIntersection.contains(r.programEntryId))
+
+    val successDiff = intVerRes1.collect {
+      case vr1 if intVerRes2.exists(vr2 => vr1.programEntryId == vr2.programEntryId && vr1.success != vr2.success) =>
+        vr1.programEntryId
+    }
+
+    val runtimeDiff = intVerRes1.collect {
+      case vr1
+          if intVerRes2.exists(vr2 =>
+            vr1.programEntryId == vr2.programEntryId && (vr1.runtime <= vr2.runtime * 0.5 || vr1.runtime >= vr2.runtime * 1.5)
+          ) =>
+        vr1.programEntryId
+    }
+
+    val errorDiff = intVerRes1.collect {
+      case vr1
+          if intVerRes2.exists(vr2 => vr1.programEntryId == vr2.programEntryId && vr1.errorIdSet != vr2.errorIdSet) =>
+        vr1.programEntryId
+    }
+
+    val avgRuntime1 = if (intVerRes1.isEmpty) 0 else (intVerRes1.map(_.runtime).sum / intVerRes1.length)
+    val avgRuntime2 = if (intVerRes2.isEmpty) 0 else (intVerRes2.map(_.runtime).sum / intVerRes2.length)
+
+    val runtimeVar1 =
+      if (intVerRes1.isEmpty) 0 else intVerRes1.map(vr => Math.pow(vr.runtime - avgRuntime1, 2)).sum / intVerRes1.length
+    val runtimeVar2 =
+      if (intVerRes2.isEmpty) 0 else intVerRes2.map(vr => Math.pow(vr.runtime - avgRuntime2, 2)).sum / intVerRes2.length
+
+    VerVersionDifferenceSummary(
+      vHash1,
+      vHash2,
+      programIntersection,
+      successDiff,
+      runtimeDiff,
+      errorDiff,
+      avgRuntime1,
+      avgRuntime2,
+      runtimeVar1.toLong,
+      runtimeVar2.toLong
+    )
+  }
+
+  def generateSilVersionDiffSummary(vHash1: String, vHash2: String): VerVersionDifferenceSummary = {
+    val silRes1 = Await.result(DBQueryInterface.getSilResForVersion(vHash1), DEFAULT_DB_TIMEOUT)
+    val silRes2 = Await.result(DBQueryInterface.getSilResForVersion(vHash2), DEFAULT_DB_TIMEOUT)
+    generateVerVersionDiffSummary(vHash1, vHash2, silRes1, silRes2)
+  }
+
+  def generateCarbVersionDiffSummary(vHash1: String, vHash2: String): VerVersionDifferenceSummary = {
+    val carbRes1 = Await.result(DBQueryInterface.getCarbResForVersion(vHash1), DEFAULT_DB_TIMEOUT)
+    val carbRes2 = Await.result(DBQueryInterface.getCarbResForVersion(vHash2), DEFAULT_DB_TIMEOUT)
+    generateVerVersionDiffSummary(vHash1, vHash2, carbRes1, carbRes2)
   }
 }

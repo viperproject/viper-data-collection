@@ -5,7 +5,7 @@ import JSONReadWriters._
 import queryFrontend.{PatternMatchResult, ProgramEntry, UserSubmission, VerResult}
 import queryFrontend.JSONReadWriters._
 import cask.Response
-import database.tools.PatternMatcher
+import database.tools.{PatternMatcher, VersionBenchmarkHelper}
 import ujson.{Arr, Obj}
 import util._
 import util.Config._
@@ -65,7 +65,6 @@ object Routes extends cask.MainRoutes {
           ),
         DEFAULT_DB_TIMEOUT
       )
-      val eJSON       = write(entries)
       val responseObj = Obj("programEntries" -> Arr.from[ProgramEntry](entries)(writeJs))
       cask.Response(data = responseObj, statusCode = 200)
     } catch {
@@ -106,6 +105,36 @@ object Routes extends cask.MainRoutes {
     try {
       val results     = Await.result(DBQueryInterface.getCarbonResultsForEntries(entryIds), DEFAULT_DB_TIMEOUT)
       val responseObj = Obj("carbonResults" -> Arr.from[VerResult](results)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
+    }
+  }
+
+  /** Returns a [[queryFrontend.VerVersionDifferenceSummary]] summarizing differences between SiliconResults of the two given
+    * Silicon versions. Only results that are already in the database are taken into account, no new ones are generated.
+    */
+  @cask.get("/silicon-version-difference")
+  def siliconVersionDifference(versionHash1: String, versionHash2: String): Response[Obj] = {
+    try {
+      val result      = VersionBenchmarkHelper.generateSilVersionDiffSummary(versionHash1, versionHash2)
+      val responseObj = Obj("verVersionDifferenceSummary" -> writeJs(result))
+      cask.Response(data = responseObj, statusCode = 200)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
+    }
+  }
+
+  /** Returns a [[queryFrontend.VerVersionDifferenceSummary]] summarizing differences between CarbonResults of the two given
+    * Carbon versions. Only results that are already in the database are taken into account, no new ones are generated.
+    */
+  @cask.get("/carbon-version-difference")
+  def carbonVersionDifference(versionHash1: String, versionHash2: String): Response[Obj] = {
+    try {
+      val result      = VersionBenchmarkHelper.generateCarbVersionDiffSummary(versionHash1, versionHash2)
+      val responseObj = Obj("verVersionDifferenceSummary" -> writeJs(result))
       cask.Response(data = responseObj, statusCode = 200)
     } catch {
       case e: Exception =>
