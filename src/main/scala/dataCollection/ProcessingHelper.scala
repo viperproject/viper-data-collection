@@ -3,11 +3,11 @@ package dataCollection
 import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
 import database.{DBQueryInterface, ProgramPrintEntry}
 import queryFrontend._
-import viper.silver.parser.{FastParser}
+import viper.silver.parser.FastParser
 import database.DBExecContext._
 import util.Config._
 import util._
-import viper.silver.verifier.{AbstractError, Failure, Success}
+import viper.silver.verifier.{AbstractError, Failure, Success, TimeoutOccurred}
 
 import java.nio.file.Paths
 import java.sql.Timestamp
@@ -219,6 +219,7 @@ object ProcessingHelper {
       runner.verifierHash,
       pe.programEntryId,
       runner.hasSucceeded,
+      runner.errors.exists(ae => ae.isInstanceOf[TimeoutOccurred]),
       runner.getTime,
       runner.getVerificationResult match {
         case Some(value) =>

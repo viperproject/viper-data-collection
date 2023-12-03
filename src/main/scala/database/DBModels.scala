@@ -150,6 +150,8 @@ class SlickTables(val profile: PostgresProfile) {
 
     def success = column[Boolean]("success")
 
+    def didTimeout = column[Boolean]("didTimeout")
+
     def runtime = column[Long]("runtime")
 
     def errors = column[Array[VerError]]("errors")
@@ -162,6 +164,7 @@ class SlickTables(val profile: PostgresProfile) {
       verifierHash,
       programEntryId,
       success,
+      didTimeout,
       runtime,
       errors,
       phaseRuntimes
@@ -183,6 +186,8 @@ class SlickTables(val profile: PostgresProfile) {
 
     def success = column[Boolean]("success")
 
+    def didTimeout = column[Boolean]("didTimeout")
+
     def runtime = column[Long]("runtime")
 
     def errors = column[Array[VerError]]("errors")
@@ -195,6 +200,7 @@ class SlickTables(val profile: PostgresProfile) {
       verifierHash,
       programEntryId,
       success,
+      didTimeout,
       runtime,
       errors,
       phaseRuntimes
