@@ -2,9 +2,10 @@ package dataCollection
 
 import database.DBQueryInterface
 import database.DBQueryInterface.clearDB
+import database.tools.VersionBenchmarkHelper
 import org.scalatest.funsuite.AnyFunSuite
 import util.Config.{DEFAULT_DB_TIMEOUT, GET_CARBON_HASH_BASH_FILE, SCALA_CLASS_BASH_FILE}
-import util.{getProcessOutput}
+import util.getProcessOutput
 
 import java.io.File
 import scala.concurrent.Await
@@ -31,6 +32,10 @@ class VersionBenchmarkTest extends AnyFunSuite {
 
       Process(s"$SCALA_CLASS_BASH_FILE database.tools.CarbVersionBenchmarker 4a695fff").!
 
+      val verDifference = VersionBenchmarkHelper.generateCarbVersionDiffSummary(hash, "4a695fff")
+      assert(verDifference.programIntersection.length == 2)
+      assert(verDifference.successDiff.isEmpty)
+      assert(verDifference.errorDiff.isEmpty)
       val (newhash, _) = getProcessOutput(Process(GET_CARBON_HASH_BASH_FILE))
       assert(newhash == hash)
       val progsWithoutNewHash = Await.result(DBQueryInterface.getPEIdsWithoutCarbVersionRes(newhash), DEFAULT_DB_TIMEOUT)
