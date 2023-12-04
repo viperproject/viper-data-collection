@@ -35,9 +35,6 @@ object Config {
   /** Fraction representing how many of a programs metadata need to be valuable for the program not to be filtered out */
   val METADATA_AMOUNT_THRESHOLD: Double = 1.0 / 3.0
 
-  /** Fraction below which the average feature has to occur in the database for a new program not to be filtered */
-  val FEATURE_FILTER_THRESHOLD: Double = 0.5
-
   /** Directory to use to for storing temporary files */
   val TMP_DIRECTORY: String = "./tmp"
 

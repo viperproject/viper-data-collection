@@ -1,6 +1,7 @@
 package database.tools
 
 import database.DBQueryInterface
+import queryFrontend.Config.TIME_DIFFERENCE_MULTIPLIER
 import queryFrontend.{VerResult, VerVersionDifferenceSummary}
 import util.Config._
 import util.{GlobalLockException, getGlobalLock, getGlobalLockSpinning}
@@ -112,7 +113,8 @@ object VersionBenchmarkHelper {
     val runtimeDiff = intVerRes1.collect {
       case vr1
           if intVerRes2.exists(vr2 =>
-            vr1.programEntryId == vr2.programEntryId && (vr1.runtime <= vr2.runtime * 0.5 || vr1.runtime >= vr2.runtime * 1.5)
+            vr1.programEntryId == vr2.programEntryId && (vr1.runtime <= vr2.runtime / TIME_DIFFERENCE_MULTIPLIER
+            || vr1.runtime >= vr2.runtime * TIME_DIFFERENCE_MULTIPLIER)
           ) =>
         vr1.programEntryId
     }

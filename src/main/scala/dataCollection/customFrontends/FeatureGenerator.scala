@@ -117,7 +117,7 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   }
 
   private def isCallWithName(name: String)(pn: PNode): Boolean =
-    pn.getClass == classOf[PCall] && pn.asInstanceOf[PCall].func.name == name
+    pn.isInstanceOf[PCall] && pn.asInstanceOf[PCall].func.name == name
 
   def hasMissingTrigger: Boolean = {
     lazy val res = programTrees flatMap { pSeq =>
