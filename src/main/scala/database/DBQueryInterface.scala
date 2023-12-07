@@ -374,7 +374,7 @@ object DBQueryInterface {
       carbRes <- sTables.carbonResultTable if carbRes.programEntryId === id
       feat    <- sTables.carbFeatureEntryTable.filter(_.resultId === carbRes.carbResId)
     } yield feat).result
-    db.run(silFeatQuery zip carbFeatQuery).map(x => x._1 ++ x._2)
+    db.run(DBIO.sequence(Seq(silFeatQuery, carbFeatQuery))).map(_.flatten)
   }
 
   /*------ General Queries ------*/
