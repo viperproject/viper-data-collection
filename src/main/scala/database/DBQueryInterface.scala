@@ -365,6 +365,18 @@ object DBQueryInterface {
     sCount flatMap (s => cCount map (c => s + c))
   }
 
+  def getFeaturesById(id: Long): Future[Seq[FeatureEntry]] = {
+    val silFeatQuery = (for {
+      silRes <- sTables.siliconResultTable if silRes.programEntryId === id
+      feat   <- sTables.silFeatureEntryTable.filter(_.resultId === silRes.silResId)
+    } yield feat).result
+    val carbFeatQuery = (for {
+      carbRes <- sTables.carbonResultTable if carbRes.programEntryId === id
+      feat    <- sTables.carbFeatureEntryTable.filter(_.resultId === carbRes.carbResId)
+    } yield feat).result
+    db.run(silFeatQuery zip carbFeatQuery).map(x => x._1 ++ x._2)
+  }
+
   /*------ General Queries ------*/
 
   def getPotentialMatchingEntryTuples(pe: ProgramEntry): DatabasePublisher[ProgramTuple] = {

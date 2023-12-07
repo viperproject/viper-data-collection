@@ -75,13 +75,14 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
 
   /** Returns true if the tree of [[root]] contains a node with the same Fingerprint, marks that node in the other tree as matched */
   def containedInTree(root: ComparableFPNode): Boolean = {
-    if (root.fp.weight < this.fp.weight || root.matched) return false
-    if (root.fp == this.fp) {
+    if (root.fp.weight < this.fp.weight || root.matched) false
+    else if (root.fp == this.fp) {
       root.matched = true
-      return true
+      true
+    } else {
+      lazy val childResults = root.children.filter(_.fp.weight >= this.fp.weight) map containedInTree
+      childResults.exists(identity)
     }
-    lazy val childResults = root.children.filter(_.fp.weight >= this.fp.weight) map containedInTree
-    childResults.exists(identity)
   }
 
   /** Clears all matched fields in this subtree */
@@ -110,7 +111,7 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
     * @return A [[MatchResult]] containing a tuple per tree with the number of nodes that were matched and total number of nodes.
     */
   def matchTrees(oPP: ComparableProgramPrint): MatchResult = {
-    val matchCounts: Seq[Int] = (trees zip oPP.trees) map Function.tupled(matchesInTree)
+    val matchCounts: Seq[Int] = (trees zip oPP.trees) map Function.tupled(countMatchesInTree)
     val matchTuples           = matchCounts zip (trees map (_.fp.weight - 1))
     oPP.clearMatches()
 
@@ -121,23 +122,23 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
   }
 
   /** Clears the matched fields in all subtrees of this program. */
-  def clearMatches(): Unit = {
+  private def clearMatches(): Unit = {
     trees foreach (_.clearMatches)
   }
 
   /** Returns the amount of nodes in [[root]] that could be matched to one in [[otherRoot]]. This is a separate method to
-    * [[numSubTreeMatches]] to discard the dummy parent node.
+    * [[countSubTreeMatches]] to discard the dummy parent node.
     */
-  private def matchesInTree(root: ComparableFPNode, otherRoot: ComparableFPNode): Int = {
+  private def countMatchesInTree(root: ComparableFPNode, otherRoot: ComparableFPNode): Int = {
     if (root.containedInTree(otherRoot)) return root.fp.weight - 1 // do not match dummy root node
-    val matchCount = numSubTreeMatches(root, otherRoot)
+    val matchCount = countSubTreeMatches(root, otherRoot)
     matchCount
   }
 
   /** Returns the amount of nodes in the tree of [[currNode]] that could be matched to one in [[root]] */
-  private def numSubTreeMatches(currNode: ComparableFPNode, root: ComparableFPNode): Int = {
+  private def countSubTreeMatches(currNode: ComparableFPNode, root: ComparableFPNode): Int = {
     if (currNode.containedInTree(root)) return currNode.fp.weight
-    currNode.children.map(c => numSubTreeMatches(c, root)).sum
+    currNode.children.map(c => countSubTreeMatches(c, root)).sum
   }
 }
 
