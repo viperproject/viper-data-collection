@@ -29,17 +29,22 @@ object ProcessingPipeline {
     var globalLock: FileLock = null
     try {
       globalLock = getGlobalLock()
-      if (globalLock == null) return
 
       tmpDirName = programEntryStage()
 
       val siliconProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconStageRunner $tmpDirName")
-      if (siliconProcess.! == -1) return
+      if (siliconProcess.! == -1) throw StageIncompleteException()
 
       val carbonProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonStageRunner $tmpDirName")
-      if (carbonProcess.! == -1) return
+      if (carbonProcess.! == -1) throw StageIncompleteException()
 
       filterAndInsertStage(tmpDirName)
+    } catch {
+      case GlobalLockException() | StageIncompleteException() => {
+        removeTempDir(tmpDirName)
+        if (globalLock != null) globalLock.release()
+        System.exit(-1)
+      }
     } finally {
       removeTempDir(tmpDirName)
       if (globalLock != null) globalLock.release()
