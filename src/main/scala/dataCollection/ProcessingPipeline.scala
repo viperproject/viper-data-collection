@@ -40,7 +40,7 @@ object ProcessingPipeline {
 
       filterAndInsertStage(tmpDirName)
     } catch {
-      case GlobalLockException() | StageIncompleteException() => {
+      case GlobalLockException() | StageIncompleteException() | NothingToDoException() => {
         removeTempDir(tmpDirName)
         if (globalLock != null) globalLock.release()
         System.exit(-1)
