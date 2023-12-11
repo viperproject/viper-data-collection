@@ -74,7 +74,8 @@ object ProcessingPipeline {
         case None => throw NothingToDoException()
       }
     } catch {
-      case e: Exception => e.printStackTrace(); throw StageIncompleteException()
+      case ntd: NothingToDoException => throw ntd
+      case e: Exception              => e.printStackTrace(); throw StageIncompleteException()
     }
 
   }

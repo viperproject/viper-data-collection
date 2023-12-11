@@ -124,6 +124,34 @@ object DBQueryInterface {
     ids
   }
 
+  def getPEIdsBySiliconData(
+    success: Boolean,
+    didTimeout: Boolean,
+    minRuntime: Long,
+    maxRuntime: Long
+  ): Future[Seq[Long]] = {
+    val silResQuery   = sTables.siliconResultTable
+    val successFilter = silResQuery.filter(_.success === success)
+    val timeoutFilter = successFilter.filter(_.didTimeout === didTimeout)
+    val runtimeFilter = timeoutFilter.filter(s => s.runtime >= minRuntime && s.runtime <= maxRuntime)
+    val ids           = runtimeFilter.groupBy(_.programEntryId).map(_._1).result
+    db.run(ids)
+  }
+
+  def getPEIdsByCarbonData(
+    success: Boolean,
+    didTimeout: Boolean,
+    minRuntime: Long,
+    maxRuntime: Long
+  ): Future[Seq[Long]] = {
+    val carbResQuery  = sTables.carbonResultTable
+    val successFilter = carbResQuery.filter(_.success === success)
+    val timeoutFilter = successFilter.filter(_.didTimeout === didTimeout)
+    val runtimeFilter = timeoutFilter.filter(s => s.runtime >= minRuntime && s.runtime <= maxRuntime)
+    val ids           = runtimeFilter.groupBy(_.programEntryId).map(_._1).result
+    db.run(ids)
+  }
+
   /*------ UserSubmission Queries ------*/
 
   def getAllUserSubmissions(): Future[Seq[UserSubmission]] = {
