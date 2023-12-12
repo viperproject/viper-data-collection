@@ -14,6 +14,7 @@ import upickle.default._
 import java.sql.Timestamp
 import java.time.LocalDateTime
 import scala.concurrent.Await
+import scala.sys.process.Process
 
 /** This object defines HTTP endpoints to retrieve information from the Database.
   *
@@ -164,6 +165,30 @@ object Routes extends cask.MainRoutes {
     } catch {
       case e: Exception =>
         e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
+    }
+  }
+
+  /** Starts a separate Process running [[database.tools.SilVersionBenchmarker]] with the given hash */
+  @cask.postJson("/benchmark-silicon-version")
+  def benchmarkSiliconVersion(versionHash: String): Response[String] = {
+    try {
+      Process(s"$SCALA_CLASS_BASH_FILE database.tools.SilVersionBenchmarker $versionHash").run
+      cask.Response(data = "Benchmarking started", statusCode = 200)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = "Error occurred during retrieval", statusCode = 500)
+    }
+  }
+
+  /** Starts a separate Process running [[database.tools.CarbVersionBenchmarker]] with the given hash */
+  @cask.postJson("/benchmark-carbon-version")
+  def benchmarkCarbonVersion(versionHash: String): Response[String] = {
+    try {
+      Process(s"$SCALA_CLASS_BASH_FILE database.tools.CarbVersionBenchmarker $versionHash").run
+      cask.Response(data = "Benchmarking started", statusCode = 200)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = "Error occurred during retrieval", statusCode = 500)
     }
   }
 
