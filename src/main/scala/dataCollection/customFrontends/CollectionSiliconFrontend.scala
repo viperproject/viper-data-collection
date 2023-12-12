@@ -3,7 +3,7 @@ package dataCollection.customFrontends
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
-import viper.silver.reporter.{BenchmarkingPhase, BenchmarkingReporter, Message, NoopReporter, Reporter}
+import viper.silver.reporter.{Message, NoopReporter, Reporter}
 import viper.silver.verifier.{Success, TypecheckerError}
 
 import scala.collection.immutable.ArraySeq
@@ -75,7 +75,7 @@ class CollectionSiliconFrontend
     siliconInstance = new Silicon(reporter, Seq("args" -> fullCmd)) {
       private val bmrReporter = BenchmarkingResultReporter()
 
-      override def reporter: BenchmarkingResultReporter = bmrReporter
+      override val reporter: BenchmarkingResultReporter = bmrReporter
     }
 
     siliconInstance

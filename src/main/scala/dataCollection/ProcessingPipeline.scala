@@ -102,10 +102,9 @@ object ProcessingPipeline {
 
   }
 
-  /** Loads the generated [[ProgramEntry]], [[VerResult]]s and [[VerifierFeature]]s from ./tmp/[[dirName]]. Then checks if entry should be filtered out or inserted.
-    * First checks if an entry that is too similar already exists in the database, if yes drops entry.
-    * Then checks if entry is unique enough in its metadata to be added to the database, if no drops entry.
-    * If filters were passed, generated data are stored in the database.
+  /** Loads the generated [[ProgramEntry]], [[VerResult]]s and [[VerifierFeature]]s from ./tmp/[[dirName]].
+    * Checks if an entry that is too similar already exists in the database, if yes drops entry.
+    * If it wasn't dropped, the generated data is then inserted into the database.
     * @throws StageIncompleteException if there was any exception preventing the stage from completing
     */
   private def filterAndInsertStage(dirName: String): Unit = {
@@ -131,15 +130,7 @@ object ProcessingPipeline {
         return
       }
 
-      //skip metadata check if fewer than 100 entries in database
-      val totalEntries = Await.result(DBQueryInterface.getPECount(), DEFAULT_DB_TIMEOUT)
-      if (totalEntries > 100) {
-        val shouldDropByMeta = shouldDropByMetadata(procResTuple.programTuple)
-        if (shouldDropByMeta) {
-          println("Too many programs with similar metadata, will not be stored.")
-          return
-        }
-      }
+      //TODO: Frontend in SiliconRunnerInstance, Carbon, ViperServer for testing
 
       // Passed all filters, store in database
       Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)

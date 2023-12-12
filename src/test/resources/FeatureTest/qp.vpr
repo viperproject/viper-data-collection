@@ -1,17 +1,17 @@
-field val: Int
+field first : Ref
+field second : Ref
 
-domain IArray {
-  function loc(a: IArray, i: Int): Ref
-  function len(a: IArray): Int
-  function first(r: Ref): IArray
-  function second(r: Ref): Int
-
-  axiom all_diff {
-    forall a: IArray, i: Int ::
-      first(loc(a, i)) == a && second(loc(a, i)) == i
-  }
-
-  axiom length_nonneg {
-    forall a: IArray :: len(a) >= 0
+method inc(nodes: Set[Ref], x: Ref)
+  requires forall n:Ref :: { n.first } n in nodes ==> 
+    acc(n.first) && 
+    (n.first != null ==> n.first in nodes)
+  requires forall n:Ref :: { n.second } n in nodes ==> 
+    acc(n.second) && 
+    (n.second != null ==> n.second in nodes)
+  requires x in nodes
+{
+  var y : Ref
+  if(x.second != null) {
+    y := x.second.first // permissions covered by preconditions
   }
 }

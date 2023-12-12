@@ -2,7 +2,7 @@ package dataCollection.customFrontends
 
 import database.tools.PatternMatcher
 import viper.silver.parser.{FastParser, Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
-import viper.silver.reporter.{BenchmarkingPhase, Message, Reporter}
+import viper.silver.reporter.{Message, Reporter}
 import viper.silver.verifier.{AbstractError, TypecheckerError}
 
 import java.io.File
@@ -45,7 +45,7 @@ trait SilFeatureGenerator extends FeatureGenerator {
       VerifierFeature(s"BenchmarkingPhase $phase", time.toString)
     }
   override def getFeatures: Seq[VerifierFeature] = {
-    if (hasRun) super.getFeatures ++ benchmarkResToVF(getBenchmarkResults)
+    if (hasRun) super.getFeatures // ++ benchmarkResToVF(getBenchmarkResults)
     else Seq()
   }
 }
@@ -95,15 +95,10 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
     programTrees exists { pSeq =>
       pSeq exists { f =>
         {
-          findNode(n => n.isInstanceOf[PQuantifier] && findNode(sn => mightBePerm(sn), n), f)
+          findNode(n => n.isInstanceOf[PQuantifier] && findNode(sn => sn.isInstanceOf[PAccPred], n), f)
         }
       }
     }
-  }
-
-  private def mightBePerm(pn: PNode): Boolean = pn match {
-    case _: PNoPerm | _: PWildcard | _: PFullPerm | _: PEpsilon | _: PCurPerm | _: PCall | _: PAccPred => true
-    case _                                                                                             => false
   }
   def hasRecursivePred: Boolean = {
     pp.predicates exists { pred =>
@@ -131,6 +126,7 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
 
 }
 
+//This can only be used when Dionisios BenchmarkingReporter is merged with main
 /** Reporter that stores the runtimes of received [[BenchmarkingPhase]]s */
 case class BenchmarkingResultReporter(name: String = "benchmarking_result_reporter") extends Reporter {
   private val _initial_time                = System.currentTimeMillis()
@@ -139,10 +135,10 @@ case class BenchmarkingResultReporter(name: String = "benchmarking_result_report
 
   def report(msg: Message): Unit =
     msg match {
-      case BenchmarkingPhase(phase) =>
+      /*case BenchmarkingPhase(phase) =>
         val t = System.currentTimeMillis()
         results = results :+ (phase, t - _previous_phase)
-        _previous_phase = t
+        _previous_phase = t*/
       case _ =>
     }
 

@@ -31,7 +31,7 @@ object TestRunner extends App {
 
   //showAST()
   //getPrograms()
-  println(PGSlickTables.getDDL)
+  //println(PGSlickTables.getDDL)
   //findDups()
   //fpAllPrograms()
   //findDupTrees()
@@ -47,6 +47,19 @@ object TestRunner extends App {
   //showAST()
   //findTerm("wildcard")
   //syntaxProps()
+  parseProgs
+
+  def parseProgs: Unit = {
+    val fp = Fingerprinter
+    for (num <- Seq.range(0, 901)) {
+      val sourcefile: BufferedSource = fromFile(testFolder + s"others/prog${num}.vpr")(decoder)
+      val sourcestring: String =
+        try sourcefile.mkString
+        finally sourcefile.close()
+      val prog = fastParser.parse(sourcestring, Paths.get(testFolder + s"others/prog${num}.vpr"))
+      if (prog.errors != Seq.empty) println(s"program: $num ${prog.errors}")
+    }
+  }
 
   def syntaxProps(): Unit = {
     val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")

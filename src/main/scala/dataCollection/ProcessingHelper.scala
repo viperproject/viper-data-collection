@@ -65,45 +65,6 @@ object ProcessingHelper {
     )
   }
 
-  /** Searches the database for programs with the same or similar metadata as the entry. Returns true if at least a third of the entry's
-    * features are present in less than half of all entries.
-    */
-  def shouldDropByMetadata(et: ProgramTuple): Boolean = {
-    val totalEntries = DBQueryInterface.getPECount()
-    val totalSilRes  = DBQueryInterface.getUniqueSRCount()
-    val totalCarbRes = DBQueryInterface.getUniqueCRCount()
-
-    val sameFrontend     = DBQueryInterface.getFrontendCount(et.programEntry.frontend)
-    val sameVerifier     = DBQueryInterface.getVerifierCount(et.programEntry.originalVerifier)
-    val sameParseSuccess = DBQueryInterface.getParseSuccessCount(et.programEntry.parseSuccess)
-    val similarLOC       = DBQueryInterface.getLocRangeCount(et.programEntry.loc - 100, et.programEntry.loc + 100)
-    val sameSilSuccess   = DBQueryInterface.getSilSuccessCount(et.siliconResult.success)
-    val similarSilRuntime = DBQueryInterface.getSiliconRuntimeRangeCount(
-      (et.siliconResult.runtime / 1.5).toLong,
-      (et.siliconResult.runtime * 1.5).toLong
-    )
-    val sameCarbSuccess = DBQueryInterface.getCarbonSuccessCount(et.carbonResult.success)
-    val similarCarbRuntime = DBQueryInterface.getCarbonRuntimeRangeCount(
-      (et.carbonResult.runtime / 1.5).toLong,
-      (et.carbonResult.runtime * 1.5).toLong
-    )
-
-    val programFeaturePercentages = Seq(sameFrontend, sameVerifier, sameParseSuccess, similarLOC) map
-      (fc => fc flatMap (c => totalEntries map (t => c.toDouble / t)))
-    val siliconFeaturePercentages = Seq(sameSilSuccess, similarSilRuntime) map
-      (fc => fc flatMap (c => totalSilRes map (t => c.toDouble / t)))
-    val carbonFeaturePercentages = Seq(sameCarbSuccess, similarCarbRuntime) map
-      (fc => fc flatMap (c => totalCarbRes map (t => c.toDouble / t)))
-
-    val allPercentages = Await.result(
-      Future.sequence(programFeaturePercentages ++ siliconFeaturePercentages ++ carbonFeaturePercentages),
-      DEFAULT_DB_TIMEOUT
-    )
-    val shouldDrop = !(allPercentages.count(p =>
-      p <= METADATA_FILTER_THRESHOLD
-    ) >= (allPercentages.length * METADATA_AMOUNT_THRESHOLD).toInt)
-    shouldDrop
-  }
 
   /** Class that stores a boolean to indicate whether an event occurred. Usage example: Passed into a closure in [[existsSimilarEntry]]
     * to avoid unnecessary computations once match has been found.

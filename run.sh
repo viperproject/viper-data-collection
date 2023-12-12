@@ -1,6 +1,8 @@
 #!/bin/bash
 trap 'pkill -P $$; exit' SIGINT SIGTERM
 
+mkdir -p tmp
+
 CP_FILE="vdc_classpath.txt"
 if [ ! -f "$CP_FILE" ]; then
   (
