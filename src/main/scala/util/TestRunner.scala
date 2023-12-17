@@ -47,7 +47,13 @@ object TestRunner extends App {
   //showAST()
   //findTerm("wildcard")
   //syntaxProps()
-  parseProgs
+  //parseProgs
+  getPrograms()
+  //clearDatabase()
+
+  def clearDatabase(): Unit = {
+    Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
+  }
 
   def parseProgs: Unit = {
     val fp = Fingerprinter
@@ -150,7 +156,7 @@ object TestRunner extends App {
     import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()
     programs.onComplete {
-      case Success(value)     => println(value)
+      case Success(value)     => value foreach println
       case Failure(exception) => println(exception)
     }
     Await.result(programs, Duration.Inf)

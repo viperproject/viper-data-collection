@@ -90,7 +90,10 @@ object ProcessingPipeline {
     try {
       val programEntry = loadSerializedObject[ProgramEntry](s"$TMP_DIRECTORY/$dirName/$peFileName")
 
-      val maxRuntime               = ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
+      val maxRuntime = Math.max(
+        ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt,
+        MIN_BENCHMARK_TIMEOUT_SECONDS
+      )
       val (verifierResult, vFeats) = verifierFunction(programEntry, Array(), maxRuntime)
 
       storeObjectSerialized[VerResult](verifierResult, s"$TMP_DIRECTORY/$dirName/${verifierName}Res.bin")
@@ -129,8 +132,6 @@ object ProcessingPipeline {
         println("Entry deemed too similar, will not be stored.")
         return
       }
-
-      //TODO: Frontend in SiliconRunnerInstance, Carbon, ViperServer for testing
 
       // Passed all filters, store in database
       Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)

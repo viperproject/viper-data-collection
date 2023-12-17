@@ -18,7 +18,10 @@ object Config {
   val DB_BATCH_SIZE: Int = 1000
 
   /** How much more time to allot to benchmarking stages compared to original runtime */
-  val BENCHMARK_TIMEOUT_MULTIPLIER: Double = 2.0
+  val BENCHMARK_TIMEOUT_MULTIPLIER: Double = 5.0
+
+  /** Minimum timeout for a benchmark, might be needed for very low original runtimes, f.e. when caching is involved */
+  val MIN_BENCHMARK_TIMEOUT_SECONDS: Int = 10
 
   /** Subtrees at or below this weight will be dropped from the fingerprint trees */
   val FP_TREE_DROP_LIMIT: Int = 3
@@ -55,6 +58,7 @@ object Config {
 
   /** Bash file that switches Carbon version to HEAD */
   val RESTORE_CARB_VERSION_BASH_FILE: String = SCRIPT_DIRECTORY + "/restore_carb_version.sh"
+
   /** Bash file that outputs current Carbon commit hash */
   val GET_CARBON_HASH_BASH_FILE: String = SCRIPT_DIRECTORY + "/get_carbon_hash.sh"
 }
