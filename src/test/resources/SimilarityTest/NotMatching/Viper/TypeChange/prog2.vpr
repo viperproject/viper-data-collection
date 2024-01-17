@@ -1,0 +1,6 @@
+method boolOp(a: Bool, b: Bool) returns (c: Bool)
+	requires b != false;
+	requires a == true;
+{
+	c:= b == false ? true : !a || a && !b
+}

@@ -1,0 +1,14 @@
+method gcd(a: Int, b: Int) returns (z: Int)
+    requires true
+    ensures true
+{
+    z := a;
+    var t: Int;
+    var newb: Int;
+    newb := b;
+    while(z != newb) {
+        t := newb;
+        newb := z % newb;
+        z := t;
+    }
+}

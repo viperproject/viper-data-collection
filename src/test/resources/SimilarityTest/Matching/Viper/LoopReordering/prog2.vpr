@@ -1,0 +1,16 @@
+method doubleLoop(n: Int) returns (res: Int)
+{
+  res := 0
+  var i: Int := 0;
+  var j: Int := 0;
+  while(j <= n)
+  {
+      while(i <= n)
+      {
+        res := res + j + i
+        i := i + 1
+      }
+      j := j + 1
+  }
+
+}

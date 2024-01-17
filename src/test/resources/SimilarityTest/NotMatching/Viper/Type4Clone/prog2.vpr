@@ -1,0 +1,15 @@
+method gcd(a: Int, b: Int) returns (newa: Int)
+    requires true
+    ensures true
+{
+    var newb: Int;
+    newa := a;
+    newb := b;
+    while(newa != newb) {
+        if(newa > newb) {
+            newa:= newa - newb;
+        } else {
+            newb := newb - newa;
+        }
+    }
+}

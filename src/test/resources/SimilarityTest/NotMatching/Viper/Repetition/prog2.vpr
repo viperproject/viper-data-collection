@@ -1,0 +1,15 @@
+field f: Int
+
+method set_inex(x: Ref, i: Int) {
+  x.f := i
+  inhale acc(x.f)
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+  x.f := i
+}
