@@ -81,10 +81,7 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
       true
     } else {
       val possibleTrees = root.children.filter(_.fp.weight >= this.fp.weight)
-      for (t <- possibleTrees) {
-        if(containedInTree(t)) return true
-      }
-      false
+      possibleTrees.exists(containedInTree)
     }
   }
 
