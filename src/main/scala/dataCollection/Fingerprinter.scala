@@ -80,8 +80,11 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
       root.matched = true
       true
     } else {
-      lazy val childResults = root.children.filter(_.fp.weight >= this.fp.weight) map containedInTree
-      childResults.exists(identity)
+      val possibleTrees = root.children.filter(_.fp.weight >= this.fp.weight)
+      for (t <- possibleTrees) {
+        if(containedInTree(t)) return true
+      }
+      false
     }
   }
 
