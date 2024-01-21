@@ -2,6 +2,7 @@
 
 - Clone this repository recursively: `git clone --recursive https://github.com/Simon-Hostettler/viper-data-collection`
 - Make sure all files in `bash_scripts` are marked executable.
+- Run `sbt compile`
 
 ### Prerequisites:
 - JDK 11
