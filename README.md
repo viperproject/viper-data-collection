@@ -1,6 +1,7 @@
 # Setup
 
 - Clone this repository recursively: `git clone --recursive https://github.com/Simon-Hostettler/viper-data-collection`
+- Make sure all files in `bash_scripts` are marked executable.
 
 ### Prerequisites:
 - JDK 11
@@ -14,8 +15,20 @@
 
 ### Configuration
 
-Set up port forwarding from `localhost:8080` to your desired outbound port to be able to access the API.
+Set up port forwarding from `localhost:51934` to your desired outbound port to be able to access the API.
+
+To submit programs to this instance, change the following files:
+
+- Silver: In `viper.silver.utility.ProgramSubmitter` change `val API_HOST` in the trait `ProgramSubmitter` to `http://server_ip/outbound_port`. This implementation is used by Silicon, Carbon, ViperServer, Gobra and Nagini.
+
+- Prusti: In `prusti_utils::program_submitter` change `const API_HOST` to `http://server_ip/outbound_port`.
+
+
 
 ### Usage
 
 Running `./run.sh` will start the Docker database container and the API webserver.
+
+To access the API, query `http://server_ip/outbound_port/query_endpoint`. For relevant endpoints see `vdc-query-frontend/src/main/scala/queryFrontend/APIQueries`.
+
+To back up the database, run `bash_scripts/db_backup.sh`. This will store a compressed backup in `db/backups/`. To restore an older version, run `bash_scripts/db_restore.sh backup_filename`. The file has to be found in `db/backups/`.
