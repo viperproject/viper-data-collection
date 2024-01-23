@@ -2,7 +2,7 @@ package util
 
 import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.customFrontends.ProgramSyntaxProperties
-import dataCollection.{ComparableProgramPrint, Fingerprinter, ProgramPrint}
+import dataCollection.{ComparableProgramPrint, FPNode, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
 import database.{DBQueryInterface, PGSlickTables}
 import queryFrontend._
@@ -25,11 +25,11 @@ import scala.util.{Failure, Success}
 //number of methods, maybe store larger one
 
 object TestRunner extends App {
-  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/others/"
+  private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/"
   private val fastParser = new FastParser()
   private val decoder    = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  //showAST()
+  showAST()
   //getPrograms()
   //println(PGSlickTables.getDDL)
   //findDups()
@@ -48,11 +48,22 @@ object TestRunner extends App {
   //findTerm("wildcard")
   //syntaxProps()
   //parseProgs
-  getPrograms()
+  //getPrograms()
+  //getSiliconResults()
   //clearDatabase()
 
   def clearDatabase(): Unit = {
     Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
+  }
+
+  def getSiliconResults(): Unit = {
+    import database.DBExecContext._
+    val res = DBQueryInterface.getLatestSilResForEntry(20)
+    res.onComplete {
+      case Success(value) => value foreach println
+      case Failure(exception) => println(exception)
+    }
+    Await.result(res, Duration.Inf)
   }
 
   def parseProgs: Unit = {
@@ -156,14 +167,14 @@ object TestRunner extends App {
     import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()
     programs.onComplete {
-      case Success(value)     => value foreach println
+      case Success(value)     => value foreach (v => println(v.frontend))
       case Failure(exception) => println(exception)
     }
     Await.result(programs, Duration.Inf)
   }
 
   def showAST(): Unit = {
-    val file   = new File("src/test/resources/FeatureTest/qp.vpr")
+    val file   = new File("src/test/resources/SimilarityTest/Matching/Frontends/SmallChangeInPython/prog2.vpr")
     val buffer = fromFile(file)
     val prog =
       try buffer.mkString
@@ -177,8 +188,29 @@ object TestRunner extends App {
     Nodes.subnodes(pn) foreach (printRec(_))
   }
 
+  def showFP(): Unit = {
+    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/SmallChangeInRust/prog1.vpr")
+    val buffer = fromFile(file)
+    val prog =
+      try buffer.mkString
+      finally buffer.close()
+    val progAST = fastParser.parse(prog, file.toPath)
+    val pprint = Fingerprinter.fingerprintPProgram(progAST)
+    println(countHash(pprint.methodTree, "3b147439f7226937"))
+    //println(pprint.methodTree)
+  }
+
+  def countHash(n: FPNode, h: String): Int = {
+    val childVals = (n.children map (c => countHash(c, h))).sum
+    if (n.fp.hashVal == h) {
+      childVals + 1
+    } else {
+      childVals
+    }
+  }
+
   def naginiDups(): Unit = {
-    val folder                               = new File(testFolder + "nagini_full/")
+    val folder                               = new File(testFolder + "SimilarityTest/Matching/Frontends/Subset/")
     var pprints: Seq[(String, ProgramPrint)] = Seq()
     for (f <- folder.listFiles()) {
       val sourcefile = fromFile(f)
@@ -187,6 +219,7 @@ object TestRunner extends App {
         finally sourcefile.close()
       val prog = fastParser.parse(text, f.toPath)
       pprints = pprints :+ (f.getName, Fingerprinter.fingerprintPProgram(prog))
+      //println(Fingerprinter.fingerprintPProgram(prog))
     }
     var dups: Set[String] = Set()
     for ((name1, pprint1) <- pprints) {

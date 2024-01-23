@@ -16,7 +16,7 @@
 
 ### Configuration
 
-Set up port forwarding from `localhost:51934` to your desired outbound port to be able to access the API.
+Set up port forwarding from `localhost:WEBSERVER_LOCAL_PORT` (can be found in `util/Config`) to your desired outbound port to be able to access the API.
 
 To submit programs to this instance, change the following files:
 

@@ -35,7 +35,7 @@ import scala.sys.process.Process
   * - If you need to query the database, there are a lot of predefined queries in [[DBQueryInterface]]
   */
 object Routes extends cask.MainRoutes {
-  override val port: Int = 51934
+  override val port: Int = WEBSERVER_LOCAL_PORT
 
   @cask.get("/")
   def default() = {
