@@ -24,6 +24,8 @@ To submit programs to this instance, change the following files:
 
 - Prusti: In `prusti_utils::program_submitter` change `const API_HOST` to `http://server_ip/outbound_port`.
 
+- vdc-query-frontend: In `queryFrontend.Config` change `val API_HOST` to `http://server_ip/outbound_port`.
+
 
 
 ### Usage

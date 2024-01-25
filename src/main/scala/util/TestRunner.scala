@@ -4,7 +4,7 @@ import dataCollection.ProcessingHelper.doProgramPrintsMatch
 import dataCollection.customFrontends.ProgramSyntaxProperties
 import dataCollection.{ComparableProgramPrint, FPNode, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
-import database.{DBQueryInterface, PGSlickTables}
+import database.{DBConnection, DBQueryInterface, PGSlickTables}
 import queryFrontend._
 import upickle.default.{read, write}
 import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode}
@@ -24,12 +24,17 @@ import scala.util.{Failure, Success}
 
 //number of methods, maybe store larger one
 
+// PR for Silver
+// PR For Carbon, Silicon
+// Add functionality to only submit, not evaluate programs
+// remove filenames
+
 object TestRunner extends App {
   private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/"
   private val fastParser = new FastParser()
   private val decoder    = Codec.UTF8.decoder.onMalformedInput(CodingErrorAction.IGNORE)
 
-  showAST()
+  //showAST()
   //getPrograms()
   //println(PGSlickTables.getDDL)
   //findDups()
@@ -51,6 +56,11 @@ object TestRunner extends App {
   //getPrograms()
   //getSiliconResults()
   //clearDatabase()
+  printDDL()
+
+  def printDDL(): Unit = {
+    print(PGSlickTables.getDDL)
+  }
 
   def clearDatabase(): Unit = {
     Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
@@ -128,7 +138,6 @@ object TestRunner extends App {
     val programEntry: ProgramEntry = ProgramEntry(
       0,
       Timestamp.valueOf(LocalDateTime.now()),
-      "prog.vpr",
       prog,
       1400,
       "Nagini",

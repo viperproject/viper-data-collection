@@ -24,8 +24,8 @@ class VersionBenchmarkTest extends AnyFunSuite {
       //very different program
       val sampleProg2 = readProgram(new File("src/test/resources/ProcessingTest/sample3.vpr"))
 
-      queryFrontend.APIQueries.submitProgram("sample.vpr", sampleProg, "Silicon", Array("--timeout", "10"), "Silicon", true, 1500)
-      queryFrontend.APIQueries.submitProgram("sample.vpr", sampleProg2, "Silicon", Array(), "Silicon", true, 3000)
+      queryFrontend.APIQueries.submitProgram(sampleProg, "Silicon", Array("--timeout", "10"), "Silicon", true, 1500)
+      queryFrontend.APIQueries.submitProgram(sampleProg2, "Silicon", Array(), "Silicon", true, 3000)
 
       Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline").!
       Process(s"$SCALA_CLASS_BASH_FILE dataCollection.ProcessingPipeline").!

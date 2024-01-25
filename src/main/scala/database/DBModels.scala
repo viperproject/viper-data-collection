@@ -69,8 +69,6 @@ class SlickTables(val profile: PostgresProfile) {
 
     def submissionDate = column[Timestamp]("submissionDate")
 
-    def originalName = column[String]("originalName")
-
     def program = column[String]("program")
 
     def loc = column[Int]("loc")
@@ -88,7 +86,6 @@ class SlickTables(val profile: PostgresProfile) {
     override def * : ProvenShape[ProgramEntry] = (
       programEntryId,
       submissionDate,
-      originalName,
       program,
       loc,
       frontend,
@@ -104,8 +101,6 @@ class SlickTables(val profile: PostgresProfile) {
     def submissionId = column[Long]("submissionId", O.PrimaryKey, O.AutoInc)
 
     def submissionDate = column[Timestamp]("submissionDate")
-
-    def originalName = column[String]("originalName")
 
     def program = column[String]("program")
 
@@ -124,7 +119,6 @@ class SlickTables(val profile: PostgresProfile) {
     override def * : ProvenShape[UserSubmission] = (
       submissionId,
       submissionDate,
-      originalName,
       program,
       loc,
       frontend,

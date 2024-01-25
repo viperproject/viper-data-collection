@@ -287,7 +287,6 @@ object Routes extends cask.MainRoutes {
 
   @cask.postJson("/submit-program")
   def submitProgram(
-    originalName: String,
     program: String,
     frontend: String,
     args: Array[String],
@@ -299,7 +298,6 @@ object Routes extends cask.MainRoutes {
       val userSubmission = UserSubmission(
         0,
         Timestamp.valueOf(LocalDateTime.now()),
-        originalName,
         program,
         getLOC(program),
         frontend,

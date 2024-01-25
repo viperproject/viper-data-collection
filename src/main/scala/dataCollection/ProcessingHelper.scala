@@ -54,7 +54,6 @@ object ProcessingHelper {
     ProgramEntry(
       0,
       Timestamp.valueOf(LocalDateTime.now()),
-      us.originalName,
       us.program,
       us.loc,
       us.frontend,
