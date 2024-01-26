@@ -26,8 +26,6 @@ import scala.util.{Failure, Success}
 
 // PR for Silver
 // PR For Carbon, Silicon
-// Add functionality to only submit, not evaluate programs
-// remove filenames
 
 object TestRunner extends App {
   private val testFolder = "/Users/simon/code/viper-data-collection/src/test/resources/"

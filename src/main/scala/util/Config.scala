@@ -5,7 +5,11 @@ import scala.concurrent.duration.{Duration, SECONDS}
 /** Contains constant parameters used in viper-data-collection */
 object Config {
 
-  val WEBSERVER_LOCAL_PORT = 51934
+  /** Store programs and their ProgramPrints only, don't benchmark them */
+  val STORE_ONLY: Boolean = false
+
+  /** Port used in [[webAPI.Routes]] */
+  val WEBSERVER_LOCAL_PORT: Int = 51934
 
   /** Number of threads to use for database operations */
   val DB_EXEC_CONTEXT_PARALLELISM: Int = 10

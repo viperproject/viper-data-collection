@@ -428,6 +428,24 @@ object DBQueryInterface {
     entryTuples
   }
 
+  def getPotentialMatchingPrograms(pe: ProgramEntry): DatabasePublisher[(ProgramEntry, ProgramPrintEntry)] = {
+    val tupleQuery = for {
+      proge <- sTables.programEntryTable
+      pp    <- sTables.programPrintEntryTable if pp.programEntryId === proge.programEntryId
+    } yield (proge, pp)
+    val filteredQuery = tupleQuery
+      .filter(_._1.loc >= (pe.loc * 0.5).toInt)
+      .filter(_._1.loc <= (pe.loc * 2.0).toInt)
+      .filter(_._1.originalVerifier === pe.originalVerifier)
+      .filter(_._1.frontend === pe.frontend)
+      .filter(_._1.parseSuccess === pe.parseSuccess)
+      .result
+    val queryWithParams = filteredQuery.transactionally
+      .withStatementParameters(fetchSize = DB_BATCH_SIZE)
+    val tuples: DatabasePublisher[(ProgramEntry, ProgramPrintEntry)] = db.stream(queryWithParams)
+    tuples
+  }
+
   def insertProcessingResult(prt: ProcessingResultTuple): Future[Any] = {
     val resInsert = for {
       peId <- (sTables.programEntryTable returning sTables.programEntryTable.map(
@@ -445,6 +463,14 @@ object DBQueryInterface {
     val silFeatureInserts           = insertVerifierFeatures("Silicon", silResId, prt.silVerFeatures)
     val carbFeatureInserts          = insertVerifierFeatures("Carbon", carbResId, prt.carbVerFeatures)
     Await.ready(Future.sequence(Seq(ppeInsert, silFeatureInserts, carbFeatureInserts)), DEFAULT_DB_TIMEOUT)
+  }
+
+  def insertProgramAndPrint(pe: ProgramEntry, ppe: ProgramPrintEntry): Future[Any] = {
+    val peID = Await.result(
+      db.run((sTables.programEntryTable returning sTables.programEntryTable.map(_.programEntryId)) += pe),
+      DEFAULT_DB_TIMEOUT
+    )
+    db.run(sTables.programPrintEntryTable += ppe.copy(programEntryId = peID))
   }
 
   def clearDB(): Future[Unit] = {

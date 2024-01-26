@@ -30,15 +30,19 @@ object ProcessingPipeline {
     try {
       globalLock = getGlobalLock()
 
-      tmpDirName = programEntryStage()
+      if (STORE_ONLY) {
+        storeOnlyStage()
+      } else {
+        tmpDirName = programEntryStage()
 
-      val siliconProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconStageRunner $tmpDirName")
-      if (siliconProcess.! == -1) throw StageIncompleteException()
+        val siliconProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.SiliconStageRunner $tmpDirName")
+        if (siliconProcess.! == -1) throw StageIncompleteException()
 
-      val carbonProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonStageRunner $tmpDirName")
-      if (carbonProcess.! == -1) throw StageIncompleteException()
+        val carbonProcess = Process(s"$SCALA_CLASS_BASH_FILE dataCollection.CarbonStageRunner $tmpDirName")
+        if (carbonProcess.! == -1) throw StageIncompleteException()
 
-      filterAndInsertStage(tmpDirName)
+        filterAndInsertStage(tmpDirName)
+      }
     } catch {
       case GlobalLockException() | StageIncompleteException() | NothingToDoException() => {
         removeTempDir(tmpDirName)
@@ -128,15 +132,39 @@ object ProcessingPipeline {
 
       // Deciding whether to drop entry based on similarity
       val similarEntryExists = existsSimilarEntry(procResTuple.programTuple)
-      if (similarEntryExists) {
-        println("Entry deemed too similar, will not be stored.")
-        return
-      }
-
       // Passed all filters, store in database
-      Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)
+      if (!similarEntryExists) {
+        Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)
+      }
     } catch {
       case e: Exception => e.printStackTrace(); throw StageIncompleteException()
+    }
+  }
+
+  /** * Called if [[STORE_ONLY]]. Checks if new UserSubmission exists, converts it to ProgramEntry and ProgramPrintEntry,
+    *  searches database for potential matching ProgramEntries and ProgramPrints,
+    *  if none found, inserts ProgramEntry and ProgramPrintEntry into database.
+    *
+    * @throws NothingToDoException     if there are no more UserSubmissions in the database
+    * @throws StageIncompleteException if there was any exception preventing the stage to complete
+    */
+  private def storeOnlyStage(): Unit = {
+    try {
+      val entryOpt = processOldestSubmission()
+      entryOpt match {
+        case Some(entry) => {
+          val programPrintEntry = createProgramPrintEntry(entry.program)
+
+          val existsSimilar = existsSimilarProgram(entry, programPrintEntry.programPrint)
+          if (!existsSimilar) {
+            Await.ready(DBQueryInterface.insertProgramAndPrint(entry, programPrintEntry), DEFAULT_DB_TIMEOUT)
+          }
+        }
+        case None => throw NothingToDoException()
+      }
+    } catch {
+      case ntd: NothingToDoException => throw ntd
+      case e: Exception              => e.printStackTrace(); throw StageIncompleteException()
     }
   }
 

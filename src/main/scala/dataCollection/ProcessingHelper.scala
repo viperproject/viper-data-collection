@@ -64,7 +64,6 @@ object ProcessingHelper {
     )
   }
 
-
   /** Class that stores a boolean to indicate whether an event occurred. Usage example: Passed into a closure in [[existsSimilarEntry]]
     * to avoid unnecessary computations once match has been found.
     */
@@ -89,7 +88,30 @@ object ProcessingHelper {
     })
     var foundMatch = false
     val evaluation = matchResults.foreach(r => foundMatch = foundMatch || r)
-    Await.ready(evaluation, Duration(200, SECONDS))
+    Await.ready(evaluation, LONG_TIMEOUT)
+    foundMatch
+  }
+
+  /** * Searches Database for potential matching ProgramEntries, matches only entry and ProgramPrint. This method is used
+    * instead of [[existsSimilarEntry]] in case [[STORE_ONLY]] is enabled.
+    * @return True if a program with a similar entry and ProgramPrint is already stored.
+    */
+  def existsSimilarProgram(pe: ProgramEntry, pp: ProgramPrint): Boolean = {
+    val potMatches = DBQueryInterface.getPotentialMatchingPrograms(pe)
+    val matchState = new BooleanCarrier()
+    val matchResults = potMatches.mapResult(otherEntry => {
+      if (matchState.bool) true
+      else {
+        lazy val peMatch = pe.isSimilarTo(otherEntry._1)
+        lazy val ppMatch = doProgramPrintsMatch(pp, otherEntry._2.programPrint, pe.frontend)
+        val dm           = peMatch && ppMatch
+        matchState.bool = dm
+        dm
+      }
+    })
+    var foundMatch = false
+    val evaluation = matchResults.foreach(r => foundMatch = foundMatch || r)
+    Await.ready(evaluation, LONG_TIMEOUT)
     foundMatch
   }
 
