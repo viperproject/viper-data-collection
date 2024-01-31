@@ -40,6 +40,12 @@ object DBQueryInterface {
     entryOpt
   }
 
+  def getProgramEntriesByIDs(entryIds: Seq[Long]): Future[Seq[ProgramEntry]] = {
+    val uniqueIds = entryIds.toSet
+    val entrySeq = db.run(sTables.programEntryTable.filter(_.programEntryId.inSet(uniqueIds)).result)
+    entrySeq
+  }
+
   def getEntriesByMetadata(
     earliestDate: Timestamp,
     latestDate: Timestamp,

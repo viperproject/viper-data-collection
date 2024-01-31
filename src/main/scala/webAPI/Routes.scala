@@ -75,6 +75,19 @@ object Routes extends cask.MainRoutes {
     }
   }
 
+  /** Returns all programEntries from database whose programEntryId is contained in entryIds */
+  @cask.postJson("/program-entries-by-ids")
+  def programEntriesByIds(entryIds: Seq[Long]): Response[Obj] = {
+    try {
+      val entries     = Await.result(DBQueryInterface.getProgramEntriesByIDs(entryIds), DEFAULT_DB_TIMEOUT)
+      val responseObj = Obj("programEntries" -> Arr.from[ProgramEntry](entries)(writeJs))
+      cask.Response(data = responseObj, statusCode = 200)
+    } catch {
+      case e: Exception =>
+        e.printStackTrace(); cask.Response(data = Obj("errMsg" -> "Error occurred during retrieval"), statusCode = 500)
+    }
+  }
+
   /** Returns a list of ids for all programEntries that have a [[VerifierResult]] which produced [[feature]] with the value of [[value]] */
   @cask.get("/program-ids-by-feature-value")
   def programIdsByFeatureValue(feature: String, value: String): Response[Obj] = {
