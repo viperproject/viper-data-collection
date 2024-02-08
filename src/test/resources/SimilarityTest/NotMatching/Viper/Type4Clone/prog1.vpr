@@ -3,12 +3,12 @@ method gcd(a: Int, b: Int) returns (z: Int)
     ensures true
 {
     z := a;
-    var t: Int;
+    var temp: Int;
     var newb: Int;
     newb := b;
     while(z != newb) {
-        t := newb;
+        temp := newb;
         newb := z % newb;
-        z := t;
+        z := temp;
     }
 }

@@ -1,15 +1,15 @@
-method gcd(a: Int, b: Int) returns (newa: Int)
+method gcd(a: Int, b: Int) returns (z: Int)
     requires true
     ensures true
 {
     var newb: Int;
-    newa := a;
+    z := a;
     newb := b;
-    while(newa != newb) {
-        if(newa > newb) {
-            newa:= newa - newb;
+    while(z != newb) {
+        if(z > newb) {
+            z:= z - newb;
         } else {
-            newb := newb - newa;
+            newb := newb - z;
         }
     }
 }
