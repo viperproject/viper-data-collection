@@ -56,7 +56,7 @@ object TestRunner extends App {
   //getPrograms()
   //getSiliconResults()
   //clearDatabase()
-  //printDDL()
+  printDDL()
   //specificMatch()
   //getMatchPercentages()
   //fpAllPrograms()

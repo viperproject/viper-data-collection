@@ -42,7 +42,7 @@ object DBQueryInterface {
 
   def getProgramEntriesByIDs(entryIds: Seq[Long]): Future[Seq[ProgramEntry]] = {
     val uniqueIds = entryIds.toSet
-    val entrySeq = db.run(sTables.programEntryTable.filter(_.programEntryId.inSet(uniqueIds)).result)
+    val entrySeq  = db.run(sTables.programEntryTable.filter(_.programEntryId.inSet(uniqueIds)).result)
     entrySeq
   }
 
@@ -90,18 +90,18 @@ object DBQueryInterface {
   /*------ ProgramEntryId Queries ------*/
 
   def getPEIdsWithFeatureValue(feature: String, value: String): Future[Seq[Long]] = {
-    val query = for {
-      feat         <- sTables.featureTable if feat.name === feature
-      silFeatEntry <- sTables.silFeatureEntryTable
-      if silFeatEntry.featureName === feat.name && silFeatEntry.value === value
-      silRes        <- sTables.siliconResultTable if silRes.silResId === silFeatEntry.resultId
-      carbFeatEntry <- sTables.carbFeatureEntryTable
-      if carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value
-      carbRes <- sTables.carbonResultTable if carbRes.carbResId === carbFeatEntry.resultId
-      pe      <- sTables.programEntryTable
-      if pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId
-    } yield (pe.programEntryId)
-    db.run(query.result)
+    val silFeatQuery = (for {
+      feat <- sTables.silFeatureEntryTable if feat.featureName === feature && feat.value === value
+      silRes <- sTables.siliconResultTable if feat.resultId === silRes.silResId
+    } yield silRes.programEntryId).result
+    val carbFeatQuery = (for {
+      feat <- sTables.carbFeatureEntryTable if feat.featureName === feature && feat.value === value
+      carbRes <- sTables.carbonResultTable if feat.resultId === carbRes.carbResId
+    } yield carbRes.programEntryId).result
+    val constFeatQuery = (for {
+      feat <- sTables.constFeatureEntryTable if feat.featureName === feature && feat.value === value
+    } yield feat.programEntryId).result
+    db.run(DBIO.sequence(Seq(silFeatQuery, carbFeatQuery, constFeatQuery))).map(_.flatten)
   }
 
   def getPEIdsWithoutSilVersionRes(versionHash: String): Future[Seq[Long]] = {
@@ -246,22 +246,6 @@ object DBQueryInterface {
 
   /*------ Metadata Queries ------*/
 
-  def getProgramWithFeatureValueCount(feature: String, value: String): Future[Int] = {
-    val query = for {
-      feat         <- sTables.featureTable if feat.name === feature
-      silFeatEntry <- sTables.silFeatureEntryTable
-      if silFeatEntry.featureName === feat.name && silFeatEntry.value === value
-      silRes        <- sTables.siliconResultTable if silRes.silResId === silFeatEntry.resultId
-      carbFeatEntry <- sTables.carbFeatureEntryTable
-      if carbFeatEntry.featureName === feat.name && carbFeatEntry.value === value
-      carbRes <- sTables.carbonResultTable if carbRes.carbResId === carbFeatEntry.resultId
-      pe      <- sTables.programEntryTable
-      if pe.programEntryId === silRes.programEntryId || pe.programEntryId === carbRes.programEntryId
-    } yield pe
-    val count = query.groupBy(_.programEntryId).length
-    db.run(count.result)
-  }
-
   def getUSCount(): Future[Int] = {
     val usCount = db.run(sTables.userSubmissionTable.length.result)
     usCount
@@ -363,14 +347,21 @@ object DBQueryInterface {
   }
 
   def insertIfNotExistsConstFeature(cf: VerifierFeature, programEntryId: Long) = {
-    val query = (for (f <- sTables.constFeatureEntryTable if f.programEntryId === programEntryId && f.featureName === cf.name) yield f).exists.result.flatMap { exists =>
-      if (!exists) sTables.constFeatureEntryTable += FeatureEntry(0, cf.name, programEntryId, cf.value)
-      else DBIO.successful(None)
-    }
+    val query =
+      (for (f <- sTables.constFeatureEntryTable if f.programEntryId === programEntryId && f.featureName === cf.name)
+        yield f).exists.result.flatMap { exists =>
+        if (!exists) sTables.constFeatureEntryTable += FeatureEntry(0, cf.name, programEntryId, cf.value)
+        else DBIO.successful(None)
+      }
     query
   }
 
-  def insertVerifierFeatures(verifier: String, resultId: Long, programEntryId: Long, vfs: Seq[VerifierFeature]): Future[Any] = {
+  def insertVerifierFeatures(
+    verifier: String,
+    resultId: Long,
+    programEntryId: Long,
+    vfs: Seq[VerifierFeature]
+  ): Future[Any] = {
     val partition = vfs.partition(_.constant)
     Await.ready(
       Future.sequence(vfs map (vf => insertIfNotExistsFeature(vf.name))),
