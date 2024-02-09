@@ -31,7 +31,7 @@ trait FeatureGenerator {
 
   /** Any VerifierFeatures returned by this function will be inserted into the database */
   def getFeatures: Seq[VerifierFeature] = if (hasRun)
-    syntaxProps.getFeatures :+ VerifierFeature("typeCheckSuccess", doesTypeCheck.toString)
+    syntaxProps.getFeatures :+ VerifierFeature("typeCheckSuccess", doesTypeCheck.toString, false)
   else Seq()
 }
 
@@ -42,7 +42,7 @@ trait SilFeatureGenerator extends FeatureGenerator {
 
   private def benchmarkResToVF(res: Seq[(String, Long)]): Seq[VerifierFeature] =
     res map { case (phase, time) =>
-      VerifierFeature(s"BenchmarkingPhase $phase", time.toString)
+      VerifierFeature(s"BenchmarkingPhase $phase", time.toString, false)
     }
   override def getFeatures: Seq[VerifierFeature] = {
     if (hasRun) super.getFeatures // ++ benchmarkResToVF(getBenchmarkResults)
@@ -57,17 +57,17 @@ trait CarbFeatureGenerator extends FeatureGenerator {}
 class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
 
   def getFeatures: Seq[VerifierFeature] = Seq(
-    VerifierFeature("hasSet", hasSet.toString),
-    VerifierFeature("hasSeq", hasSeq.toString),
-    VerifierFeature("hasMagicWand", hasMagicWand.toString),
-    VerifierFeature("hasWildcardPerm", hasWildcardPerm.toString),
-    VerifierFeature("hasPerm", hasPerm.toString),
-    VerifierFeature("hasForPerm", hasForPerm.toString),
-    VerifierFeature("hasTermination", hasTermination.toString),
-    VerifierFeature("hasRecursivePred", hasRecursivePred.toString),
-    VerifierFeature("hasRecursiveFunc", hasRecursiveFunc.toString),
-    VerifierFeature("hasMissingTrigger", hasMissingTrigger.toString),
-    VerifierFeature("mightHaveQP", mightHaveQP.toString)
+    VerifierFeature("hasSet", hasSet.toString, true),
+    VerifierFeature("hasSeq", hasSeq.toString, true),
+    VerifierFeature("hasMagicWand", hasMagicWand.toString, true),
+    VerifierFeature("hasWildcardPerm", hasWildcardPerm.toString, true),
+    VerifierFeature("hasPerm", hasPerm.toString, true),
+    VerifierFeature("hasForPerm", hasForPerm.toString, true),
+    VerifierFeature("hasTermination", hasTermination.toString, true),
+    VerifierFeature("hasRecursivePred", hasRecursivePred.toString, true),
+    VerifierFeature("hasRecursiveFunc", hasRecursiveFunc.toString, true),
+    VerifierFeature("hasMissingTrigger", hasMissingTrigger.toString, true),
+    VerifierFeature("mightHaveQP", mightHaveQP.toString, true)
   )
   private def programTrees: Seq[Seq[PNode]] =
     Seq(pp.extensions, pp.predicates, pp.methods, pp.fields, pp.domains, pp.functions)
@@ -145,4 +145,4 @@ case class BenchmarkingResultReporter(name: String = "benchmarking_result_report
   def getBenchmarkResults: Seq[(String, Long)] = results
 }
 
-case class VerifierFeature(name: String, value: String) extends Serializable
+case class VerifierFeature(name: String, value: String, constant: Boolean) extends Serializable

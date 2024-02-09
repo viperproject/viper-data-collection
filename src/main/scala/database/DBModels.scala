@@ -49,6 +49,7 @@ class SlickTables(val profile: PostgresProfile) {
   lazy val featureTable           = TableQuery[FeatureTable]
   lazy val silFeatureEntryTable   = TableQuery[SilFeatureEntryTable]
   lazy val carbFeatureEntryTable  = TableQuery[CarbFeatureEntryTable]
+  lazy val constFeatureEntryTable = TableQuery[ConstFeatureEntryTable]
 
   def tables = Seq(
     userSubmissionTable,
@@ -58,7 +59,8 @@ class SlickTables(val profile: PostgresProfile) {
     programPrintEntryTable,
     featureTable,
     silFeatureEntryTable,
-    carbFeatureEntryTable
+    carbFeatureEntryTable,
+    constFeatureEntryTable
   )
 
   //abbreviation
@@ -257,6 +259,24 @@ class SlickTables(val profile: PostgresProfile) {
 
     override def * : ProvenShape[FeatureEntry] =
       (featureEntryId, featureName, resultId, value) <> (FeatureEntry.tupled, FeatureEntry.unapply)
+
+  }
+
+  class ConstFeatureEntryTable(tag: Tag) extends Table[FeatureEntry](tag, Some("programs"), "ConstFeatureEntries") {
+    def featureEntryId = column[Long]("constFeatureEntryId", O.PrimaryKey, O.AutoInc)
+
+    def featureName = column[String]("featureName")
+
+    def feature = foreignKey("constfeF_FK", featureName, featureTable)(_.name, onDelete = casc, onUpdate = casc)
+
+    def programEntryId = column[Long]("programEntryId")
+
+    def result = foreignKey("constfePE_FK", programEntryId, programEntryTable)(_.programEntryId, onDelete = casc, onUpdate = casc)
+
+    def value = column[String]("value")
+
+    override def * : ProvenShape[FeatureEntry] =
+      (featureEntryId, featureName, programEntryId, value) <> (FeatureEntry.tupled, FeatureEntry.unapply)
 
   }
 

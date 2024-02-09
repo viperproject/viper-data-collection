@@ -362,17 +362,27 @@ object DBQueryInterface {
     db.run(query)
   }
 
-  def insertVerifierFeatures(verifier: String, resultId: Long, vfs: Seq[VerifierFeature]): Future[Any] = {
+  def insertIfNotExistsConstFeature(cf: VerifierFeature, programEntryId: Long) = {
+    val query = (for (f <- sTables.constFeatureEntryTable if f.programEntryId === programEntryId && f.featureName === cf.name) yield f).exists.result.flatMap { exists =>
+      if (!exists) sTables.constFeatureEntryTable += FeatureEntry(0, cf.name, programEntryId, cf.value)
+      else DBIO.successful(None)
+    }
+    query
+  }
+
+  def insertVerifierFeatures(verifier: String, resultId: Long, programEntryId: Long, vfs: Seq[VerifierFeature]): Future[Any] = {
+    val partition = vfs.partition(_.constant)
     Await.ready(
       Future.sequence(vfs map (vf => insertIfNotExistsFeature(vf.name))),
       DEFAULT_DB_TIMEOUT
     )
-    val insertQuery = if (verifier == "Silicon") {
-      sTables.silFeatureEntryTable ++= vfs map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
+    val verifierInserts = if (verifier == "Silicon") {
+      sTables.silFeatureEntryTable ++= partition._2 map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
     } else {
-      sTables.carbFeatureEntryTable ++= vfs map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
+      sTables.carbFeatureEntryTable ++= partition._2 map (vf => FeatureEntry(0, vf.name, resultId, vf.value))
     }
-    db.run(insertQuery)
+    val constInserts = partition._1 map (cf => insertIfNotExistsConstFeature(cf, programEntryId))
+    db.run(DBIO.seq(DBIO.sequence(constInserts :+ verifierInserts)))
   }
 
   def insertFeature(feature: Feature): Future[Int] = {
@@ -408,7 +418,10 @@ object DBQueryInterface {
       carbRes <- sTables.carbonResultTable if carbRes.programEntryId === id
       feat    <- sTables.carbFeatureEntryTable.filter(_.resultId === carbRes.carbResId)
     } yield feat).result
-    db.run(DBIO.sequence(Seq(silFeatQuery, carbFeatQuery))).map(_.flatten)
+    val constFeatQuery = (for {
+      feat <- sTables.constFeatureEntryTable if feat.programEntryId === id
+    } yield feat).result
+    db.run(DBIO.sequence(Seq(silFeatQuery, carbFeatQuery, constFeatQuery))).map(_.flatten)
   }
 
   /*------ General Queries ------*/
@@ -466,8 +479,8 @@ object DBQueryInterface {
     } yield (peId, silResId, carbResId)
     val (peId, silResId, carbResId) = Await.result(db.run(resInsert), DEFAULT_DB_TIMEOUT)
     val ppeInsert                   = insertProgramPrintEntry(prt.programTuple.programPrintEntry.copy(programEntryId = peId))
-    val silFeatureInserts           = insertVerifierFeatures("Silicon", silResId, prt.silVerFeatures)
-    val carbFeatureInserts          = insertVerifierFeatures("Carbon", carbResId, prt.carbVerFeatures)
+    val silFeatureInserts           = insertVerifierFeatures("Silicon", silResId, peId, prt.silVerFeatures)
+    val carbFeatureInserts          = insertVerifierFeatures("Carbon", carbResId, peId, prt.carbVerFeatures)
     Await.ready(Future.sequence(Seq(ppeInsert, silFeatureInserts, carbFeatureInserts)), DEFAULT_DB_TIMEOUT)
   }
 

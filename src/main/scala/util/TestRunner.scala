@@ -7,20 +7,22 @@ import database.tools.PatternMatcher
 import database.{DBConnection, DBQueryInterface, PGSlickTables}
 import queryFrontend._
 import upickle.default.{read, write}
-import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode}
+import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode, PProgram}
 import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.charset.CodingErrorAction
 import java.nio.file.{Files, Paths}
 import java.sql.Timestamp
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.io.{BufferedSource, Codec, Source}
+import scala.reflect.io.{Directory}
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
+import java.time.Duration.between
 
 //number of methods, maybe store larger one
 
@@ -54,10 +56,152 @@ object TestRunner extends App {
   //getPrograms()
   //getSiliconResults()
   //clearDatabase()
-  printDDL()
+  //printDDL()
+  //specificMatch()
+  //getMatchPercentages()
+  //fpAllPrograms()
+  //findDupTrees()
+  //regexDBPerformance()
+  getFeatures()
 
   def printDDL(): Unit = {
     print(PGSlickTables.getDDL)
+  }
+
+  def getFeatures(): Unit = {
+    import database.DBExecContext._
+    val features = DBQueryInterface.getFeaturesById(501)
+    features.onComplete {
+      case Success(value) => value foreach (println(_))
+      case Failure(exception) => println(exception)
+    }
+    Await.result(features, Duration.Inf)
+  }
+
+  def readProgram(path: String): String = {
+    val fBuffer: BufferedSource = scala.io.Source.fromFile(path)(decoder)
+    val prog =
+      try fBuffer.mkString
+      finally fBuffer.close()
+    prog
+  }
+
+  def processingPerformanceTest(): Unit = {
+    val dbAndAPIProcess = Process(s"./run.sh").run
+    Thread.sleep(2000) // startup
+    Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
+    try {
+      var programs: Seq[ProgramEntry] = Seq()
+
+      for(i<- 0 to 499) {
+        val prog = readProgram(testFolder + s"dataCollection/others/prog${i}.vpr")
+        val us = ProgramEntry(
+          0,
+          Timestamp.valueOf(LocalDateTime.now()),
+          prog,
+          15,
+          "Silicon",
+          "Silicon",
+          Array(),
+          2000,
+          true
+        )
+        programs = programs :+ us
+      }
+
+      val insertQ = DBQueryInterface.insertProgramEntries(programs)
+      Await.ready(insertQ, Duration.Inf)
+
+      for(i <- 0 to 5) {
+        APIQueries.submitProgram(programs(i).program, "Silicon", Array(), "Silicon", true, 2000)
+      }
+      Thread.sleep(300000)
+    } finally {
+      dbAndAPIProcess.destroy()
+    }
+  }
+
+  def getMatchPercentages(): Unit = {
+    val fileDir = new Directory(new File("src/test/resources/SimilarityTest/Matching/Viper"))
+    val subDirs = fileDir.dirs
+    var min: Seq[Double] = Seq()
+    var max: Seq[Double] = Seq()
+    println("Matching / Viper")
+    for (d <- subDirs) {
+      val res = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", false)
+      min = min :+ res._1
+      max = max :+ res._2
+    }
+    var min_mean = min.sum / min.length
+    var min_stdev = math.sqrt(((min.map(_ - min_mean)).map(v => v * v).sum) / (min.length - 1))
+    var max_mean = max.sum / max.length
+    var max_stdev = math.sqrt(((max.map(_ - max_mean)).map(v => v * v).sum) / (max.length - 1))
+    println(s"min_mean: ${min_mean}")
+    println(s"min_stdev: ${min_stdev}")
+    println(s"max_mean: ${max_mean}")
+    println(s"max_stdev: ${max_stdev}")
+    println()
+
+    val fileDir2 = new Directory(new File("src/test/resources/SimilarityTest/Matching/Frontends"))
+    val subDirs2 = fileDir2.dirs
+    min = Seq()
+    max = Seq()
+    println("Matching / Frontends")
+    for (d <- subDirs2) {
+      val res = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", true)
+      min = min :+ res._1
+      max = max :+ res._2
+    }
+    min_mean = min.sum / min.length
+    min_stdev = math.sqrt(((min.map(_ - min_mean)).map(v => v * v).sum) / (min.length - 1))
+    max_mean = max.sum / max.length
+    max_stdev = math.sqrt(((max.map(_ - max_mean)).map(v => v * v).sum) / (max.length - 1))
+    println(s"min_mean: ${min_mean}")
+    println(s"min_stdev: ${min_stdev}")
+    println(s"max_mean: ${max_mean}")
+    println(s"max_stdev: ${max_stdev}")
+    println()
+
+    val fileDir3 = new Directory(new File("src/test/resources/SimilarityTest/NotMatching/Viper"))
+    val subDirs3 = fileDir3.dirs
+    println("NotMatching / Viper")
+    min = Seq()
+    max = Seq()
+    for (d <- subDirs3) {
+      val res = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", false)
+      min = min :+ res._1
+      max = max :+ res._2
+    }
+    min_mean = min.sum / min.length
+    min_stdev = math.sqrt(((min.map(_ - min_mean)).map(v => v * v).sum) / (min.length - 1))
+    max_mean = max.sum / max.length
+    max_stdev = math.sqrt(((max.map(_ - max_mean)).map(v => v * v).sum) / (max.length - 1))
+    println(s"min_mean: ${min_mean}")
+    println(s"min_stdev: ${min_stdev}")
+    println(s"max_mean: ${max_mean}")
+    println(s"max_stdev: ${max_stdev}")
+    println()
+
+    val fileDir4 = new Directory(new File("src/test/resources/SimilarityTest/NotMatching/Frontends"))
+    val subDirs4 = fileDir4.dirs
+    println("NotMatching / Frontends")
+    min = Seq()
+    max = Seq()
+    for (d <- subDirs4) {
+      val res = Helper.doMatch(d.toString() + "/prog1.vpr", d.toString() + "/prog2.vpr", true)
+      min = min :+ res._1
+      max = max :+ res._2
+    }
+    min_mean = min.sum / min.length
+    min_stdev = math.sqrt(((min.map(_ - min_mean)).map(v => v * v).sum) / (min.length - 1))
+    max_mean = max.sum / max.length
+    max_stdev = math.sqrt(((max.map(_ - max_mean)).map(v => v * v).sum) / (max.length - 1))
+    println(s"min_mean: ${min_mean}")
+    println(s"min_stdev: ${min_stdev}")
+    println(s"max_mean: ${max_mean}")
+    println(s"max_stdev: ${max_stdev}")
+    println()
+
   }
 
   def clearDatabase(): Unit = {
@@ -127,47 +271,78 @@ object TestRunner extends App {
   def regexDBPerformance() = {
     val dbProcess = Process("docker-compose up").run
     Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
-    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
-    //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
-    val buffer = fromFile(file)
-    val prog =
-      try buffer.mkString
-      finally buffer.close()
-    val programEntry: ProgramEntry = ProgramEntry(
-      0,
-      Timestamp.valueOf(LocalDateTime.now()),
-      prog,
-      1400,
-      "Nagini",
-      "Silicon",
-      Array(),
-      3000,
-      true
-    )
-    val progs   = (for (i <- 1 to 5000) yield programEntry).toList
-    val insertQ = DBQueryInterface.insertProgramEntries(progs)
+    var progs: Seq[ProgramEntry] = Seq()
+    var finalProgs: Seq[ProgramEntry] = Seq()
+    for (i <- 0 to 99) {
+      val file = new File(s"src/test/resources/dataCollection/frontends/prog${i}.vpr")
+      //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
+      val buffer = fromFile(file)
+      val prog = {
+        try buffer.mkString
+        finally buffer.close()
+      }
+      val programEntry: ProgramEntry = ProgramEntry(
+        0,
+        Timestamp.valueOf(LocalDateTime.now()),
+        prog,
+        1400,
+        "Nagini",
+        "Silicon",
+        Array(),
+        3000,
+        true
+      )
+      progs = progs :+ programEntry
+    }
+    for (i <- 1 to 50) {
+      finalProgs = finalProgs ++ progs
+    }
+    val insertQ = DBQueryInterface.insertProgramEntries(finalProgs)
     Await.ready(insertQ, Duration.Inf)
-    val regexStr  = "\\{.*\\([^)]*\\).*\\}"
-    val startTime = System.currentTimeMillis()
-    val res       = PatternMatcher.matchRegexAgainstDatabase(regexStr)
-    println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
-    println(res.map(_.matchIndices.length).sum + " lines were matched")
+    var rtimes: Seq[Double] = Seq()
+    var progtimes: Seq[Double] = Seq()
+    for (i <- 1 to 10) {
+      val regexStr = "\\{.*\\(.*\\).*\\}"
+      val starttime = Instant.now()
+      val res = PatternMatcher.matchRegexAgainstDatabase(regexStr)
+      val runtime = between(starttime, Instant.now()).toNanos / 1000000.0
+      rtimes = rtimes :+ runtime
+      progtimes = progtimes :+ (runtime / finalProgs.length)
+    }
+    println(rtimes.sum.toDouble / rtimes.length.toDouble)
+    println(progtimes.sum.toDouble / progtimes.length.toDouble)
     dbProcess.destroy()
   }
 
   def regexPerformance() = {
-    val file = new File("src/test/resources/SimilarityTest/Matching/Frontends/Subset/prog1.vpr")
-    //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
-    val buffer = fromFile(file)
-    val prog =
-      try buffer.mkString
-      finally buffer.close()
-    val progs     = (for (i <- 1 to 5000) yield prog).toList
-    val regexStr  = "\\{.*\\([^)]*\\).*\\}"
-    val startTime = System.currentTimeMillis()
-    val res       = PatternMatcher.matchRegexOnPrograms(progs, regexStr)
-    println("Took: " + ((System.currentTimeMillis() - startTime) + " ms"))
-    println(res.map(_.matchIndices.length).sum + " lines were matched")
+    var progs: Seq[String] = Seq()
+    var finalprogs: Seq[String] = Seq()
+    var runtimes: Seq[Double] = Seq()
+    for(i <- 0 to 99){
+      val file = new File(s"src/test/resources/dataCollection/frontends/prog${i}.vpr")
+      //val file = new File("src/test/resources/ProcessingTest/sample.vpr")
+      val buffer = fromFile(file)
+      val prog = {
+        try buffer.mkString
+        finally buffer.close()
+      }
+      progs = progs :+ prog
+    }
+    for(i <- 1 to 50) {
+      finalprogs = finalprogs ++ progs
+    }
+    var rtimes: Seq[Double] = Seq()
+    var progtimes: Seq[Double] = Seq()
+    for(i <- 1 to 10) {
+      val regexStr = "\\{.*\\(.*\\).*\\}"
+      val res = PatternMatcher.matchRegexOnPrograms(finalprogs, regexStr)
+      //val runtime = between(res._2, Instant.now()).toNanos / 1000000.0
+      //rtimes = rtimes :+ runtime
+      //progtimes = progtimes :+ (runtime / finalprogs.length)
+    }
+    println(rtimes.sum.toDouble/rtimes.length.toDouble)
+    println(progtimes.sum.toDouble/progtimes.length.toDouble)
+
   }
 
   def getPrograms(): Unit = {
@@ -257,6 +432,23 @@ object TestRunner extends App {
     doProgramPrintsMatch(progres1, progres2, "Silicon")
   }
 
+  def specificMatch(): Unit = {
+    val path1 = testFolder + s"SimilarityTest/NotMatching/Viper/Type4Clone/prog1.vpr"
+    val path2 = testFolder + s"SimilarityTest/NotMatching/Viper/Type4Clone/prog2.vpr"
+    val sourcefile1: BufferedSource = fromFile(path1)
+    val program1: PProgram =
+      try fastParser.parse(sourcefile1.mkString, Paths.get(path1))
+      finally sourcefile1.close()
+    val sourcefile2: BufferedSource = fromFile(path2)
+    val program2: PProgram =
+      try fastParser.parse(sourcefile2.mkString, Paths.get(path2))
+      finally sourcefile2.close()
+    val pprint1 = new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(program1))
+    val pprint2 = new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(program2))
+    println(pprint1.matchTrees(pprint2))
+    println(pprint2.matchTrees(pprint1))
+  }
+
   def specificFingerPrint(num: Int): Unit = {
     val sourcefile: BufferedSource = fromFile(testFolder + s"others/prog${num}.vpr")(decoder)
     val sourcestring: String =
@@ -270,48 +462,53 @@ object TestRunner extends App {
   }
 
   def findDupTrees(): Unit = {
-    val starttime                      = System.currentTimeMillis()
     var progresults: Seq[ProgramPrint] = Seq()
-    for (num <- Seq.range(0, 901)) {
-      val sourcefile: BufferedSource = fromFile(testFolder + s"results/prog${num}pprint.json")
+    var runtimes: Seq[Double] = Seq()
+    for (num <- Seq.range(0, 100)) {
+      val sourcefile: BufferedSource = fromFile(testFolder + s"dataCollection/frontend_results/prog${num}pprint.json")
       val pprintJSON: String =
         try sourcefile.mkString
         finally sourcefile.close()
       val progres = read[ProgramPrint](pprintJSON)
       progresults = progresults :+ progres
     }
-    var dupCount = 0
-    for (num <- Seq.range(0, 901)) {
+    for (num <- Seq.range(0, 100)) {
       val prog1             = progresults(num)
-      var matches: Seq[Int] = Seq()
-      for (num2 <- Seq.range(num + 1, 901)) {
+      for (num2 <- Seq.range(num + 1, 100)) {
         val prog2 = progresults(num2)
-        if (doProgramPrintsMatch(prog1, prog2, "Silicon")) {
-          matches = matches :+ num2
-        }
+        val starttime = Instant.now()
+        doProgramPrintsMatch(prog1, prog2, "Nagini")
+        runtimes = runtimes :+ between(starttime, Instant.now()).toNanos / 1000000.0
       }
-      println(s"Matches with ${num}: ${matches}")
-      if (!(matches == List())) dupCount += 1
     }
-    println(s"${dupCount} duplicates found")
-    println(s"Time: ${System.currentTimeMillis() - starttime}ms")
+    val w = new BufferedWriter(new FileWriter(testFolder + s"dataCollection/runtimes.txt"))
+    w.write(runtimes.mkString(","))
+    w.close()
   }
 
   def fpAllPrograms(): Unit = {
     val fp        = Fingerprinter
-    val starttime = System.currentTimeMillis()
-    for (num <- Seq.range(0, 901)) {
-      val sourcefile: BufferedSource = fromFile(testFolder + s"others/prog${num}.vpr")(decoder)
+    var runtimes: Seq[Double] = Seq()
+    var filelen: Seq[Int] = Seq()
+    for (num <- Seq.range(0, 100)) {
+      val sourcefile: BufferedSource = fromFile(testFolder + s"dataCollection/frontends/prog${num}.vpr")(decoder)
       val sourcestring: String =
         try sourcefile.mkString
         finally sourcefile.close()
-      val prog   = fastParser.parse(sourcestring, Paths.get(testFolder + s"others/prog${num}.vpr"))
+      val prog   = fastParser.parse(sourcestring, Paths.get(testFolder + s"dataCollection/frontends/prog${num}.vpr"))
+      val starttime: Instant = Instant.now()
       val pprint = fp.fingerprintPProgram(prog)
-      val w      = new BufferedWriter(new FileWriter(testFolder + s"results/prog${num}pprint.json"))
+      val runtime: Double = between(starttime, Instant.now()).toNanos / 1000000.0
+      runtimes = runtimes :+ runtime
+      filelen = filelen :+ getLOC(sourcestring)
+      val w      = new BufferedWriter(new FileWriter(testFolder + s"dataCollection/frontend_results/prog${num}pprint.json"))
       w.write(write(pprint))
       w.close()
     }
-    println(s"Time: ${System.currentTimeMillis() - starttime}")
+    val w      = new BufferedWriter(new FileWriter(testFolder + s"dataCollection/runtimes.txt"))
+    w.write(runtimes.mkString(","))
+    w.close()
+    println(s"avg loc: ${filelen.sum.toDouble / filelen.length.toDouble}")
   }
 
   def findTerm(term: String): Unit = {
@@ -360,3 +557,31 @@ object TestRunner extends App {
   }
 
 }
+
+object Helper {
+
+  val fp = new FastParser
+  def doMatch(file1: String, file2: String, frontend: Boolean): (Double, Double) = {
+    val sourcefile1: BufferedSource = fromFile(file1)
+    val sourcefile2: BufferedSource = fromFile(file2)
+    val sourcestring1: String =
+      try sourcefile1.mkString
+      finally sourcefile1.close()
+    val sourcestring2: String =
+      try sourcefile2.mkString
+      finally sourcefile2.close()
+    val prog1   = fp.parse(sourcestring1, Paths.get(file1))
+    val prog2   = fp.parse(sourcestring2, Paths.get(file2))
+    val pprint1 = new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(prog1))
+    val pprint2 = new ComparableProgramPrint(Fingerprinter.fingerprintPProgram(prog2))
+    if(frontend) {
+      return (math.min(pprint1.matchTrees(pprint2).methFunMatchP, pprint2.matchTrees(pprint1).methFunMatchP),
+        math.max(pprint1.matchTrees(pprint2).methFunMatchP, pprint2.matchTrees(pprint1).methFunMatchP))
+    } else {
+      return (math.min(pprint1.matchTrees(pprint2).totalMatchP, pprint2.matchTrees(pprint1).totalMatchP),
+        math.max(pprint1.matchTrees(pprint2).totalMatchP, pprint2.matchTrees(pprint1).totalMatchP))
+    }
+
+  }
+}
+

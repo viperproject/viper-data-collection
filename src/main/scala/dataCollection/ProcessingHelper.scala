@@ -159,7 +159,7 @@ object ProcessingHelper {
         val runtimeLimit     = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
         val (silRes, vfeats) = generateSiliconResults(entry, timeOutSeconds = runtimeLimit)
         val silResId         = Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
-        Await.ready(DBQueryInterface.insertVerifierFeatures("Silicon", silResId, vfeats), DEFAULT_DB_TIMEOUT)
+        Await.ready(DBQueryInterface.insertVerifierFeatures("Silicon", silResId, programEntryId, vfeats), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
@@ -172,7 +172,7 @@ object ProcessingHelper {
         val runtimeLimit      = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
         val (carbRes, vfeats) = generateCarbonResults(entry, timeOutSeconds = runtimeLimit)
         val carbResId         = Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
-        Await.ready(DBQueryInterface.insertVerifierFeatures("Carbon", carbResId, vfeats), DEFAULT_DB_TIMEOUT)
+        Await.ready(DBQueryInterface.insertVerifierFeatures("Carbon", carbResId, programEntryId, vfeats), DEFAULT_DB_TIMEOUT)
       case None => println("ID does not match any stored program")
     }
   }
