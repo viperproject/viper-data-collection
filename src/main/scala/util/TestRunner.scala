@@ -1,6 +1,6 @@
 package util
 
-import dataCollection.ProcessingHelper.doProgramPrintsMatch
+import dataCollection.ProcessingHelper.{doProgramPrintsMatch, filterSiliconArgs}
 import dataCollection.customFrontends.ProgramSyntaxProperties
 import dataCollection.{ComparableProgramPrint, FPNode, Fingerprinter, ProgramPrint}
 import database.tools.PatternMatcher
@@ -19,7 +19,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source.fromFile
 import scala.io.{BufferedSource, Codec, Source}
-import scala.reflect.io.{Directory}
+import scala.reflect.io.Directory
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
 import java.time.Duration.between
@@ -56,17 +56,24 @@ object TestRunner extends App {
   //getPrograms()
   //getSiliconResults()
   //clearDatabase()
-  printDDL()
+  //printDDL()
   //specificMatch()
   //getMatchPercentages()
   //fpAllPrograms()
   //findDupTrees()
   //regexDBPerformance()
-  getFeatures()
+  //getFeatures()
+  //testFilter()
 
   def printDDL(): Unit = {
     print(PGSlickTables.getDDL)
   }
+
+//  def testFilter(): Unit = {
+//    val testArr = Array("--timeout", "10", "--z3Exe", "local.exe", "--printMethodCFGs", "--randomFlag", "--cvc5Exe")
+//    val filteredCorrectly = filterSiliconArgs(testArr) sameElements Array("--randomFlag")
+//    println(filteredCorrectly)
+//  }
 
   def getFeatures(): Unit = {
     import database.DBExecContext._

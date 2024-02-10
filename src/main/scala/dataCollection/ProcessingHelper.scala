@@ -159,7 +159,10 @@ object ProcessingHelper {
         val runtimeLimit     = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
         val (silRes, vfeats) = generateSiliconResults(entry, timeOutSeconds = runtimeLimit)
         val silResId         = Await.result(DBQueryInterface.insertSiliconResult(silRes), DEFAULT_DB_TIMEOUT)
-        Await.ready(DBQueryInterface.insertVerifierFeatures("Silicon", silResId, programEntryId, vfeats), DEFAULT_DB_TIMEOUT)
+        Await.ready(
+          DBQueryInterface.insertVerifierFeatures("Silicon", silResId, programEntryId, vfeats),
+          DEFAULT_DB_TIMEOUT
+        )
       case None => println("ID does not match any stored program")
     }
   }
@@ -172,7 +175,10 @@ object ProcessingHelper {
         val runtimeLimit      = ((entry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt
         val (carbRes, vfeats) = generateCarbonResults(entry, timeOutSeconds = runtimeLimit)
         val carbResId         = Await.result(DBQueryInterface.insertCarbonResult(carbRes), DEFAULT_DB_TIMEOUT)
-        Await.ready(DBQueryInterface.insertVerifierFeatures("Carbon", carbResId, programEntryId, vfeats), DEFAULT_DB_TIMEOUT)
+        Await.ready(
+          DBQueryInterface.insertVerifierFeatures("Carbon", carbResId, programEntryId, vfeats),
+          DEFAULT_DB_TIMEOUT
+        )
       case None => println("ID does not match any stored program")
     }
   }
@@ -233,10 +239,34 @@ object ProcessingHelper {
     if (pe.originalVerifier == "Silicon") {
       args = args ++ pe.args
     }
-    args = filterArgs(args, "--timeout")
+    args = filterSiliconArgs(args)
     args ++= Array("--timeout", timeOutSeconds.toString)
 
     generateVerifierResults(runner, pe, args)
+  }
+
+  /** Removes any arguments for Silicon which are only meaningful locally or should not be used during benchmarking */
+  private def filterSiliconArgs(args: Array[String]): Array[String] = {
+    var filteredArgs = args
+    val toFilter = Array(
+      "--timeout",
+      "--cvc5Exe",
+      "--enableTempDirectory",
+      "--mapAxiomatizationFile",
+      "--multisetAxiomatizationFile",
+      "--printMethodCFGs",
+      "--proverLogFile",
+      "--sequenceAxiomatizationFile",
+      "--setAxiomatizationFile",
+      "--submitForEvaluation",
+      "--tempDirectory",
+      "--z3Exe",
+      "--z3LogFile"
+    )
+    for (filter <- toFilter) {
+      filteredArgs = filterArgs(filteredArgs, filter)
+    }
+    filteredArgs
   }
 
   /** @param pe            ProgramEntry for which to get the results of verifying it through Carbon
@@ -255,16 +285,37 @@ object ProcessingHelper {
       args = args ++ pe.args
     }
 
+    args = filterCarbonArgs(args)
+
     generateVerifierResults(runner, pe, args)
   }
 
-  /** if [[toFilter]] is found in [[args]], drops that and next index in the array */
+  /** Removes any arguments for Carbon which are only meaningful locally or should not be used during benchmarking */
+  private def filterCarbonArgs(args: Array[String]): Array[String] = {
+    var filteredArgs = args
+    val toFilter = Array(
+      "--timeout",
+      "--boogieExe",
+      "--proverLog",
+      "--z3Exe"
+    )
+    for (filter <- toFilter) {
+      filteredArgs = filterArgs(filteredArgs, filter)
+    }
+    filteredArgs
+  }
+
+  /** if [[toFilter]] is found in [[args]], drops that and next index in the array, if next index is not another flag */
   private def filterArgs(args: Array[String], toFilter: String): Array[String] = {
     val argInd = args.indexOf(toFilter)
     if (argInd == -1) {
       args
     } else {
-      args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
+      if (argInd < args.length - 1 && args(argInd + 1).startsWith("--")) {
+        args.dropRight(args.length - argInd) ++ args.drop(argInd + 1)
+      } else {
+        args.dropRight(args.length - argInd) ++ args.drop(argInd + 2)
+      }
     }
   }
 
