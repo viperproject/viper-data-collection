@@ -1,15 +1,14 @@
 package webAPI
 
-import database.DBQueryInterface
-import JSONReadWriters._
-import queryFrontend.{FeatureEntry, PatternMatchResult, ProgramEntry, UserSubmission, VerResult}
-import queryFrontend.JSONReadWriters._
 import cask.Response
+import database.DBQueryInterface
 import database.tools.{PatternMatcher, VersionBenchmarkHelper}
+import queryFrontend.JSONReadWriters._
+import queryFrontend._
 import ujson.{Arr, Obj}
-import util._
-import util.Config._
 import upickle.default._
+import util.Config._
+import util._
 
 import java.sql.Timestamp
 import java.time.LocalDateTime

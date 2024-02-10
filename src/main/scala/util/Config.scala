@@ -41,12 +41,6 @@ object Config {
   /** Percentage of fingerprint nodes that have to be matched for two frontend programs to count as similar */
   val FRONTEND_MATCH_THRESHOLD: Int = 70
 
-  /** Fraction representing that a certain metadata is valuable if the less than the fraction of entries in the DB contain this feature */
-  val METADATA_FILTER_THRESHOLD: Double = 0.5
-
-  /** Fraction representing how many of a programs metadata need to be valuable for the program not to be filtered out */
-  val METADATA_AMOUNT_THRESHOLD: Double = 1.0 / 3.0
-
   /** Directory to use to for storing temporary files */
   val TMP_DIRECTORY: String = "./tmp"
 

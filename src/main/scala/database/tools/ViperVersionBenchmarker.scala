@@ -4,7 +4,7 @@ import database.DBQueryInterface
 import queryFrontend.Config.TIME_DIFFERENCE_MULTIPLIER
 import queryFrontend.{VerResult, VerVersionDifferenceSummary}
 import util.Config._
-import util.{GlobalLockException, getGlobalLock, getGlobalLockSpinning}
+import util.getGlobalLockSpinning
 
 import java.nio.channels.FileLock
 import scala.concurrent.Await
@@ -125,8 +125,8 @@ object VersionBenchmarkHelper {
         vr1.programEntryId
     }
 
-    val avgRuntime1 = if (intVerRes1.isEmpty) 0 else (intVerRes1.map(_.runtime).sum / intVerRes1.length)
-    val avgRuntime2 = if (intVerRes2.isEmpty) 0 else (intVerRes2.map(_.runtime).sum / intVerRes2.length)
+    val avgRuntime1 = if (intVerRes1.isEmpty) 0 else intVerRes1.map(_.runtime).sum / intVerRes1.length
+    val avgRuntime2 = if (intVerRes2.isEmpty) 0 else intVerRes2.map(_.runtime).sum / intVerRes2.length
 
     val runtimeVar1 =
       if (intVerRes1.isEmpty) 0 else intVerRes1.map(vr => Math.pow(vr.runtime - avgRuntime1, 2)).sum / intVerRes1.length

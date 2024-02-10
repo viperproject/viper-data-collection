@@ -2,7 +2,6 @@ package dataCollection
 
 import dataCollection.ProcessingHelper.{generateCarbonResults, generateSiliconResults}
 import dataCollection.ProcessingPipeline.verifierStage
-import database.tools.SilVersionBenchmarker
 import util.StageIncompleteException
 
 /** Represents a runner for jobs that should be called in a new JVM instance to ensure consistency in performance */

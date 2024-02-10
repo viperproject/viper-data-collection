@@ -3,8 +3,8 @@ package dataCollection.customFrontends
 import viper.silicon.{BuildInfo, Silicon, SiliconFrontend}
 import viper.silver.frontend.SilFrontend
 import viper.silver.logger.ViperStdOutLogger
-import viper.silver.reporter.{Message, NoopReporter, Reporter}
-import viper.silver.verifier.{Success, TypecheckerError}
+import viper.silver.reporter.NoopReporter
+import viper.silver.verifier.Success
 
 import scala.collection.immutable.ArraySeq
 
@@ -58,7 +58,7 @@ class CollectionSiliconFrontend
     try {
       execute(ArraySeq.unsafeWrapArray(args))
     } catch {
-      case e: Exception => println(s"encountered: ${e}")
+      case e: Exception => println(s"encountered: $e")
     } finally {
       siliconInstance.reporter match {
         case bmrReporter: BenchmarkingResultReporter => benchmarkRuntimes = bmrReporter.getBenchmarkResults
@@ -71,7 +71,7 @@ class CollectionSiliconFrontend
   }
 
   /** Adds a [[BenchmarkingResultReporter]] field to the Verifier s.t. benchmarking results get stored */
-  override def createVerifier(fullCmd: String) = {
+  override def createVerifier(fullCmd: String): Silicon = {
     siliconInstance = new Silicon(reporter, Seq("args" -> fullCmd)) {
       private val bmrReporter = BenchmarkingResultReporter()
 

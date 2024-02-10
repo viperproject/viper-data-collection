@@ -3,18 +3,17 @@ package dataCollection
 import dataCollection.customFrontends.VerifierFeature
 import database.{DBQueryInterface, ProgramPrintEntry}
 import queryFrontend._
-import util._
 import util.Config._
+import util._
 
 import java.nio.channels.FileLock
-import scala.concurrent.{Await}
+import scala.concurrent.Await
 import scala.sys.process._
 
 /** Provides methods to process submissions, create ProgramEntries, benchmark them and insert the results into the database */
 object ProcessingPipeline {
 
   import ProcessingHelper._
-  import database.BinarySerializer._
 
   private val peFileName  = "programEntry.bin"
   private val srFileName  = "siliconRes.bin"

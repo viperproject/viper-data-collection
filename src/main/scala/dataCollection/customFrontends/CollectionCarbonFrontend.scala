@@ -5,7 +5,7 @@ import util.getProcessOutput
 import viper.carbon.CarbonFrontend
 import viper.silver.logger.ViperStdOutLogger
 import viper.silver.reporter.NoopReporter
-import viper.silver.verifier.{TimeoutOccurred, Success => CarbSuccess}
+import viper.silver.verifier.TimeoutOccurred
 
 import java.util.concurrent.TimeoutException
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,7 +42,7 @@ class CollectionCarbonFrontend(timeOut: Int = 0)
       instantiateSyntaxProps(args(0))
       hasRun = true
     } catch {
-      case e: Exception => println(s"encountered: ${e}")
+      case e: Exception => println(s"encountered: $e")
     }
   }
   

@@ -1,7 +1,7 @@
 package dataCollection.customFrontends
 
 import database.tools.PatternMatcher
-import viper.silver.parser.{FastParser, Nodes, PAccPred, PCall, PCurPerm, PEpsilon, PFullPerm, PNoPerm, PNode, PProgram, PQuantifier, PWildcard}
+import viper.silver.parser._
 import viper.silver.reporter.{Message, Reporter}
 import viper.silver.verifier.{AbstractError, TypecheckerError}
 

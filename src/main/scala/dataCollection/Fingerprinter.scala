@@ -70,8 +70,8 @@ case class ProgramPrint(
   * matching between trees. Nodes in this tree aren't marked since they won't be checked more than once.
   */
 class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends FingerprintNode {
-  val fp       = fpNode.fp.copy()
-  val children = fpNode.children map (c => new ComparableFPNode(c))
+  val fp: Fingerprint = fpNode.fp.copy()
+  val children: Seq[ComparableFPNode] = fpNode.children map (c => new ComparableFPNode(c))
 
   /** Returns true if the tree of [[root]] contains a node with the same Fingerprint, marks that node in the other tree as matched */
   def containedInTree(root: ComparableFPNode): Boolean = {
@@ -86,9 +86,9 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
   }
 
   /** Clears all matched fields in this subtree */
-  def clearMatches: Unit = {
+  def clearMatches(): Unit = {
     matched = false
-    children foreach (_.clearMatches)
+    children foreach (_.clearMatches())
   }
 }
 
@@ -102,8 +102,8 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
   val predicateTree = new ComparableFPNode(pp.predicateTree)
   val methodTree    = new ComparableFPNode(pp.methodTree)
   val extensionTree = new ComparableFPNode(pp.extensionTree)
-  val numMethods    = pp.numMethods
-  val numFunctions  = pp.numFunctions
+  val numMethods: Int = pp.numMethods
+  val numFunctions: Int = pp.numFunctions
 
   /** Matches all subtrees of this program to the associated subtrees in [[oPP]]. Clears the [[oPP]] tree after comparison.
     * The dummy parent node is ignored in node weights.
@@ -123,7 +123,7 @@ class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[Compar
 
   /** Clears the matched fields in all subtrees of this program. */
   private def clearMatches(): Unit = {
-    trees foreach (_.clearMatches)
+    trees foreach (_.clearMatches())
   }
 
   /** Returns the amount of nodes in [[root]] that could be matched to one in [[otherRoot]]. This is a separate method to
@@ -294,7 +294,7 @@ object Fingerprinter {
 
   private def flattenBinExpAnd(pn: PExp): Seq[PExp] = {
     pn match {
-      case bn: PBinExp => if (bn.opName == "&&") (flattenBinExpAnd(bn.left) ++ flattenBinExpAnd(bn.right)) else Seq(bn)
+      case bn: PBinExp => if (bn.opName == "&&") flattenBinExpAnd(bn.left) ++ flattenBinExpAnd(bn.right) else Seq(bn)
       case _           => Seq(pn)
     }
   }

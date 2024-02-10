@@ -78,7 +78,7 @@ object DBQueryInterface {
   }
 
   def insertProgramEntries(entries: Seq[ProgramEntry]) = {
-    val insertQuery = (sTables.programEntryTable) ++= entries
+    val insertQuery = sTables.programEntryTable ++= entries
     db.run(insertQuery)
   }
 

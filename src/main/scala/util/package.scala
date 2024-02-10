@@ -4,9 +4,8 @@ import util.Config.TMP_DIRECTORY
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter}
 import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
-import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.reflect.io.Directory
-import scala.sys.process.{Process, ProcessBuilder, ProcessLogger}
+import scala.sys.process.{ProcessBuilder, ProcessLogger}
 
 /** Traits, classes and functions that don't necessitate their own file */
 package object util {
@@ -26,14 +25,14 @@ package object util {
       }
       lock
     } catch {
-      case e: Exception =>
-        throw new GlobalLockException()
+      case _: Exception =>
+        throw GlobalLockException()
     }
   }
 
   /** Tries to lock the global.lock file
     *
-    * @returns the FileLock, should eventually be released again
+    * @return the FileLock, should eventually be released again
     * @throws GlobalLockException if any exception occured or lock is held by someone else
     */
   def getGlobalLock(): FileLock = {
@@ -44,8 +43,8 @@ package object util {
       if (lock == null) throw GlobalLockException()
       lock
     } catch {
-      case e: Exception =>
-        throw new GlobalLockException()
+      case _: Exception =>
+        throw GlobalLockException()
     }
   }
 
@@ -108,7 +107,7 @@ package object util {
     f.delete()
   }
 
-  /** @returns The standard output and errors written by the [[process]] */
+  /** @return The standard output and errors written by the [[process]] */
   def getProcessOutput(process: ProcessBuilder): (String, String) = {
     val out = new StringBuilder()
     val err = new StringBuilder()

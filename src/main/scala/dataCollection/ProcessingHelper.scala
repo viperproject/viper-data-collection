@@ -1,19 +1,18 @@
 package dataCollection
 
 import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
+import database.DBExecContext._
 import database.{DBQueryInterface, ProgramPrintEntry}
 import queryFrontend._
-import viper.silver.parser.FastParser
-import database.DBExecContext._
 import util.Config._
 import util._
+import viper.silver.parser.FastParser
 import viper.silver.verifier.{AbstractError, Failure, Success, TimeoutOccurred}
 
 import java.nio.file.Paths
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 
 /** Provides functions to aid in the processing of submissions and generating database entries */
 object ProcessingHelper {
