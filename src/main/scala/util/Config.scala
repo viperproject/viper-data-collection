@@ -29,6 +29,9 @@ object Config {
   /** Minimum timeout for a benchmark, might be needed for very low original runtimes, f.e. when caching is involved */
   val MIN_BENCHMARK_TIMEOUT_SECONDS: Int = 10
 
+  /** Maximum timeout for a benchmark, to avoid stalling on an unverifiable program */
+  val MAX_BENCHMARK_TIMEOUT_SECONDS: Int = 600
+
   /** Subtrees at or below this weight will be dropped from the fingerprint trees */
   val FP_TREE_DROP_LIMIT: Int = 3
 

@@ -94,9 +94,13 @@ object ProcessingPipeline {
     try {
       val programEntry = loadSerializedObject[ProgramEntry](s"$TMP_DIRECTORY/$dirName/$peFileName")
 
-      val maxRuntime = Math.max(
-        ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt,
-        MIN_BENCHMARK_TIMEOUT_SECONDS
+      // gives runtime between min and max timeout config options
+      val maxRuntime = Math.min(
+        Math.max(
+          ((programEntry.originalRuntime * BENCHMARK_TIMEOUT_MULTIPLIER) / 1000).toInt,
+          MIN_BENCHMARK_TIMEOUT_SECONDS
+        ),
+        MAX_BENCHMARK_TIMEOUT_SECONDS
       )
       val (verifierResult, vFeats) = verifierFunction(programEntry, Array(), maxRuntime)
 

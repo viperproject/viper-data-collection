@@ -1,11 +1,12 @@
 import database.BinarySerializer.{deserialize, serialize}
+import util.Config.TMP_DIRECTORY
 
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter}
 import java.nio.channels.{FileChannel, FileLock}
 import java.nio.file.StandardOpenOption
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.reflect.io.Directory
-import scala.sys.process.{ProcessLogger, Process, ProcessBuilder}
+import scala.sys.process.{Process, ProcessBuilder, ProcessLogger}
 
 /** Traits, classes and functions that don't necessitate their own file */
 package object util {
@@ -79,14 +80,14 @@ package object util {
   }
 
   def createTempDir(dirName: String): Unit = {
-    val dir = new File(s"tmp/$dirName")
+    val dir = new File(s"$TMP_DIRECTORY/$dirName")
     if (!dir.exists()) {
       dir.mkdir()
     }
   }
 
   def removeTempDir(dirName: String): Unit = {
-    val dir = new Directory(new File(s"tmp/$dirName"))
+    val dir = new Directory(new File(s"$TMP_DIRECTORY/$dirName"))
     if (dir.exists) {
       dir.deleteRecursively()
     }
@@ -94,7 +95,7 @@ package object util {
 
   /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
   def createTempProgramFile(id: Long, program: String): String = {
-    val fName          = s"./tmp/$id.vpr"
+    val fName          = s"$TMP_DIRECTORY/$id.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
     fw.write(program)
     fw.close()
