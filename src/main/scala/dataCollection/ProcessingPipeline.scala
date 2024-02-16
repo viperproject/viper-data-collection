@@ -78,7 +78,7 @@ object ProcessingPipeline {
       }
     } catch {
       case ntd: NothingToDoException => throw ntd
-      case e: Exception              => e.printStackTrace(); throw StageIncompleteException()
+      case _: Throwable              => throw StageIncompleteException()
     }
 
   }
@@ -107,7 +107,7 @@ object ProcessingPipeline {
       storeObjectSerialized[Array[VerifierFeature]](vFeats.toArray, s"$TMP_DIRECTORY/$dirName/${verifierName}Feats.bin")
 
     } catch {
-      case e: Exception => e.printStackTrace(); throw StageIncompleteException()
+      case _: Throwable => throw StageIncompleteException()
     }
 
   }
@@ -140,7 +140,7 @@ object ProcessingPipeline {
         Await.ready(DBQueryInterface.insertProcessingResult(procResTuple), DEFAULT_DB_TIMEOUT)
       }
     } catch {
-      case e: Exception => e.printStackTrace(); throw StageIncompleteException()
+      case _: Throwable => throw StageIncompleteException()
     }
   }
 
@@ -167,7 +167,7 @@ object ProcessingPipeline {
       }
     } catch {
       case ntd: NothingToDoException => throw ntd
-      case e: Exception              => e.printStackTrace(); throw StageIncompleteException()
+      case _: Throwable              => throw StageIncompleteException()
     }
   }
 
