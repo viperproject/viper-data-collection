@@ -29,6 +29,12 @@ object DBQueryInterface {
     programEntries
   }
 
+  def getProgramEntriesStream(): DatabasePublisher[ProgramEntry] = {
+    val query = sTables.programEntryTable.result.transactionally.withStatementParameters(fetchSize = DB_BATCH_SIZE)
+    val publisher: DatabasePublisher[ProgramEntry] = db.stream(query)
+    publisher
+  }
+
   def getAllProgramEntriesBatched(): DatabasePublisher[ProgramEntry] = {
     val query       = sTables.programEntryTable.result.transactionally.withStatementParameters(fetchSize = DB_BATCH_SIZE)
     val entryStream = db.stream(query)
@@ -242,6 +248,15 @@ object DBQueryInterface {
   def insertProgramPrintEntry(ppe: ProgramPrintEntry): Future[Int] = {
     val insertQuery = sTables.programPrintEntryTable += ppe
     db.run(insertQuery)
+  }
+
+  def insertProgramPrintEntries(ppe: Seq[ProgramPrintEntry]): Future[Any] = {
+    val insertQuery = sTables.programPrintEntryTable ++= ppe
+    db.run(insertQuery)
+  }
+
+  def getAllProgramPrintEntries(): Future[Seq[ProgramPrintEntry]] = {
+    db.run(sTables.programPrintEntryTable.result)
   }
 
   /*------ Metadata Queries ------*/
@@ -487,5 +502,9 @@ object DBQueryInterface {
     val deletions   = sTables.tables map (_.delete)
     val deleteQuery = DBIO.seq(deletions: _*)
     db.run(deleteQuery)
+  }
+
+  def clearProgramPrintEntries(): Future[Int] = {
+    db.run(sTables.programPrintEntryTable.delete)
   }
 }

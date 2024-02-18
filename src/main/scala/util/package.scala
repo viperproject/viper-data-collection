@@ -3,7 +3,7 @@ import util.Config.TMP_DIRECTORY
 
 import java.io.{BufferedInputStream, BufferedOutputStream, File, FileInputStream, FileOutputStream, FileWriter}
 import java.nio.channels.{FileChannel, FileLock}
-import java.nio.file.StandardOpenOption
+import java.nio.file.{Files, Paths, StandardOpenOption}
 import scala.reflect.io.Directory
 import scala.sys.process.{ProcessBuilder, ProcessLogger}
 
@@ -93,8 +93,10 @@ package object util {
   }
 
   /** Verifiers and Parsers need a local file that contains the program, this function creates such a temporary file and returns the path */
-  def createTempProgramFile(id: Long, program: String): String = {
-    val fName          = s"$TMP_DIRECTORY/$id.vpr"
+  def createTempProgramFile(program: String): String = {
+    var identifier = program.hashCode()
+    while (Files.exists(Paths.get(s"$TMP_DIRECTORY/$identifier.vpr"))) { identifier += 1 }
+    val fName          = s"$TMP_DIRECTORY/$identifier.vpr"
     val fw: FileWriter = new FileWriter(new File(fName))
     fw.write(program)
     fw.close()

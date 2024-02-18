@@ -32,7 +32,7 @@ object ProcessingHelper {
   }
 
   def createProgramPrintEntry(program: String): ProgramPrintEntry = {
-    val tmpFile = createTempProgramFile(program.hashCode, program)
+    val tmpFile = createTempProgramFile(program)
 
     val parsedProgram = fastParser.parse(program, Paths.get(tmpFile))
     val programPrint  = fPrinter.fingerprintPProgram(parsedProgram)
@@ -43,7 +43,7 @@ object ProcessingHelper {
   }
 
   def createProgramEntryFromSubmission(us: UserSubmission): ProgramEntry = {
-    val tmpFile = createTempProgramFile(us.submissionId, us.program)
+    val tmpFile = createTempProgramFile(us.program)
 
     val parsedProgram = fastParser.parse(us.program, Paths.get(tmpFile))
     val parseSuccess  = parsedProgram.errors.isEmpty
@@ -197,7 +197,7 @@ object ProcessingHelper {
     pe: ProgramEntry,
     args: Array[String]
   ): (VerResult, Seq[VerifierFeature]) = {
-    val tmpFile = createTempProgramFile(pe.programEntryId, pe.program)
+    val tmpFile = createTempProgramFile(pe.program)
     runner.main(Array(tmpFile) ++ args)
 
     val verRes = VerResult(
@@ -320,6 +320,23 @@ object ProcessingHelper {
 
   def abstractToVerError(ae: AbstractError): VerError = {
     VerError(ae.fullId, ae.readableMessage)
+  }
+
+  /** Removes all [[ProgramPrintEntry]]s from database, recreates [[ProgramPrint]]s and inserts them.
+    * To be used when changes to Silver AST are made.
+    */
+  def recreateProgramPrints(): Unit = {
+    val programEntryPublisher = DBQueryInterface.getProgramEntriesStream()
+    val newPrints = programEntryPublisher.mapResult(e => {
+      val pPrintEntry = createProgramPrintEntry(e.program)
+      pPrintEntry.copy(programEntryId = e.programEntryId)
+    })
+    var pPrintEntries: Seq[ProgramPrintEntry] = Seq()
+    val result                                = newPrints.foreach(p => pPrintEntries = pPrintEntries :+ p)
+
+    Await.ready(result, VERY_LONG_TIMEOUT)
+    Await.ready(DBQueryInterface.clearProgramPrintEntries(), DEFAULT_DB_TIMEOUT)
+    Await.ready(DBQueryInterface.insertProgramPrintEntries(pPrintEntries), LONG_TIMEOUT)
   }
 
 }

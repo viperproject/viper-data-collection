@@ -1,12 +1,13 @@
 package util
 
-import dataCollection.ProcessingHelper.{doProgramPrintsMatch, filterSiliconArgs}
+import dataCollection.ProcessingHelper.{createProgramEntryFromSubmission, doProgramPrintsMatch, filterSiliconArgs}
 import dataCollection.customFrontends.ProgramSyntaxProperties
-import dataCollection.{ComparableProgramPrint, FPNode, Fingerprinter, ProgramPrint}
+import dataCollection.{ComparableProgramPrint, FPNode, Fingerprinter, ProcessingHelper, ProgramPrint}
 import database.tools.PatternMatcher
 import database.{DBConnection, DBQueryInterface, PGSlickTables}
 import queryFrontend._
 import upickle.default.{read, write}
+import util.Config.DEFAULT_DB_TIMEOUT
 import viper.silver.parser.{FastParser, PBinExp, PCall, PNode, PProgram}
 import webAPI.JSONReadWriters._
 
@@ -64,6 +65,8 @@ object TestRunner extends App {
   //regexDBPerformance()
   //getFeatures()
   //testFilter()
+  //recreateProgramPrints()
+  //getPrograms()
 
   def printDDL(): Unit = {
     print(PGSlickTables.getDDL)
@@ -123,6 +126,41 @@ object TestRunner extends App {
         APIQueries.submitProgram(programs(i).program, "Silicon", Array(), "Silicon", true, 2000)
       }
       Thread.sleep(300000)
+    } finally {
+      dbAndAPIProcess.destroy()
+    }
+  }
+
+  def recreateProgramPrints(): Unit = {
+    val dbAndAPIProcess = Process(s"./run.sh").run
+    Thread.sleep(2000) // startup
+    Await.ready(DBQueryInterface.clearDB(), Duration.Inf)
+    try {
+      var programs: Seq[ProgramEntry] = Seq()
+
+      for (i <- 0 to 0) {
+        val prog = readProgram(testFolder + s"dataCollection/others/prog${i}.vpr")
+        val us = ProgramEntry(
+          0,
+          Timestamp.valueOf(LocalDateTime.now()),
+          prog,
+          15,
+          "Silicon",
+          "Silicon",
+          Array(),
+          2000,
+          true
+        )
+        programs = programs :+ us
+      }
+
+      for (i <- 0 to 3) {
+        DBQueryInterface.insertProgramEntry(programs(0))
+      }
+      Thread.sleep(1000)
+      ProcessingHelper.recreateProgramPrints()
+      val prints = Await.result(DBQueryInterface.getAllProgramPrintEntries(), DEFAULT_DB_TIMEOUT)
+      prints.foreach(println(_))
     } finally {
       dbAndAPIProcess.destroy()
     }
@@ -356,7 +394,7 @@ object TestRunner extends App {
     import database.DBExecContext._
     val programs = DBQueryInterface.getAllProgramEntries()
     programs.onComplete {
-      case Success(value)     => value foreach (v => println(v.frontend))
+      case Success(value)     => value foreach (v => println(v))
       case Failure(exception) => println(exception)
     }
     Await.result(programs, Duration.Inf)

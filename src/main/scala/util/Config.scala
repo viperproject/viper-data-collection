@@ -20,6 +20,9 @@ object Config {
   /** Default timeout for operations that might take longer than a simple query */
   val LONG_TIMEOUT: Duration = Duration(100, SECONDS)
 
+  /** Timeout for operations that will take quite a while */
+  val VERY_LONG_TIMEOUT: Duration = Duration(1000, SECONDS)
+
   /** Number of results to load into memory at once when using streamed queries */
   val DB_BATCH_SIZE: Int = 1000
 
