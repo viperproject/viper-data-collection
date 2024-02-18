@@ -7,7 +7,7 @@ import database.tools.PatternMatcher
 import database.{DBConnection, DBQueryInterface, PGSlickTables}
 import queryFrontend._
 import upickle.default.{read, write}
-import viper.silver.parser.{FastParser, Nodes, PBinExp, PCall, PNode, PProgram}
+import viper.silver.parser.{FastParser, PBinExp, PCall, PNode, PProgram}
 import webAPI.JSONReadWriters._
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -374,7 +374,7 @@ object TestRunner extends App {
 
   def printRec(pn: PNode): Unit = {
     println(pn)
-    Nodes.subnodes(pn) foreach (printRec(_))
+    pn.subnodes foreach (printRec(_))
   }
 
   def showFP(): Unit = {

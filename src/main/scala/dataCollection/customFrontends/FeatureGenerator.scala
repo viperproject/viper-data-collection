@@ -74,7 +74,7 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
 
   /** Returns whether a [[PNode]] matching [[pred]] is present in the subtree of [[root]] */
   private def findNode(pred: PNode => Boolean, root: PNode): Boolean =
-    pred(root) || Nodes.subnodes(root).exists(findNode(pred, _))
+    pred(root) || root.subnodes.exists(findNode(pred, _))
 
   def hasSet: Boolean =
     PatternMatcher.matchesAtLeastOne(program, Seq("^.*Set\\[.*\\].*$", "^.*Multiset\\[.*\\].*$"), Pattern.MULTILINE)
@@ -112,7 +112,7 @@ class ProgramSyntaxProperties(val program: String, val pp: PProgram) {
   }
 
   private def isCallWithName(name: String)(pn: PNode): Boolean =
-    pn.isInstanceOf[PCall] && pn.asInstanceOf[PCall].func.name == name
+    pn.isInstanceOf[PCall] && pn.asInstanceOf[PCall].idnref.name == name
 
   def hasMissingTrigger: Boolean = {
     lazy val res = programTrees flatMap { pSeq =>
