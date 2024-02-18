@@ -70,7 +70,7 @@ case class ProgramPrint(
   * matching between trees. Nodes in this tree aren't marked since they won't be checked more than once.
   */
 class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends FingerprintNode {
-  val fp: Fingerprint = fpNode.fp.copy()
+  val fp: Fingerprint                 = fpNode.fp.copy()
   val children: Seq[ComparableFPNode] = fpNode.children map (c => new ComparableFPNode(c))
 
   /** Returns true if the tree of [[root]] contains a node with the same Fingerprint, marks that node in the other tree as matched */
@@ -96,13 +96,13 @@ class ComparableFPNode(fpNode: FPNode, var matched: Boolean = false) extends Fin
   * they were matched to another node, to avoid duplicate matches that could overestimate the similarity of two programs.
   */
 class ComparableProgramPrint(pp: ProgramPrint) extends ProgramFingerprint[ComparableFPNode] {
-  val domainTree    = new ComparableFPNode(pp.domainTree)
-  val fieldTree     = new ComparableFPNode(pp.fieldTree)
-  val functionTree  = new ComparableFPNode(pp.functionTree)
-  val predicateTree = new ComparableFPNode(pp.predicateTree)
-  val methodTree    = new ComparableFPNode(pp.methodTree)
-  val extensionTree = new ComparableFPNode(pp.extensionTree)
-  val numMethods: Int = pp.numMethods
+  val domainTree        = new ComparableFPNode(pp.domainTree)
+  val fieldTree         = new ComparableFPNode(pp.fieldTree)
+  val functionTree      = new ComparableFPNode(pp.functionTree)
+  val predicateTree     = new ComparableFPNode(pp.predicateTree)
+  val methodTree        = new ComparableFPNode(pp.methodTree)
+  val extensionTree     = new ComparableFPNode(pp.extensionTree)
+  val numMethods: Int   = pp.numMethods
   val numFunctions: Int = pp.numFunctions
 
   /** Matches all subtrees of this program to the associated subtrees in [[oPP]]. Clears the [[oPP]] tree after comparison.
@@ -208,7 +208,9 @@ case class MatchResult(
 }
 
 /** Used to group together sequence of parent-less [[PNode]]s, such as when splitting a program into its fields */
-case class RootPNode(childNodes: Seq[PNode])(val pos: (Position, Position)) extends PNode
+case class RootPNode(childNodes: Seq[PNode])(val pos: (Position, Position)) extends PNode {
+  def pretty: String = ""
+}
 
 object Fingerprinter {
 
@@ -266,36 +268,56 @@ object Fingerprinter {
     */
   private def subnodes(pn: PNode): (Seq[PNode], Seq[PNode]) = pn match {
     // this list is probably incomplete
-    case PMethod(idndef, args, rets, pres, posts, body) => (Seq(idndef) ++ args ++ rets ++ body.toSeq, pres ++ posts)
-    case PFunction(name, args, typ, pres, posts, body)  => (Seq(name) ++ args ++ Seq(typ) ++ body.toSeq, pres ++ posts)
-    case PWhile(cond, invs, body)                       => (Seq(cond) ++ Seq(body), invs)
-    case PBinExp(l, op, r)                              => if (commutativeOps.contains(op)) (Seq(), Seq(l, r)) else (Seq(l, r), Seq())
-    case RootPNode(c)                                   => (c, Seq())
-    case _                                              => (Nodes.subnodes(pn), Seq())
+    case PMethod(_, _, idndef, args, rets, pres, posts, body) =>
+      (Seq(idndef, args) ++ Seq(rets, body).flatten, Seq(pres, posts))
+    case PFunction(_, _, name, args, _, typ, pres, posts, body) =>
+      (Seq(name, args, typ) ++ Seq(body).flatten, Seq(pres, posts))
+    case PWhile(_, cond, invs, body) => (Seq(cond) ++ Seq(body.ss), invs.subnodes)
+    case PBinExp(l, op, r)           => if (commutativeOps.contains(op)) (Seq(), Seq(l, r)) else (Seq(l, r), Seq())
+    case RootPNode(c)                => (c, Seq())
+    case _                           => (pn.subnodes, Seq())
   }
 
   /** Splits pres, posts and invariants of methods, functions and while loops that are combined with && into separate statements */
   private def flatten(pn: PNode): PNode = {
     pn match {
-      case wh: PWhile => wh.copy(invs = wh.invs flatMap flattenBinExpAnd)(wh.pos)
+      case wh: PWhile =>
+        wh.copy(invs =
+          PDelimited[PSpecification[PKw.InvSpec], Option[PSym.Semi]](wh.invs.toSeq flatMap flattenSpec)(wh.invs.pos)
+        )(wh.pos)
       case pm: PMethod =>
-        pm.copy(pres = pm.pres flatMap flattenBinExpAnd, posts = pm.posts flatMap flattenBinExpAnd)(
-          pm.pos,
-          pm.annotations
+        pm.copy(
+          pres =
+            PDelimited[PSpecification[PKw.PreSpec], Option[PSym.Semi]](pm.pres.toSeq flatMap flattenSpec)(pm.pres.pos),
+          posts = PDelimited[PSpecification[PKw.PostSpec], Option[PSym.Semi]](pm.posts.toSeq flatMap flattenSpec)(
+            pm.posts.pos
+          )
+        )(
+          pm.pos
         )
       case pf: PFunction =>
-        pf.copy(pres = pf.pres flatMap flattenBinExpAnd, posts = pf.posts flatMap flattenBinExpAnd)(
-          pf.pos,
-          pf.annotations
+        pf.copy(
+          pres =
+            PDelimited[PSpecification[PKw.PreSpec], Option[PSym.Semi]](pf.pres.toSeq flatMap flattenSpec)(pf.pres.pos),
+          posts = PDelimited[PSpecification[PKw.PostSpec], Option[PSym.Semi]](pf.posts.toSeq flatMap flattenSpec)(
+            pf.posts.pos
+          )
+        )(
+          pf.pos
         )
       case _ => pn
     }
   }
 
+  private def flattenSpec[T <: PKw.Spec](s: PSpecification[T]): Seq[(PSpecification[T], Option[PSym.Semi])] = {
+    (flattenBinExpAnd(s.e) map ((e: PExp) => PSpecification[T](s.k, e)(s.pos))) map (e => (e, None))
+  }
+
   private def flattenBinExpAnd(pn: PExp): Seq[PExp] = {
     pn match {
-      case bn: PBinExp => if (bn.opName == "&&") flattenBinExpAnd(bn.left) ++ flattenBinExpAnd(bn.right) else Seq(bn)
-      case _           => Seq(pn)
+      case bn: PBinExp =>
+        if (f"${bn.op}".trim() == "&&") flattenBinExpAnd(bn.left) ++ flattenBinExpAnd(bn.right) else Seq(bn)
+      case _ => Seq(pn)
     }
   }
 
@@ -307,105 +329,11 @@ object ConstNodeHashes {
   /** Lookup-table for default hash-values for all types of [[PNode]]
     */
   def hashValue(p: PNode): String = p match {
-    case RootPNode(_)                        => "e48e13207341b6bf"
-    case PIdnDef(_)                          => "cfcd208495d565ef"
-    case PIdnUse(_)                          => "c4ca4238a0b92382"
-    case PUnnamedFormalArgDecl(_)            => "c81e728d9d4c2f63"
-    case PFormalArgDecl(_, _)                => "eccbc87e4b5ce2fe"
-    case PFormalReturnDecl(_, _)             => "a87ff679a2f3e71d"
-    case PLogicalVarDecl(_, _)               => "e4da3b7fbbce2345"
-    case PLocalVarDecl(_, _)                 => "1679091c5a880faf"
-    case PFieldDecl(_, _)                    => "8f14e45fceea167a"
-    case PPrimitiv(typ)                      => MD5.generateHash("c9f0f895fb98ab91" + typ)
-    case PDomainType(_, _)                   => "45c48cce2e2d7fbd"
-    case PSeqType(_)                         => "d3d9446802a44259"
-    case PSetType(_)                         => "6512bd43d9caa6e0"
-    case PMultisetType(_)                    => "c20ad4d76fe97759"
-    case PMapType(_, _)                      => "c51ce410c124a10e"
-    case PUnknown()                          => "aab3238922bcc25a"
-    case PPredicateType()                    => "9bf31c7ff062936a"
-    case PWandType()                         => "c74d97b01eae257e"
-    case PFunctionType(_, _)                 => "70efdf2ec9b08607"
-    case PBinExp(_, op, _)                   => MD5.generateHash("6f4922f45568161a" + op)
-    case PMagicWandExp(_, _)                 => "1f0e3dad99908345"
-    case PUnExp(op, _)                       => MD5.generateHash("98f13708210194c4" + op)
-    case PTrigger(_)                         => "3c59dc048e885024"
-    case PIntLit(_)                          => "b6d767d2f8ed5d21"
-    case PBoolLit(_)                         => "37693cfc748049e4"
-    case PNullLit()                          => "1ff1de774005f8da"
-    case PResultLit()                        => "8e296a067a375633"
-    case PFieldAccess(_, _)                  => "4e732ced3463d06d"
-    case PCall(_, _, _)                      => "02e74f10e0327ad8"
-    case PUnfolding(_, _)                    => "33e75ff09dd601bb"
-    case PApplying(_, _)                     => "6ea9ab1baa0efb9e"
-    case PExists(_, _, _)                    => "34173cb38f07f89d"
-    case PLabelledOld(_, _)                  => "c16a5320fa475530"
-    case _: POldExp                          => "6364d3f0f495b6ab"
-    case PLet(_, _)                          => "182be0c5cdcd5072"
-    case PLetNestedScope(_, _)               => "e369853df766fa44"
-    case PForall(_, _, _)                    => "1c383cd30b7c298a"
-    case PForPerm(_, _, _)                   => "19ca14e7ea6328a4"
-    case PCondExp(_, _, _)                   => "a5bfc9e07964f8dd"
-    case PInhaleExhaleExp(_, _)              => "a5771bce93e200c3"
-    case PCurPerm(_)                         => "d67d8ab4f4c10bf2"
-    case PNoPerm()                           => "d645920e395fedad"
-    case PFullPerm()                         => "3416a75f4cea9109"
-    case PWildcard()                         => "a1d0c6e83f027327"
-    case PEpsilon()                          => "17e62166fc8586df"
-    case PAccPred(_, _)                      => "f7177163c833dff4"
-    case PEmptySeq(_)                        => "6c8349cc7260ae62"
-    case PSeqIndex(_, _)                     => "d9d4f495e875a2e0"
-    case PExplicitSeq(_)                     => "67c6a1e7ce56d3d6"
-    case PRangeSeq(_, _)                     => "642e92efb7942173"
-    case PSeqTake(_, _)                      => "f457c545a9ded88f"
-    case PSeqDrop(_, _)                      => "c0c7c76d30bd3dca"
-    case PSeqUpdate(_, _, _)                 => "2838023a778dfaec"
-    case PLookup(_, _)                       => "9a1158154dfa42ca"
-    case PUpdate(_, _, _)                    => "d82c8d1619ad8176"
-    case PSize(_)                            => "a684eceee76fc522"
-    case PEmptySet(_)                        => "b53b3a3d6ab90ce0"
-    case PExplicitSet(_)                     => "9f61408e3afb633e"
-    case PEmptyMultiset(_)                   => "72b32a1f754ba1c0"
-    case PExplicitMultiset(_)                => "66f041e16a60928b"
-    case PEmptyMap(_, _)                     => "093f65e080a295f8"
-    case PExplicitMap(_)                     => "072b030ba126b2f4"
-    case PMapRange(_)                        => "7f39f8317fbdb198"
-    case PMapDomain(_)                       => "44f683a84163b352"
-    case PMaplet(_, _)                       => "03afdbd66e7929b1"
-    case PSeqn(_)                            => "ea5d2f1c4608232e"
-    case PFold(_)                            => "fc490ca45c00b124"
-    case PUnfold(_)                          => "3295c76acbf4caae"
-    case PPackageWand(_, _)                  => "735b90b4568125ed"
-    case PApplyWand(_)                       => "a3f390d88e4c41f2"
-    case PExhale(_)                          => "14bfa6bb14875e45"
-    case PAssert(_)                          => "7cbbc409ec990f19"
-    case PInhale(_)                          => "e2c420d928d4bf8c"
-    case PAssume(_)                          => "32bb90e8976aab52"
-    case PNewExp(_)                          => "d2ddea18f00665ce"
-    case PLabel(_, _)                        => "ad61ab143223efbc"
-    case PGoto(_)                            => "d09bf41544a3365a"
-    case PAssign(_, _)                       => "fbd7939d674997cd"
-    case PIf(_, _, _)                        => "28dd2c7955ce9264"
-    case PWhile(_, _, _)                     => "35f4a8d465e6e1ed"
-    case PVars(_, _)                         => "d1fe173d08e95939"
-    case PProgram(_, _, _, _, _, _, _, _, _) => "f033ab37c30201f7"
-    case PLocalImport(_)                     => "43ec517d68b6edd3"
-    case PStandardImport(_)                  => "9778d5d219c5080b"
-    case PDomain(_, _, _, _, _)              => "fe9fc289c3ff0af1"
-    case PFields(_)                          => "68d30a9594728bc3"
-    case PMethod(_, _, _, _, _, _)           => "3ef815416f775098"
-    case PFunction(_, _, _, _, _, _)         => "93db85ed909c1383"
-    case PDomainFunction(_, _, _, _, _)      => "c7e1249ffc03eb9d"
-    case PPredicate(_, _, _)                 => "2a38a4a9316c49e5"
-    case PAxiom(_, _)                        => "7647966b7343c290"
-    case PTypeVarDecl(_)                     => "8613985ec49eb8f7"
-    case PDefine(_, _, _)                    => "54229abfcfa5649e"
-    case PQuasihavoc(_, _)                   => "92cc227532d17e56"
-    case PQuasihavocall(_, _, _)             => "98dce83da57b0395"
-    case PAnnotatedExp(_, _)                 => "f4b9ec30ad9f68f8"
-    case PAnnotatedStmt(_, _)                => "812b4ba287f5ee0b"
-    case _: PExtender                        => "26657d5ff9020d2a"
-    case _: PSkip                            => "e2ef524fbf3d9fe6"
+    case _: RootPNode      => "e48e13207341b6bf"
+    case PPrimitiv(typ)    => MD5.generateHash("c9f0f895fb98ab91" + typ)
+    case PBinExp(_, op, _) => MD5.generateHash("6f4922f45568161a" + op)
+    case PUnExp(op, _)     => MD5.generateHash("98f13708210194c4" + op)
+    case n                 => MD5.generateHash("15b1e5ffe0aaab3c" + n.getClass().toString())
   }
 }
 
