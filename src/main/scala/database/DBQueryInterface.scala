@@ -1,6 +1,6 @@
 package database
 
-import dataCollection.{ProcessingResultTuple, ProgramTuple}
+import dataCollection.{ProcessingResultTuple, ProgramPrint, ProgramTuple}
 import dataCollection.customFrontends.VerifierFeature
 import slick.basic.DatabasePublisher
 import util.Config._
@@ -18,7 +18,7 @@ object DBExecContext {
 /** Contains slick queries to fetch entries from the database */
 object DBQueryInterface {
   private val db      = DBConnection.db
-  private val sTables = PGSlickTables
+  val sTables = PGSlickTables
 
   import sTables.profile.api._
   import DBExecContext._
@@ -253,6 +253,13 @@ object DBQueryInterface {
   def insertProgramPrintEntries(ppe: Seq[ProgramPrintEntry]): Future[Any] = {
     val insertQuery = sTables.programPrintEntryTable ++= ppe
     db.run(insertQuery)
+  }
+
+  def updateProgramPrintEntry(ppe: ProgramPrintEntry) = {
+    val q = for {entry <- sTables.programPrintEntryTable if entry.programEntryId === ppe.programEntryId} yield entry.pprintId
+    val pKey = Await.result(db.run(q.result.headOption), DEFAULT_DB_TIMEOUT)
+    val newPPE = ppe.copy(pprintId = pKey.getOrElse(0))
+    sTables.programPrintEntryTable.insertOrUpdate(newPPE)
   }
 
   def getAllProgramPrintEntries(): Future[Seq[ProgramPrintEntry]] = {

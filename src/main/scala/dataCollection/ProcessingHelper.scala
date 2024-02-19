@@ -1,9 +1,11 @@
 package dataCollection
 
 import dataCollection.customFrontends.{CollectionCarbonFrontend, CollectionSilFrontend, CollectionSiliconFrontend, VerifierFeature}
+import database.DBConnection.db
 import database.DBExecContext._
 import database.{DBQueryInterface, ProgramPrintEntry}
 import queryFrontend._
+import slick.dbio.{DBIO, Effect, NoStream}
 import util.Config._
 import util._
 import viper.silver.parser.FastParser
@@ -322,21 +324,22 @@ object ProcessingHelper {
     VerError(ae.fullId, ae.readableMessage)
   }
 
-  /** Removes all [[ProgramPrintEntry]]s from database, recreates [[ProgramPrint]]s and inserts them.
+  /** Recreates ProgramPrints for all ProgramEntries and updates all ProgramPrintEntries in database.
     * To be used when changes to Silver AST are made.
     */
   def recreateProgramPrints(): Unit = {
     val programEntryPublisher = DBQueryInterface.getProgramEntriesStream()
     val newPrints = programEntryPublisher.mapResult(e => {
-      val pPrintEntry = createProgramPrintEntry(e.program)
-      pPrintEntry.copy(programEntryId = e.programEntryId)
+      val pPrintEntry = createProgramPrintEntry(e.program).copy(programEntryId = e.programEntryId)
+      DBQueryInterface.updateProgramPrintEntry(pPrintEntry)
     })
-    var pPrintEntries: Seq[ProgramPrintEntry] = Seq()
-    val result                                = newPrints.foreach(p => pPrintEntries = pPrintEntries :+ p)
+    var updateActions: Seq[DBQueryInterface.sTables.profile.ProfileAction[Int, NoStream, Effect.Write]] = Seq()
+    val awaitable                               = newPrints.foreach(p => updateActions = updateActions :+ p)
 
-    Await.ready(result, VERY_LONG_TIMEOUT)
-    Await.ready(DBQueryInterface.clearProgramPrintEntries(), DEFAULT_DB_TIMEOUT)
-    Await.ready(DBQueryInterface.insertProgramPrintEntries(pPrintEntries), LONG_TIMEOUT)
+    Await.ready(awaitable, VERY_LONG_TIMEOUT)
+
+    val updateSeq = db.run(DBIO.sequence(updateActions))
+    Await.ready(updateSeq, LONG_TIMEOUT)
   }
 
 }
