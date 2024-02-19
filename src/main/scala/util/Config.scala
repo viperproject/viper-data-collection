@@ -9,7 +9,7 @@ object Config {
   val STORE_ONLY: Boolean = false
 
   /** Port used in [[webAPI.Routes]] */
-  val WEBSERVER_LOCAL_PORT: Int = 51934
+  val WEBSERVER_LOCAL_PORT: Int = 10000
 
   /** Number of threads to use for database operations */
   val DB_EXEC_CONTEXT_PARALLELISM: Int = 10
