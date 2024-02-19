@@ -35,7 +35,7 @@ import scala.sys.process.Process
   */
 object Routes extends cask.MainRoutes {
   override val port: Int = WEBSERVER_LOCAL_PORT
-
+  override val host: String = "0.0.0.0"
   @cask.get("/")
   def default() = {
     "This is an API for the viper-data-collection database"
