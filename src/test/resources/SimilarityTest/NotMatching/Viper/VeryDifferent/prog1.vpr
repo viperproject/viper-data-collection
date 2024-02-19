@@ -1,0 +1,98 @@
+import <decreases/int.vpr>
+
+//decreases m_termination_V1, n_termination_V1
+method ack_termination_F(m_termination_V1: Int, n_termination_V1: Int) returns (result_termination_V1: Int)
+  decreases m_termination_V1, n_termination_V1
+  requires m_termination_V1 >= 0
+  requires n_termination_V1 >= 0
+  ensures result_termination_V1 >= 0
+{
+  inhale result_termination_V1 == 0
+
+  // decl m_termination_V1_CN2: int�, n_termination_V1_CN3: int�, result_termination_V1_CN4: int�
+
+  var result_termination_V1_CN4: Int
+  var n_termination_V1_CN3: Int
+  var m_termination_V1_CN2: Int
+
+  // init m_termination_V1_CN2
+
+  inhale m_termination_V1_CN2 == 0
+
+  // init n_termination_V1_CN3
+
+  inhale n_termination_V1_CN3 == 0
+
+  // init result_termination_V1_CN4
+
+  inhale result_termination_V1_CN4 == 0
+
+  // m_termination_V1_CN2 = m_termination_V1
+
+  m_termination_V1_CN2 := m_termination_V1
+
+  // n_termination_V1_CN3 = n_termination_V1
+
+  n_termination_V1_CN3 := n_termination_V1
+
+  // decl
+
+
+  // if(m_termination_V1_CN2 == 0) {...} else {...}
+
+  if (m_termination_V1_CN2 == 0) {
+
+    // decl
+
+
+    // result_termination_V1 = n_termination_V1_CN3 + 1
+
+    result_termination_V1 := n_termination_V1_CN3 + 1
+
+    // return
+
+    goto returnLabel
+  } else {
+
+    // decl
+
+
+    // if(n_termination_V1_CN3 == 0) {...} else {...}
+
+    if (n_termination_V1_CN3 == 0) {
+
+      // decl N7: int�
+
+      var N7: Int
+
+      // N7 = ack_termination_F(m_termination_V1_CN2 - 1, 1)
+
+      assert !true || true
+      assert (decreasing(m_termination_V1_CN2 - 1, old(m_termination_V1)): Bool) && (bounded(old(m_termination_V1)): Bool) || m_termination_V1_CN2 - 1 == old(m_termination_V1) && ((decreasing(1, old(n_termination_V1)): Bool) && (bounded(old(n_termination_V1)): Bool) || 1 == old(n_termination_V1) && false)
+      N7 := ack_termination_F(m_termination_V1_CN2 - 1, 1)
+    } else {
+
+      // decl N5: int�, N6: int�
+
+      var N6: Int
+      var N5: Int
+
+      // N5 = ack_termination_F(m_termination_V1_CN2, n_termination_V1_CN3 - 1)
+
+      assert !true || true
+      assert (decreasing(m_termination_V1_CN2, old(m_termination_V1)): Bool) && (bounded(old(m_termination_V1)): Bool) || m_termination_V1_CN2 == old(m_termination_V1) && ((decreasing(n_termination_V1_CN3 - 1, old(n_termination_V1)): Bool) && (bounded(old(n_termination_V1)): Bool) || n_termination_V1_CN3 - 1 == old(n_termination_V1) && false)
+      N5 := ack_termination_F(m_termination_V1_CN2, n_termination_V1_CN3 - 1)
+
+      // N6 = ack_termination_F(m_termination_V1_CN2 - 1, N5)
+
+      assert !true || true
+      assert (decreasing(m_termination_V1_CN2 - 1, old(m_termination_V1)): Bool) && (bounded(old(m_termination_V1)): Bool) || m_termination_V1_CN2 - 1 == old(m_termination_V1) && ((decreasing(N5, old(n_termination_V1)): Bool) && (bounded(old(n_termination_V1)): Bool) || N5 == old(n_termination_V1) && false)
+      N6 := ack_termination_F(m_termination_V1_CN2 - 1, N5)
+    }
+  }
+
+  // result_termination_V1 = result_termination_V1_CN4
+
+  result_termination_V1 := result_termination_V1_CN4
+  label returnLabel
+}

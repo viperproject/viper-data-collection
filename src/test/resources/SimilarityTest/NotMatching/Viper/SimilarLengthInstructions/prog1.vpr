@@ -1,23 +1,26 @@
 // Type your example here, and hit the "play" button to run the verifier for feedback
 import <decreases/int.vpr>
 
-method floor_sqrt(n: Int) returns (z: Int)
-  requires true
-  ensures true
+method program_1(n:Int) returns (b:Int)
+  requires  n > 0; // pre-condition
+  ensures b >= 0 && pow(10,b) <= n && pow(10,b+1)>n;   // post-condition
 {
-  var y: Int;
+  var a : Int;
 
-  y := 0;
-  z := 0;
+  a := 1;
+  b := 0;
 
-  while (y * y < n) 
-    invariant false
+  while (a < n)
+    invariant b >= 0
+        && (
+            a < n && pow(10, b) == a
+            || a == n && pow(10, b) == a
+            || a > n && pow(10, b + 1) == a
+        ); // your invariant should replace "true", here
   {
-    y := y + 1;
-    if (y * y <= n) {
-      z := z + 1;
-    } else {
-      // skip
-    }
+    a := 10 * a;
+    if (a <= n) {
+        b := b + 1;
+    } else {}
   }
 }

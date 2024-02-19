@@ -1,23 +1,15 @@
-method Task910c(n: Int) returns (r: Int)
-  requires n >= 0
-  ensures  r == fib(n)
+method sum(n: Int) returns (res: Int)
+  requires 1 <= n
+  ensures  res == n * (n + 1) / 2
 {
-  var c: Int := n;
-  var r1: Int := 0;
-  var r2: Int := 1;
-  r := 0
-  
-  if (n >= 1) {
-    r := 1
-  }
-  
-  while(c >= 2)
-    invariant r == r1 + r2
+  res := 0
+  var i: Int := 0;
+  while(i <= n)
+    invariant i <= (n + 1)
+    invariant res == (i - 1) * i / 2
   {
-    r := r1 + r2;
-    r1 := r2;
-    r2 := r;
-    c := c - 1
+    res := sum(n - 1)
+    i := i + res
   }
 }
 
